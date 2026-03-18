@@ -1,0 +1,659 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Rates - Hotel PMS</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1f10c6",
+              "background-light": "#f6f6f8",
+              "background-dark": "#121022",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: 180px repeat(14, minmax(100px, 1fr));
+      }
+      .rates-grid {
+        display: grid;
+        grid-template-columns: 180px repeat(var(--rate-days, 7), minmax(120px, 1fr));
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div
+      class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden"
+    >
+      <!-- Top Navigation Bar -->
+      <header
+        class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 sticky top-0 z-50"
+      >
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-3 text-primary">
+            <div
+              class="size-8 bg-primary rounded-lg flex items-center justify-center text-white"
+            >
+              <span class="material-symbols-outlined">domain</span>
+            </div>
+            <h2
+              class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight"
+            >
+              Hotel PMS
+            </h2>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden sm:block">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl"
+              >search</span
+            >
+            <input
+              class="w-64 bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary"
+              placeholder="Search rooms or guests..."
+              type="text"
+            />
+          </div>
+          <button
+            class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative"
+          >
+            <span class="material-symbols-outlined">notifications</span>
+            <span
+              class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
+            ></span>
+          </button>
+          <div class="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1"></div>
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-xs font-bold text-slate-900 dark:text-slate-100">
+                Alex Rivers
+              </p>
+              <p class="text-[10px] text-slate-500">Manager</p>
+            </div>
+            <div
+              class="size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden"
+            >
+              <img
+                alt="User Profile"
+                class="size-full object-cover"
+                data-alt="Portrait of a male hotel manager"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvXXdPk52GDIOtvRsq-40ft_Mf8v4xBBK1IS0PEfY1DC_TF6sxi0X2hRiji0u_evvwyVgFuTFp3IzqfQPNKFggyD750idHIGsSEe-zcUW1aatojAApdkTy4IxetROrLiiNsTr8nziIECD4T_uTtmhtdNUeTvWTleCUuXV6WHrYG720pq_TMgb2rwWU5_XjSCJu0ErScDXAEa9tXHSlVITR4KYlQuinC3TgdgAmMVG0P_Hm1oNNGTcOE3X5G9cRUOhM-5N1Uuglsi8"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="flex grow min-h-[calc(100vh-64px)]">
+        <!-- Sidebar -->
+        <aside
+          class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col hidden lg:flex"
+        >
+          <div class="p-6">
+            <div class="flex flex-col mb-8">
+              <h1
+                class="text-slate-900 dark:text-slate-100 text-base font-bold"
+              >
+                Grand Plaza Hotel
+              </h1>
+              <p class="text-slate-500 text-xs font-medium">
+                Admin Portal • London
+              </p>
+            </div>
+            <nav class="space-y-1">
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >dashboard</span
+                >
+                <span class="text-sm font-medium">Dashboard</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span class="material-symbols-outlined text-xl"
+                  >calendar_month</span
+                >
+                <span class="text-sm font-bold">Inventory Calendar</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >bed</span
+                >
+                <span class="text-sm font-medium">Rooms Management</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary rounded-lg"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >sell</span
+                >
+                <span class="text-sm font-bold">Daily Rates</span>
+              </a>
+              <div class="pt-4 pb-2">
+                <p
+                  class="text-[10px] uppercase font-bold text-slate-400 px-3 tracking-widest"
+                >
+                  System
+                </p>
+              </div>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >settings</span
+                >
+                <span class="text-sm font-medium">Settings</span>
+              </a>
+            </nav>
+          </div>
+          <div class="mt-auto p-6">
+            <div class="bg-primary rounded-xl p-4 text-white">
+              <p class="text-xs opacity-80 mb-1">Total Occupancy</p>
+              <p class="text-xl font-bold">84.2%</p>
+              <div class="w-full bg-white/20 h-1.5 rounded-full mt-3">
+                <div class="bg-white h-full rounded-full w-[84%]"></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="flex-1 p-8">
+          <!-- Header Actions -->
+          <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+            <div class="flex flex-col gap-1">
+              <h2
+                class="text-slate-900 dark:text-slate-100 text-3xl font-bold tracking-tight"
+              >
+                Daily Rates &amp; Yield
+              </h2>
+              <p class="text-slate-500 text-sm">
+                Manage dynamic pricing based on occupancy and real-time market
+                data.
+              </p>
+            </div>
+            <div class="flex gap-3">
+              <button
+                class="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                <span class="material-symbols-outlined">file_download</span>
+                Export
+              </button>
+              <button
+                class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
+              >
+                <span class="material-symbols-outlined">publish</span>
+                Publish Changes
+              </button>
+            </div>
+          </div>
+          <!-- Filters & Navigation -->
+          <div
+            class="flex flex-wrap gap-4 items-center mb-6 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+          >
+            <div
+              class="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg"
+            >
+              <button
+                class="px-4 py-1.5 rounded-md text-sm font-medium bg-white dark:bg-slate-700 shadow-sm"
+              >
+                All Rooms
+              </button>
+              <button
+                class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-900"
+              >
+                Deluxe
+              </button>
+              <button
+                class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-900"
+              >
+                Standard
+              </button>
+              <button
+                class="px-4 py-1.5 rounded-md text-sm font-medium text-slate-500 hover:text-slate-900"
+              >
+                Single
+              </button>
+            </div>
+            <div class="h-8 w-px bg-slate-200 dark:border-slate-800 mx-2"></div>
+            <div class="flex items-center gap-2">
+              <button
+                class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50"
+              >
+                <span class="material-symbols-outlined">chevron_left</span>
+              </button>
+              <div class="px-4 text-sm font-bold flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary"
+                  >calendar_month</span
+                >
+                October 2023
+              </div>
+              <button
+                class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50"
+              >
+                <span class="material-symbols-outlined">chevron_right</span>
+              </button>
+            </div>
+            <div class="ml-auto flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                View
+              </span>
+              <div
+                class="flex gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800"
+                id="day-range-switcher"
+              >
+                <button
+                  class="rounded-md bg-white px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100"
+                  data-range="7"
+                  type="button"
+                >
+                  7 Days
+                </button>
+                <button
+                  class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-300"
+                  data-range="15"
+                  type="button"
+                >
+                  15 Days
+                </button>
+                <button
+                  class="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-300"
+                  data-range="30"
+                  type="button"
+                >
+                  30 Days
+                </button>
+              </div>
+            </div>
+          </div>
+          <!-- Yield Management Grid -->
+          <div
+            class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden"
+          >
+            <div
+              class="custom-scrollbar overflow-x-auto overflow-y-hidden"
+              id="rates-grid-scroll"
+            >
+              <div id="rates-grid-root"></div>
+            </div>
+          </div>
+          <!-- Summary Charts Section -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div
+              class="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <h3
+                  class="text-sm font-bold text-slate-700 dark:text-slate-300"
+                >
+                  Market Demand
+                </h3>
+                <span
+                  class="text-[10px] px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-bold uppercase"
+                  >High</span
+                >
+              </div>
+              <div class="flex items-end gap-1.5 h-24">
+                <div class="w-full bg-primary/10 h-[40%] rounded-t"></div>
+                <div class="w-full bg-primary/20 h-[55%] rounded-t"></div>
+                <div class="w-full bg-primary/30 h-[70%] rounded-t"></div>
+                <div class="w-full bg-primary/40 h-[65%] rounded-t"></div>
+                <div class="w-full bg-primary h-[90%] rounded-t"></div>
+                <div class="w-full bg-primary/60 h-[80%] rounded-t"></div>
+                <div class="w-full bg-primary/50 h-[75%] rounded-t"></div>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-3">
+                Next 7 days projected demand is 24% higher than last year.
+              </p>
+            </div>
+            <div
+              class="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm"
+            >
+              <div class="flex items-center justify-between mb-4">
+                <h3
+                  class="text-sm font-bold text-slate-700 dark:text-slate-300"
+                >
+                  ADR Comparison
+                </h3>
+                <span class="material-symbols-outlined text-slate-400"
+                  >more_horiz</span
+                >
+              </div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-500">Your Hotel</span>
+                  <span class="text-xs font-bold">$214.50</span>
+                </div>
+                <div
+                  class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"
+                >
+                  <div class="bg-primary h-full w-[85%]"></div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-500">Comp Set Avg</span>
+                  <span class="text-xs font-bold">$198.20</span>
+                </div>
+                <div
+                  class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden"
+                >
+                  <div
+                    class="bg-slate-300 dark:bg-slate-600 h-full w-[70%]"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="p-5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between"
+            >
+              <div>
+                <h3
+                  class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-1"
+                >
+                  RevPAR Target
+                </h3>
+                <p class="text-2xl font-black text-primary">$182.40</p>
+              </div>
+              <div class="flex items-center gap-2 mt-4 text-emerald-600">
+                <span class="material-symbols-outlined">trending_up</span>
+                <span class="text-xs font-bold">+12.4% vs prev week</span>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-2">
+                Yield optimizations contributed $14.20 to this growth.
+              </p>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <script>
+      (() => {
+        const month = "Oct";
+        const year = 2023;
+        const totalDays = 30;
+        const defaultRange = 7;
+        const todayIndex = 4;
+
+        const baseRows = [
+          {
+            title: "Deluxe Suite",
+            subtitle: "12 Available",
+            cells: [
+              { note: "85% Occ.", value: "$240", tone: "default" },
+              { note: "92% Occ. ↑", value: "$285", tone: "emerald" },
+              { note: "75% Occ.", value: "$240", tone: "default" },
+              { note: "60% Occ.", value: "$210", tone: "default" },
+              { note: "Today", value: "$310", tone: "primary" },
+              { note: "Suggest: $290", value: "$240", tone: "amber" },
+              { note: "95% Occ.", value: "$320", tone: "default" },
+            ],
+          },
+          {
+            title: "Standard Double",
+            subtitle: "45 Available",
+            cells: [
+              { note: "40% Occ.", value: "$145", tone: "default" },
+              { note: "42% Occ.", value: "$145", tone: "default" },
+              { note: "45% Occ.", value: "$145", tone: "default" },
+              { note: "35% Occ.", value: "$130", tone: "default" },
+              { note: "38% Occ.", value: "$145", tone: "today-soft" },
+              { note: "55% Occ.", value: "$165", tone: "default" },
+              { note: "70% Occ.", value: "$185", tone: "default" },
+            ],
+          },
+          {
+            title: "Single Economy",
+            subtitle: "8 Available",
+            cells: [
+              { note: "100% Occ.", value: "Sold Out", tone: "disabled" },
+              { note: "20% Occ.", value: "$95", tone: "default" },
+              { note: "25% Occ.", value: "$95", tone: "default" },
+              { note: "15% Occ.", value: "$85", tone: "default" },
+              { note: "10% Occ.", value: "$85", tone: "today-soft" },
+              { note: "45% Occ.", value: "$110", tone: "default" },
+              { note: "60% Occ.", value: "$125", tone: "default" },
+            ],
+          },
+        ];
+
+        const days = Array.from({ length: totalDays }, (_, index) => {
+          const date = new Date(year, 9, index + 1);
+          return {
+            shortDay: date.toLocaleDateString("en-US", { weekday: "short" }),
+            dayNum: String(index + 1).padStart(2, "0"),
+          };
+        });
+
+        const expandCells = (cells) =>
+          Array.from({ length: totalDays }, (_, index) => {
+            const seed = cells[index % cells.length];
+            if (index === todayIndex) {
+              return { ...seed, note: "Today", tone: "primary" };
+            }
+            return { ...seed };
+          });
+
+        const rows = baseRows.map((row) => ({
+          ...row,
+          cells: expandCells(row.cells),
+        }));
+
+        const toneClassMap = {
+          default:
+            "rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-center",
+          emerald:
+            "rounded-lg border border-emerald-100 bg-emerald-50/30 p-3 text-center ring-1 ring-emerald-200",
+          amber:
+            "rounded-lg border border-amber-100 bg-amber-50/30 p-3 text-center ring-1 ring-amber-200",
+          primary:
+            "relative z-20 rounded-lg border-2 border-primary bg-white p-3 text-center shadow-md dark:bg-slate-800",
+          "today-soft":
+            "rounded-lg border border-slate-100 bg-white p-3 text-center dark:bg-slate-800",
+          disabled:
+            "rounded-lg border border-slate-100 bg-slate-50/50 p-3 text-center",
+        };
+
+        const noteClassMap = {
+          default: "mb-1 block text-xs text-slate-400",
+          emerald: "mb-1 block text-[10px] font-bold text-emerald-600",
+          amber: "mb-1 block text-[10px] font-bold text-amber-600",
+          primary: "mb-1 block text-[10px] font-bold uppercase text-primary",
+          "today-soft": "mb-1 block text-xs text-slate-400",
+          disabled: "mb-1 block text-xs text-slate-400",
+        };
+
+        const inputClassMap = {
+          default:
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold focus:ring-0",
+          emerald:
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold text-emerald-700 focus:ring-0",
+          amber:
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold text-amber-700 focus:ring-0",
+          primary:
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold text-primary focus:ring-0",
+          "today-soft":
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold focus:ring-0",
+          disabled:
+            "w-full border-none bg-transparent p-0 text-center text-sm font-bold text-slate-400 focus:ring-0",
+        };
+
+        const root = document.getElementById("rates-grid-root");
+        const switcher = document.getElementById("day-range-switcher");
+        const scrollArea = document.getElementById("rates-grid-scroll");
+
+        function render(range) {
+          root.innerHTML = "";
+
+          const wrapper = document.createElement("div");
+          wrapper.className = "min-w-max";
+          wrapper.style.setProperty("--rate-days", String(range));
+
+          const header = document.createElement("div");
+          header.className =
+            "rates-grid sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900";
+
+          const firstHead = document.createElement("div");
+          firstHead.className =
+            "flex items-center justify-between border-r border-slate-200 p-4 dark:border-slate-800";
+          firstHead.innerHTML =
+            '<span class="text-xs font-bold uppercase tracking-wider text-slate-400">Room Category</span><span class="material-symbols-outlined text-sm text-slate-400">unfold_more</span>';
+          header.appendChild(firstHead);
+
+          days.slice(0, range).forEach((day, index) => {
+            const item = document.createElement("div");
+            const isToday = index === todayIndex;
+            const weekend = day.shortDay === "Sat" || day.shortDay === "Sun";
+            item.className = [
+              "flex flex-col items-center justify-center border-r border-slate-200 p-2 dark:border-slate-800",
+              isToday ? "bg-slate-50 dark:bg-slate-800/50" : "",
+              !isToday && weekend ? "bg-slate-100/50 dark:bg-slate-800/20" : "",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            item.innerHTML = `
+              <span class="${
+                isToday
+                  ? "text-[10px] font-bold uppercase text-primary"
+                  : "text-[10px] font-bold uppercase text-slate-400"
+              }">${isToday ? "Today" : day.shortDay}</span>
+              <span class="${
+                isToday
+                  ? "text-sm font-black text-primary"
+                  : "text-sm font-bold text-slate-800 dark:text-slate-200"
+              }">${day.dayNum} ${month}</span>
+            `;
+            header.appendChild(item);
+          });
+
+          wrapper.appendChild(header);
+
+          const body = document.createElement("div");
+          body.className = "divide-y divide-slate-200 dark:divide-slate-800";
+
+          rows.forEach((row) => {
+            const rowWrap = document.createElement("div");
+            rowWrap.className = "rates-grid";
+            rowWrap.style.setProperty("--rate-days", String(range));
+
+            const info = document.createElement("div");
+            info.className =
+              "flex flex-col justify-center border-r border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900";
+            info.innerHTML = `
+              <span class="text-sm font-bold leading-none text-slate-900 dark:text-slate-100">${row.title}</span>
+              <span class="mt-1 text-[10px] font-medium uppercase text-slate-500">${row.subtitle}</span>
+            `;
+            rowWrap.appendChild(info);
+
+            row.cells.slice(0, range).forEach((cell, index) => {
+              const slot = document.createElement("div");
+              const weekend =
+                days[index].shortDay === "Sat" || days[index].shortDay === "Sun";
+              const isToday = index === todayIndex;
+              slot.className = [
+                "p-2",
+                index !== range - 1
+                  ? "border-r border-slate-100 dark:border-slate-800/50"
+                  : "",
+                isToday
+                  ? "bg-slate-50 dark:bg-slate-800/40"
+                  : "bg-white dark:bg-slate-900",
+                !isToday && weekend ? "bg-slate-50/60 dark:bg-slate-900" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+
+              slot.innerHTML = `
+                <div class="${toneClassMap[cell.tone]}">
+                  <span class="${noteClassMap[cell.tone]}">${cell.note}</span>
+                  <input
+                    class="${inputClassMap[cell.tone]}"
+                    ${cell.tone === "disabled" ? "disabled" : ""}
+                    type="text"
+                    value="${cell.value}"
+                  />
+                </div>
+              `;
+              rowWrap.appendChild(slot);
+            });
+
+            body.appendChild(rowWrap);
+          });
+
+          wrapper.appendChild(body);
+          root.appendChild(wrapper);
+          scrollArea.scrollLeft = 0;
+        }
+
+        switcher.querySelectorAll("[data-range]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const range = Number(button.dataset.range);
+            switcher.querySelectorAll("[data-range]").forEach((item) => {
+              item.className =
+                "rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-300";
+            });
+            button.className =
+              "rounded-md bg-white px-3 py-1.5 text-sm font-bold text-slate-900 shadow-sm dark:bg-slate-700 dark:text-slate-100";
+            render(range);
+          });
+        });
+
+        render(defaultRange);
+      })();
+    </script>
+  </body>
+</html>

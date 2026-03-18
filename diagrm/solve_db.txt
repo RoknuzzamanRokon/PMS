@@ -1,0 +1,149 @@
+erDiagram
+    PROPERTY {
+        bigint id PK
+        varchar supplier_property_id UK
+        varchar name
+        varchar name_lang
+        varchar property_type_code FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ROOM_TYPE {
+        bigint id PK
+        bigint property_id FK
+        varchar supplier_room_id UK
+        varchar room_name
+        varchar room_name_lang
+        int max_adults
+        int max_children
+        int total_inventory
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    RATE_PLAN {
+        bigint id PK
+        bigint property_id FK
+        bigint room_type_id FK
+        varchar supplier_rate_id UK
+        varchar title
+        varchar description
+        varchar meal_plan_code FK
+        boolean is_refundable
+        varchar cancellation_policy
+        int min_stay
+        int max_stay
+        boolean closed_to_arrival
+        boolean closed_to_departure
+        boolean stop_sell
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    RATE_CALENDAR {
+        bigint id PK
+        bigint property_id FK
+        bigint room_type_id FK
+        bigint rate_plan_id FK
+        date stay_date
+        varchar currency
+        decimal base_rate
+        decimal tax
+        decimal extra_adult_rate
+        decimal extra_child_rate
+        boolean availability
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ROOM_INVENTORY {
+        bigint id PK
+        bigint property_id FK
+        bigint room_type_id FK
+        date inventory_date
+        int total_rooms
+        int available_rooms
+        int booked_rooms
+        int blocked_rooms
+        timestamp updated_at
+    }
+
+    BOOKING {
+        bigint id PK
+        varchar booking_code UK
+        bigint property_id FK
+        varchar booking_status
+        date check_in
+        date check_out
+        varchar currency
+        decimal total_amount
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    BOOKING_ROOM {
+        bigint id PK
+        bigint booking_id FK
+        bigint property_id FK
+        bigint room_type_id FK
+        bigint rate_plan_id FK
+        int rooms_booked
+        decimal nightly_rate
+        decimal total_amount
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    PROPERTY_AMENITY {
+        bigint id PK
+        bigint property_id FK
+        bigint amenity_code_id FK
+    }
+
+    ROOM_TYPE_AMENITY {
+        bigint id PK
+        bigint room_type_id FK
+        bigint amenity_code_id FK
+    }
+
+    Z_PROPERTY_TYPE {
+        bigint id PK
+        varchar code UK
+        varchar title
+    }
+
+    Z_MEAL_PLAN {
+        bigint id PK
+        varchar code UK
+        varchar title
+    }
+
+    Z_AMENITIES_CODES {
+        bigint id PK
+        varchar code UK
+        varchar name
+        boolean for_room
+        boolean for_property
+    }
+
+    PROPERTY ||--o{ ROOM_TYPE : has
+    PROPERTY ||--o{ RATE_PLAN : has
+    PROPERTY ||--o{ RATE_CALENDAR : has
+    PROPERTY ||--o{ ROOM_INVENTORY : has
+    PROPERTY ||--o{ BOOKING : has
+    BOOKING ||--o{ BOOKING_ROOM : has
+
+    ROOM_TYPE ||--o{ RATE_PLAN : has
+    ROOM_TYPE ||--o{ RATE_CALENDAR : priced_by
+    ROOM_TYPE ||--o{ ROOM_INVENTORY : tracked_in
+    ROOM_TYPE ||--o{ BOOKING_ROOM : booked_as
+    ROOM_TYPE ||--o{ ROOM_TYPE_AMENITY : has
+
+    RATE_PLAN ||--o{ RATE_CALENDAR : daily_rate
+    RATE_PLAN ||--o{ BOOKING_ROOM : sold_as
+
+    Z_PROPERTY_TYPE ||--o{ PROPERTY : classifies
+    Z_MEAL_PLAN ||--o{ RATE_PLAN : defines
+    Z_AMENITIES_CODES ||--o{ PROPERTY_AMENITY : maps
+    Z_AMENITIES_CODES ||--o{ ROOM_TYPE_AMENITY : maps

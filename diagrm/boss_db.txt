@@ -1,0 +1,218 @@
+---
+config:
+  layout: elk
+---
+erDiagram
+    guests {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar guest_id UK
+        varchar first_name
+        varchar last_name
+        varchar email
+        varchar phone
+        varchar loyalty_status
+    }
+
+    payments {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar payment_id UK
+        varchar booking_id
+        decimal amount
+        varchar currency
+        varchar payment_method
+        varchar payment_status
+        varchar transaction_ref
+    }
+
+    properties {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar property_id UK
+        varchar name
+        varchar name_lang
+        varchar property_type
+    }
+
+    property_amenities {
+        int Id PK
+        varchar property_id
+        varchar amenity_code
+    }
+
+    rate_calendar {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar rate_id
+        date stay_date
+        varchar currency
+        decimal base_rate
+        decimal tax
+        varchar availability
+    }
+
+    rate_cancellation_policies {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar rate_id
+        date season_start_date
+        date season_end_date
+        int days_before_arrival
+        varchar penalty_type
+        decimal penalty_value
+        varchar description
+    }
+
+    rate_plans {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar rate_id UK
+        varchar room_id
+        varchar title
+        varchar description
+        varchar meal_plan
+        tinyint is_refundable
+        varchar bed_type
+        varchar cancellation_policy
+        tinyint status
+        int min_stay
+        int max_stay
+        varchar currency
+        decimal base_rate
+        decimal tax_and_service_fee
+        decimal surcharges
+        decimal mandatory_fee
+        decimal resort_fee
+        decimal mandatory_tax
+        int total_inventory
+        int available_inventory
+        int sold_inventory
+        tinyint closed_to_arrival
+        tinyint closed_to_departure
+        tinyint stop_sell
+        decimal extra_adult_rate
+        decimal extra_child_rate
+    }
+
+    reservations {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar booking_id UK
+        varchar property_id
+        varchar guest_id
+        date check_in_date
+        date check_out_date
+        decimal total_price
+        varchar currency
+        varchar booking_status
+    }
+
+    reservations_rooms {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar booking_id
+        varchar room_id
+        varchar rate_id
+        varchar room_name
+        varchar room_name_lang
+        decimal room_rate_snapshot
+        decimal tax_snapshot
+        varchar occupant_name
+    }
+
+    room_amenities {
+        int Id PK
+        varchar room_id
+        varchar amenity_code
+    }
+
+    rooms {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar property_id
+        varchar room_id UK
+        varchar room_name
+        varchar room_name_lang
+        decimal base_rate
+        decimal tax_and_service_fee
+        decimal surcharges
+        decimal mandatory_fee
+        decimal resort_fee
+        decimal mandatory_tax
+    }
+
+    users {
+        int Id PK
+        timestamp created_at
+        timestamp updated_at
+        varchar user_id UK
+        varchar username UK
+        varchar password_hash
+        varchar first_name
+        varchar last_name
+        varchar role
+        tinyint status
+    }
+
+    z_amenities_codes {
+        int Id PK
+        varchar code UK
+        varchar name
+        tinyint for_room
+        tinyint for_property
+    }
+
+    z_availability_status {
+        int Id PK
+        varchar code UK
+        varchar title
+        varchar desc
+    }
+
+    z_meal_plan {
+        int Id PK
+        varchar code UK
+        varchar title
+        varchar desc
+    }
+
+    z_property_type {
+        int Id PK
+        varchar code UK
+        varchar title
+        varchar desc
+    }
+
+    properties ||--o{ rooms : "property_id"
+    properties ||--o{ reservations : "property_id"
+    properties ||--o{ property_amenities : "property_id"
+
+    guests ||--o{ reservations : "guest_id"
+
+    rooms ||--o{ rate_plans : "room_id"
+    rooms ||--o{ reservations_rooms : "room_id"
+    rooms ||--o{ room_amenities : "room_id"
+
+    rate_plans ||--o{ rate_calendar : "rate_id"
+    rate_plans ||--o{ rate_cancellation_policies : "rate_id"
+    rate_plans ||--o{ reservations_rooms : "rate_id"
+
+    reservations ||--o{ reservations_rooms : "booking_id"
+    reservations ||--o{ payments : "booking_id"
+
+    z_property_type ||--o{ properties : "property_type"
+    z_meal_plan ||--o{ rate_plans : "meal_plan"
+    z_availability_status ||--o{ rate_calendar : "availability"
+
+    z_amenities_codes ||--o{ property_amenities : "amenity_code"
+    z_amenities_codes ||--o{ room_amenities : "amenity_code"

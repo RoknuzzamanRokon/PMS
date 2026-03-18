@@ -1,0 +1,1089 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Rooms Management - Hotel PMS</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1f10c6",
+              "background-light": "#f6f6f8",
+              "background-dark": "#121022",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div
+      class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden"
+    >
+      <header
+        class="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3 dark:border-slate-800 dark:bg-slate-900"
+      >
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-3 text-primary">
+            <div
+              class="flex size-8 items-center justify-center rounded-lg bg-primary text-white"
+            >
+              <span class="material-symbols-outlined">domain</span>
+            </div>
+            <h2
+              class="text-lg font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100"
+            >
+              Hotel PMS
+            </h2>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden sm:block">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-xl text-slate-400"
+              >search</span
+            >
+            <input
+              class="w-64 rounded-lg border-none bg-slate-100 py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary dark:bg-slate-800"
+              placeholder="Search rooms or categories..."
+              type="text"
+            />
+          </div>
+          <button
+            class="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <span class="material-symbols-outlined">notifications</span>
+            <span
+              class="absolute right-2 top-2 size-2 rounded-full border-2 border-white bg-red-500 dark:border-slate-900"
+            ></span>
+          </button>
+          <div class="mx-1 h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
+          <div class="flex items-center gap-3">
+            <div class="hidden text-right sm:block">
+              <p class="text-xs font-bold text-slate-900 dark:text-slate-100">
+                Alex Rivers
+              </p>
+              <p class="text-[10px] text-slate-500">Manager</p>
+            </div>
+            <div
+              class="flex size-9 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-primary/10"
+            >
+              <img
+                alt="User Profile"
+                class="size-full object-cover"
+                data-alt="Portrait of a male hotel manager"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvXXdPk52GDIOtvRsq-40ft_Mf8v4xBBK1IS0PEfY1DC_TF6sxi0X2hRiji0u_evvwyVgFuTFp3IzqfQPNKFggyD750idHIGsSEe-zcUW1aatojAApdkTy4IxetROrLiiNsTr8nziIECD4T_uTtmhtdNUeTvWTleCUuXV6WHrYG720pq_TMgb2rwWU5_XjSCJu0ErScDXAEa9tXHSlVITR4KYlQuinC3TgdgAmMVG0P_Hm1oNNGTcOE3X5G9cRUOhM-5N1Uuglsi8"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="flex grow overflow-hidden">
+        <aside
+          class="hidden w-64 flex-col border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:flex"
+        >
+          <div class="p-6">
+            <div class="mb-8 flex flex-col">
+              <h1 class="text-base font-bold text-slate-900 dark:text-slate-100">
+                Grand Plaza Hotel
+              </h1>
+              <p class="text-xs font-medium text-slate-500">
+                Admin Portal • London
+              </p>
+            </div>
+            <nav class="space-y-1">
+              <a
+                class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >dashboard</span
+                >
+                <span class="text-sm font-medium">Dashboard</span>
+              </a>
+              <a
+                class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                href="#"
+              >
+                <span class="material-symbols-outlined text-xl"
+                  >calendar_month</span
+                >
+                <span class="text-sm font-medium">Inventory Calendar</span>
+              </a>
+              <a
+                class="flex items-center gap-3 rounded-lg bg-primary/10 px-3 py-2.5 text-primary"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >bed</span
+                >
+                <span class="text-sm font-bold">Rooms Management</span>
+              </a>
+              <a
+                class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >sell</span
+                >
+                <span class="text-sm font-medium">Daily Rates</span>
+              </a>
+              <div class="pb-2 pt-4">
+                <p
+                  class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                >
+                  System
+                </p>
+              </div>
+              <a
+                class="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >settings</span
+                >
+                <span class="text-sm font-medium">Settings</span>
+              </a>
+            </nav>
+          </div>
+          <div class="mt-auto p-6">
+            <div class="rounded-xl bg-primary p-4 text-white">
+              <p class="mb-1 text-xs opacity-80">Total Occupancy</p>
+              <p class="text-xl font-bold">78.4%</p>
+              <div class="mt-3 h-1.5 w-full rounded-full bg-white/20">
+                <div class="h-full w-[78%] rounded-full bg-white"></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto p-6 lg:p-8">
+          <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div class="flex flex-col gap-1">
+              <div
+                class="mb-1 inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary"
+              >
+                <span class="material-symbols-outlined text-base">hotel</span>
+                Property + Room Type + Inventory
+              </div>
+              <h2
+                class="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100"
+              >
+                Rooms Management
+              </h2>
+              <p class="max-w-3xl text-sm text-slate-500">
+                Monitor hotel room status, manage room categories, and add
+                single or multiple rooms from one operational workspace.
+              </p>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <button
+                class="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+              >
+                <span class="material-symbols-outlined">file_download</span>
+                Export Room List
+              </button>
+              <button
+                class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90"
+              >
+                <span class="material-symbols-outlined">add_business</span>
+                Add Rooms
+              </button>
+            </div>
+          </div>
+
+          <section class="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <article
+              class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Total Rooms
+                </p>
+                <span
+                  class="material-symbols-outlined rounded-lg bg-slate-100 p-2 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  >meeting_room</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                128
+              </p>
+              <p class="mt-2 text-xs text-slate-500">
+                Across 6 active room categories for Grand Plaza Hotel.
+              </p>
+            </article>
+            <article
+              class="rounded-xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-900/40 dark:bg-slate-900"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Available
+                </p>
+                <span
+                  class="material-symbols-outlined rounded-lg bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-500/10"
+                  >check_circle</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                74
+              </p>
+              <p class="mt-2 text-xs text-emerald-600">
+                57.8% of total inventory open for sale tonight.
+              </p>
+            </article>
+            <article
+              class="rounded-xl border border-blue-200 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-slate-900"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Booked
+                </p>
+                <span
+                  class="material-symbols-outlined rounded-lg bg-blue-100 p-2 text-blue-600 dark:bg-blue-500/10"
+                  >bedtime</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                42
+              </p>
+              <p class="mt-2 text-xs text-blue-600">
+                Includes stayovers and confirmed arrivals in inventory.
+              </p>
+            </article>
+            <article
+              class="rounded-xl border border-amber-200 bg-white p-5 shadow-sm dark:border-amber-900/40 dark:bg-slate-900"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Blocked
+                </p>
+                <span
+                  class="material-symbols-outlined rounded-lg bg-amber-100 p-2 text-amber-600 dark:bg-amber-500/10"
+                  >block</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                12
+              </p>
+              <p class="mt-2 text-xs text-amber-600">
+                Held for maintenance, owner use, or manual restriction.
+              </p>
+            </article>
+            <article
+              class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div class="mb-4 flex items-center justify-between">
+                <p class="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  Occupancy
+                </p>
+                <span
+                  class="material-symbols-outlined rounded-lg bg-primary/10 p-2 text-primary"
+                  >bar_chart</span
+                >
+              </div>
+              <p class="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                78.4%
+              </p>
+              <div class="mt-3 h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
+                <div class="h-full w-[78%] rounded-full bg-primary"></div>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">
+                Based on booked plus blocked rooms versus total rooms.
+              </p>
+            </article>
+          </section>
+
+          <section class="mb-8 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+            <div
+              class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div
+                class="mb-6 flex flex-wrap items-start justify-between gap-4"
+              >
+                <div>
+                  <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">
+                    Status Overview
+                  </h3>
+                  <p class="mt-1 text-sm text-slate-500">
+                    Schema-safe inventory metrics with space for future
+                    operational room statuses.
+                  </p>
+                </div>
+                <div
+                  class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <p class="font-bold text-slate-900 dark:text-slate-100">
+                    Property
+                  </p>
+                  <p class="text-slate-500">Grand Plaza Hotel • London</p>
+                </div>
+              </div>
+
+              <div class="grid gap-4 md:grid-cols-2">
+                <div
+                  class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Inventory Mix
+                    </p>
+                    <span class="text-xs font-medium text-slate-500">
+                      ROOM_INVENTORY
+                    </span>
+                  </div>
+                  <div class="space-y-3">
+                    <div>
+                      <div class="mb-1 flex items-center justify-between text-xs">
+                        <span class="font-medium text-slate-500">Available</span>
+                        <span class="font-bold text-emerald-600">74 rooms</span>
+                      </div>
+                      <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          class="h-full w-[58%] rounded-full bg-emerald-500"
+                        ></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between text-xs">
+                        <span class="font-medium text-slate-500">Booked</span>
+                        <span class="font-bold text-blue-600">42 rooms</span>
+                      </div>
+                      <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div class="h-full w-[33%] rounded-full bg-blue-500"></div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between text-xs">
+                        <span class="font-medium text-slate-500">Blocked</span>
+                        <span class="font-bold text-amber-600">12 rooms</span>
+                      </div>
+                      <div class="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div
+                          class="h-full w-[9%] rounded-full bg-amber-500"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div class="mb-3 flex items-center justify-between">
+                    <p class="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      Future Operational Status
+                    </p>
+                    <span
+                      class="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary"
+                      >Reserved</span
+                    >
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                      <p class="font-semibold text-slate-900 dark:text-slate-100">
+                        Ready
+                      </p>
+                      <p class="mt-1 text-xs text-slate-500">
+                        Placeholder for housekeeping-ready state.
+                      </p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                      <p class="font-semibold text-slate-900 dark:text-slate-100">
+                        Dirty
+                      </p>
+                      <p class="mt-1 text-xs text-slate-500">
+                        Placeholder for turnover tracking.
+                      </p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                      <p class="font-semibold text-slate-900 dark:text-slate-100">
+                        Maintenance
+                      </p>
+                      <p class="mt-1 text-xs text-slate-500">
+                        Planned extension beyond blocked inventory.
+                      </p>
+                    </div>
+                    <div class="rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                      <p class="font-semibold text-slate-900 dark:text-slate-100">
+                        Out of Order
+                      </p>
+                      <p class="mt-1 text-xs text-slate-500">
+                        Future exception state for operations.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div class="mb-4">
+                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  Room Categories
+                </h3>
+                <p class="mt-1 text-sm text-slate-500">
+                  Manage `ROOM_TYPE` details and inventory baselines.
+                </p>
+              </div>
+
+              <div class="space-y-3">
+                <article
+                  class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div class="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        Deluxe King
+                      </p>
+                      <p class="text-xs text-slate-500">
+                        ROOM_TYPE: DLX-KING • 24 rooms
+                      </p>
+                    </div>
+                    <span
+                      class="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700"
+                      >Active</span
+                    >
+                  </div>
+                  <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Max Adults: 2
+                    </span>
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Max Children: 1
+                    </span>
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Amenities: Wi-Fi, City View
+                    </span>
+                  </div>
+                </article>
+
+                <article
+                  class="rounded-xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div class="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        Executive Twin
+                      </p>
+                      <p class="text-xs text-slate-500">
+                        ROOM_TYPE: EXE-TWN • 18 rooms
+                      </p>
+                    </div>
+                    <span
+                      class="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700"
+                      >Linked</span
+                    >
+                  </div>
+                  <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Max Adults: 2
+                    </span>
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Max Children: 2
+                    </span>
+                    <span class="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Amenities: Work Desk, Smart TV
+                    </span>
+                  </div>
+                </article>
+
+                <article
+                  class="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-4"
+                >
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="material-symbols-outlined rounded-lg bg-white p-2 text-primary"
+                      >add</span
+                    >
+                    <div>
+                      <p class="font-bold text-slate-900">Create New Category</p>
+                      <p class="text-xs text-slate-500">
+                        Add a fresh room category inline before assigning rooms.
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="mb-8 grid gap-4 2xl:grid-cols-[1.1fr_1.3fr]">
+            <div
+              class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div class="mb-5">
+                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  Create or Select Room Category
+                </h3>
+                <p class="mt-1 text-sm text-slate-500">
+                  Inline category setup based on the `ROOM_TYPE` structure.
+                </p>
+              </div>
+
+              <div class="mb-5 flex flex-wrap gap-2">
+                <button
+                  class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+                >
+                  Create New Category
+                </button>
+                <button
+                  class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Use Existing Category
+                </button>
+              </div>
+
+              <form class="grid gap-4 md:grid-cols-2">
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Property
+                  </span>
+                  <select
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <option>Grand Plaza Hotel</option>
+                  </select>
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Existing Category
+                  </span>
+                  <select
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                  >
+                    <option>Select or create new</option>
+                    <option>Deluxe King</option>
+                    <option>Executive Twin</option>
+                    <option>Family Suite</option>
+                  </select>
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Room Category Name
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="Deluxe King"
+                    type="text"
+                  />
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Localized Name
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="Deluxe King (EN/BG)"
+                    type="text"
+                  />
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Max Adults
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    min="1"
+                    type="number"
+                    value="2"
+                  />
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Max Children
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    min="0"
+                    type="number"
+                    value="1"
+                  />
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Total Inventory Baseline
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    min="0"
+                    type="number"
+                    value="24"
+                  />
+                </label>
+                <label class="flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Amenity Tags
+                  </span>
+                  <input
+                    class="rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="Wi-Fi, Balcony, Smart TV"
+                    type="text"
+                  />
+                </label>
+                <label class="md:col-span-2 flex flex-col gap-2 text-sm">
+                  <span class="font-medium text-slate-700 dark:text-slate-300">
+                    Category Notes
+                  </span>
+                  <textarea
+                    class="min-h-24 rounded-lg border-slate-200 bg-slate-50 text-sm dark:border-slate-700 dark:bg-slate-800"
+                    placeholder="Describe category positioning, inventory rules, or amenity mapping."
+                  ></textarea>
+                </label>
+                <div class="md:col-span-2 flex flex-wrap gap-3 pt-2">
+                  <button
+                    class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+                    type="button"
+                  >
+                    Save Category
+                  </button>
+                  <button
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                    type="button"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div
+              class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+            >
+              <div
+                class="mb-5 flex flex-wrap items-start justify-between gap-3"
+              >
+                <div>
+                  <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">
+                    Add Rooms
+                  </h3>
+                  <p class="mt-1 text-sm text-slate-500">
+                    Single add, bulk quantity add, and exact room-number bulk
+                    add in one workspace.
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+                  >
+                    Single Add
+                  </button>
+                  <button
+                    class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                  >
+                    Bulk Add
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid gap-4 lg:grid-cols-2">
+                <div class="space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined rounded-lg bg-white p-2 text-primary dark:bg-slate-900"
+                      >door_front</span
+                    >
+                    <div>
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        Single Room Add
+                      </p>
+                      <p class="text-xs text-slate-500">
+                        Add one room under any category.
+                      </p>
+                    </div>
+                  </div>
+                  <form class="grid gap-3">
+                    <select
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <option>Select room category</option>
+                      <option>Deluxe King</option>
+                      <option>Executive Twin</option>
+                      <option>Family Suite</option>
+                    </select>
+                    <input
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                      placeholder="Room number or code"
+                      type="text"
+                      value="1208"
+                    />
+                    <input
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                      placeholder="Room display name"
+                      type="text"
+                      value="1208 - Deluxe King"
+                    />
+                    <select
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <option>Initial status: Available</option>
+                      <option>Booked</option>
+                      <option>Blocked</option>
+                      <option>Ready (future)</option>
+                      <option>Dirty (future)</option>
+                    </select>
+                    <textarea
+                      class="min-h-24 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                      placeholder="Optional notes for the room."
+                    ></textarea>
+                    <button
+                      class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+                      type="button"
+                    >
+                      Add Single Room
+                    </button>
+                  </form>
+                </div>
+
+                <div class="space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="material-symbols-outlined rounded-lg bg-white p-2 text-primary dark:bg-slate-900"
+                      >library_add</span
+                    >
+                    <div>
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        Bulk Add
+                      </p>
+                      <p class="text-xs text-slate-500">
+                        Use quantity-based creation or paste exact room numbers.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      class="rounded-lg bg-white px-3 py-2 text-sm font-bold text-primary dark:bg-slate-900"
+                    >
+                      Count-based
+                    </button>
+                    <button
+                      class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                    >
+                      Room-number List
+                    </button>
+                  </div>
+                  <form class="grid gap-3">
+                    <select
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <option>Select category for bulk add</option>
+                      <option>Deluxe King</option>
+                      <option>Executive Twin</option>
+                      <option>Family Suite</option>
+                    </select>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <input
+                        class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                        min="1"
+                        placeholder="Quantity"
+                        type="number"
+                        value="6"
+                      />
+                      <input
+                        class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                        placeholder="Numbering pattern e.g. 15##"
+                        type="text"
+                        value="15##"
+                      />
+                    </div>
+                    <textarea
+                      class="min-h-28 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                      placeholder="Or paste room numbers on separate lines:&#10;1501&#10;1502&#10;1503"
+                    >1501
+1502
+1503
+1504</textarea
+                    >
+                    <select
+                      class="rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                    >
+                      <option>Initial status: Available</option>
+                      <option>Blocked</option>
+                      <option>Booked</option>
+                    </select>
+                    <textarea
+                      class="min-h-20 rounded-lg border-slate-200 bg-white text-sm dark:border-slate-700 dark:bg-slate-800"
+                      placeholder="Notes for this batch import."
+                    ></textarea>
+                    <button
+                      class="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+                      type="button"
+                    >
+                      Add Multiple Rooms
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div
+              class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 p-6 dark:border-slate-800"
+            >
+              <div>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-slate-100">
+                  Room List
+                </h3>
+                <p class="mt-1 text-sm text-slate-500">
+                  Static operations view ready for future room-level data wiring.
+                </p>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <div
+                  class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <span class="material-symbols-outlined text-slate-400"
+                    >filter_alt</span
+                  >
+                  <span class="font-medium text-slate-500">Status:</span>
+                  <span class="font-bold text-primary">All</span>
+                </div>
+                <div
+                  class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-800"
+                >
+                  <span class="material-symbols-outlined text-slate-400"
+                    >category</span
+                  >
+                  <span class="font-medium text-slate-500">Category:</span>
+                  <span class="font-bold text-primary">All Types</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-800/50">
+                  <tr>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Room
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Category
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Capacity
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Inventory Role
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Current Status
+                    </th>
+                    <th
+                      class="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Notes
+                    </th>
+                    <th
+                      class="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500"
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+                  <tr>
+                    <td class="px-6 py-4">
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        1208
+                      </p>
+                      <p class="text-xs text-slate-500">1208 - Deluxe King</p>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Deluxe King
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      2 Adults / 1 Child
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Counted in available inventory
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700"
+                        >Available</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">
+                      Newly opened after refurbishment.
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4">
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        1502
+                      </p>
+                      <p class="text-xs text-slate-500">Executive Twin</p>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Executive Twin
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      2 Adults / 2 Children
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Counted in blocked inventory
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700"
+                        >Blocked</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">
+                      Reserved for soft renovation next week.
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4">
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        1705
+                      </p>
+                      <p class="text-xs text-slate-500">Family Suite</p>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Family Suite
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      3 Adults / 2 Children
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Counted in booked inventory
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-bold text-blue-700"
+                        >Booked</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">
+                      Assigned to booking BR-54812.
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="px-6 py-4">
+                      <p class="font-bold text-slate-900 dark:text-slate-100">
+                        1810
+                      </p>
+                      <p class="text-xs text-slate-500">Premium Corner Suite</p>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Premium Corner Suite
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      2 Adults / 2 Children
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
+                      Future operational placeholder
+                    </td>
+                    <td class="px-6 py-4">
+                      <span
+                        class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                        >Ready (future)</span
+                      >
+                    </td>
+                    <td class="px-6 py-4 text-sm text-slate-500">
+                      Reserved UI state for housekeeping workflow.
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="rounded-lg px-3 py-1.5 text-sm font-medium text-rose-600 hover:bg-rose-50"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

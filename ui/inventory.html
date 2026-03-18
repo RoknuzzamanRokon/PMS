@@ -1,0 +1,812 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Inventory Calendar - Hotel PMS</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#1f10c6",
+              "background-light": "#f6f6f8",
+              "background-dark": "#121022",
+            },
+            fontFamily: {
+              display: ["Inter", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: 180px repeat(14, minmax(100px, 1fr));
+      }
+      .custom-scrollbar::-webkit-scrollbar {
+        height: 8px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100"
+  >
+    <div
+      class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden"
+    >
+      <!-- Top Navigation Bar -->
+      <header
+        class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-3 sticky top-0 z-50"
+      >
+        <div class="flex items-center gap-8">
+          <div class="flex items-center gap-3 text-primary">
+            <div
+              class="size-8 bg-primary rounded-lg flex items-center justify-center text-white"
+            >
+              <span class="material-symbols-outlined">domain</span>
+            </div>
+            <h2
+              class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight"
+            >
+              Hotel PMS
+            </h2>
+          </div>
+        
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="relative hidden sm:block">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl"
+              >search</span
+            >
+            <input
+              class="w-64 bg-slate-100 dark:bg-slate-800 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary"
+              placeholder="Search rooms or guests..."
+              type="text"
+            />
+          </div>
+          <button
+            class="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative"
+          >
+            <span class="material-symbols-outlined">notifications</span>
+            <span
+              class="absolute top-2 right-2 size-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"
+            ></span>
+          </button>
+          <div class="h-8 w-[1px] bg-slate-200 dark:bg-slate-800 mx-1"></div>
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden sm:block">
+              <p class="text-xs font-bold text-slate-900 dark:text-slate-100">
+                Alex Rivers
+              </p>
+              <p class="text-[10px] text-slate-500">Manager</p>
+            </div>
+            <div
+              class="size-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center overflow-hidden"
+            >
+              <img
+                alt="User Profile"
+                class="size-full object-cover"
+                data-alt="Portrait of a male hotel manager"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBvXXdPk52GDIOtvRsq-40ft_Mf8v4xBBK1IS0PEfY1DC_TF6sxi0X2hRiji0u_evvwyVgFuTFp3IzqfQPNKFggyD750idHIGsSEe-zcUW1aatojAApdkTy4IxetROrLiiNsTr8nziIECD4T_uTtmhtdNUeTvWTleCUuXV6WHrYG720pq_TMgb2rwWU5_XjSCJu0ErScDXAEa9tXHSlVITR4KYlQuinC3TgdgAmMVG0P_Hm1oNNGTcOE3X5G9cRUOhM-5N1Uuglsi8"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+      <div class="flex grow h-[calc(100vh-64px)] overflow-hidden">
+        <!-- Sidebar -->
+        <aside
+          class="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col hidden lg:flex"
+        >
+          <div class="p-6">
+            <div class="flex flex-col mb-8">
+              <h1
+                class="text-slate-900 dark:text-slate-100 text-base font-bold"
+              >
+                Grand Plaza Hotel
+              </h1>
+              <p class="text-slate-500 text-xs font-medium">
+                Admin Portal • London
+              </p>
+            </div>
+            <nav class="space-y-1">
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >dashboard</span
+                >
+                <span class="text-sm font-medium">Dashboard</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 bg-primary/10 text-primary rounded-lg"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl"
+                  style="font-variation-settings: &quot;FILL&quot; 1"
+                  >calendar_month</span
+                >
+                <span class="text-sm font-bold">Inventory Calendar</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >bed</span
+                >
+                <span class="text-sm font-medium">Rooms Management</span>
+              </a>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >sell</span
+                >
+                <span class="text-sm font-medium">Rates &amp; Offers</span>
+              </a>
+              <div class="pt-4 pb-2">
+                <p
+                  class="text-[10px] uppercase font-bold text-slate-400 px-3 tracking-widest"
+                >
+                  System
+                </p>
+              </div>
+              <a
+                class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg group"
+                href="#"
+              >
+                <span
+                  class="material-symbols-outlined text-xl group-hover:text-primary"
+                  >settings</span
+                >
+                <span class="text-sm font-medium">Settings</span>
+              </a>
+            </nav>
+          </div>
+          <div class="mt-auto p-6">
+            <div class="bg-primary rounded-xl p-4 text-white">
+              <p class="text-xs opacity-80 mb-1">Total Occupancy</p>
+              <p class="text-xl font-bold">84.2%</p>
+              <div class="w-full bg-white/20 h-1.5 rounded-full mt-3">
+                <div class="bg-white h-full rounded-full w-[84%]"></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden flex flex-col">
+          <!-- Content Header -->
+          <div
+            class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-6"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2
+                  class="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight"
+                >
+                  Inventory Calendar
+                </h2>
+                <p class="text-slate-500 text-sm">
+                  Real-time room availability for Oct 12 - Oct 25, 2023
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                  <button
+                    class="p-1.5 text-slate-600 hover:text-primary hover:bg-white dark:hover:bg-slate-700 rounded-md transition-all"
+                  >
+                    <span class="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <button
+                    class="px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-700 shadow-sm rounded-md"
+                  >
+                    Today
+                  </button>
+                  <button
+                    class="p-1.5 text-slate-600 hover:text-primary hover:bg-white dark:hover:bg-slate-700 rounded-md transition-all"
+                  >
+                    <span class="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
+                <button
+                  class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform"
+                >
+                  <span class="material-symbols-outlined text-sm">add</span>
+                  <span>Quick Booking</span>
+                </button>
+              </div>
+            </div>
+            <!-- Filters Bar -->
+            <div class="flex flex-wrap gap-3 mt-6">
+              <div
+                class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700"
+              >
+                <span class="material-symbols-outlined text-slate-400 text-lg"
+                  >filter_alt</span
+                >
+                <span
+                  class="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >Room Type:</span
+                >
+                <select
+                  class="bg-transparent border-none p-0 text-xs font-medium text-primary focus:ring-0 cursor-pointer"
+                >
+                  <option>All Types</option>
+                  <option>Deluxe Suite</option>
+                  <option>Standard Single</option>
+                  <option>Executive King</option>
+                </select>
+              </div>
+              <div
+                class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700"
+              >
+                <span class="material-symbols-outlined text-slate-400 text-lg"
+                  >stairs</span
+                >
+                <span
+                  class="text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >Floor:</span
+                >
+                <select
+                  class="bg-transparent border-none p-0 text-xs font-medium text-primary focus:ring-0 cursor-pointer"
+                >
+                  <option>All Floors</option>
+                  <option>1st Floor</option>
+                  <option>2nd Floor</option>
+                </select>
+              </div>
+              <div class="ml-auto flex items-center gap-6">
+                <div class="flex items-center gap-1.5">
+                  <span class="size-2.5 bg-blue-500 rounded-full"></span>
+                  <span class="text-[11px] font-medium text-slate-500"
+                    >Confirmed</span
+                  >
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="size-2.5 bg-green-500 rounded-full"></span>
+                  <span class="text-[11px] font-medium text-slate-500"
+                    >Checked-in</span
+                  >
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="size-2.5 bg-amber-400 rounded-full"></span>
+                  <span class="text-[11px] font-medium text-slate-500"
+                    >Pending</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Gantt Chart Container -->
+          <div
+            class="flex-1 overflow-auto custom-scrollbar bg-slate-50 dark:bg-slate-950"
+          >
+            <div class="min-w-max">
+              <!-- Calendar Header (Dates) -->
+              <div
+                class="calendar-grid sticky top-0 bg-white dark:bg-slate-900 z-30 border-b border-slate-200 dark:border-slate-800 shadow-sm"
+              >
+                <div
+                  class="p-4 border-r border-slate-200 dark:border-slate-800 flex items-center justify-between"
+                >
+                  <span
+                    class="text-xs font-bold uppercase text-slate-400 tracking-wider"
+                    >Rooms</span
+                  >
+                  <span class="material-symbols-outlined text-slate-400 text-sm"
+                    >unfold_more</span
+                  >
+                </div>
+                <!-- Generating 14 Days -->
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Mon</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >12 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Tue</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >13 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50"
+                >
+                  <span class="text-[10px] font-bold text-primary uppercase"
+                    >Today</span
+                  >
+                  <span class="text-sm font-black text-primary">14 Oct</span>
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Thu</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >15 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Fri</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >16 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/20"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Sat</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >17 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/20"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Sun</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >18 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Mon</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >19 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Tue</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >20 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Wed</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >21 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Thu</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >22 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Fri</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >23 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/20"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Sat</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >24 Oct</span
+                  >
+                </div>
+                <div
+                  class="flex flex-col items-center justify-center p-2 border-r border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/20"
+                >
+                  <span class="text-[10px] font-bold text-slate-400 uppercase"
+                    >Sun</span
+                  >
+                  <span
+                    class="text-sm font-bold text-slate-800 dark:text-slate-200"
+                    >25 Oct</span
+                  >
+                </div>
+              </div>
+              <!-- Room Rows -->
+              <div class="divide-y divide-slate-200 dark:divide-slate-800">
+                <!-- Room Row Example 1 -->
+                <div class="calendar-grid group h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >101</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Deluxe King</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <!-- Confirmed Booking -->
+                    <div class="absolute top-2 left-0 h-12 w-[300px] z-10 px-1">
+                      <div
+                        class="h-full bg-blue-500/15 border-l-4 border-blue-500 rounded-lg p-2 flex flex-col justify-center overflow-hidden cursor-pointer hover:bg-blue-500/25 transition-all"
+                      >
+                        <p
+                          class="text-[10px] font-black text-blue-700 dark:text-blue-400 truncate uppercase"
+                        >
+                          Smith, James
+                        </p>
+                        <p
+                          class="text-[9px] text-blue-600 dark:text-blue-500 truncate"
+                        >
+                          #RES-40291 • 3 Guests
+                        </p>
+                      </div>
+                    </div>
+                    <!-- Today Highlight Overlay -->
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Room Row Example 2 -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >102</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Deluxe King</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <!-- Checked-in Booking -->
+                    <div
+                      class="absolute top-2 left-[100px] h-12 w-[400px] z-10 px-1"
+                    >
+                      <div
+                        class="h-full bg-green-500/15 border-l-4 border-green-500 rounded-lg p-2 flex flex-col justify-center overflow-hidden cursor-pointer hover:bg-green-500/25 transition-all"
+                      >
+                        <p
+                          class="text-[10px] font-black text-green-700 dark:text-green-400 truncate uppercase"
+                        >
+                          Garcia, Maria
+                        </p>
+                        <p
+                          class="text-[9px] text-green-600 dark:text-green-500 truncate"
+                        >
+                          Checked-in • Rm 102
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Room Row Example 3 -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >103</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Std Queen</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <!-- Pending Booking -->
+                    <div
+                      class="absolute top-2 left-[600px] h-12 w-[200px] z-10 px-1"
+                    >
+                      <div
+                        class="h-full bg-amber-500/15 border-l-4 border-amber-500 border-dashed rounded-lg p-2 flex flex-col justify-center overflow-hidden cursor-pointer hover:bg-amber-500/25 transition-all"
+                      >
+                        <p
+                          class="text-[10px] font-black text-amber-700 dark:text-amber-500 truncate uppercase"
+                        >
+                          Taylor, Robert
+                        </p>
+                        <p
+                          class="text-[9px] text-amber-600 dark:text-amber-600 truncate"
+                        >
+                          Waiting Dep. • $420.00
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Room Row Example 4 -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >201</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Executive Suite</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <div
+                      class="absolute top-2 left-[200px] h-12 w-[300px] z-10 px-1"
+                    >
+                      <div
+                        class="h-full bg-blue-500/15 border-l-4 border-blue-500 rounded-lg p-2 flex flex-col justify-center overflow-hidden cursor-pointer hover:bg-blue-500/25 transition-all"
+                      >
+                        <p
+                          class="text-[10px] font-black text-blue-700 dark:text-blue-400 truncate uppercase"
+                        >
+                          Corp Booking: TechInc
+                        </p>
+                        <p
+                          class="text-[9px] text-blue-600 dark:text-blue-500 truncate"
+                        >
+                          #GRP-128 • 5 Rooms
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Room Row Example 5 -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >202</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Executive Suite</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Repeat/Filler Rows -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >203</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Std Queen</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >301</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Penthouse</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <div
+                      class="absolute top-2 left-[500px] h-12 w-[400px] z-10 px-1"
+                    >
+                      <div
+                        class="h-full bg-green-500/15 border-l-4 border-green-500 rounded-lg p-2 flex flex-col justify-center overflow-hidden cursor-pointer hover:bg-green-500/25 transition-all"
+                      >
+                        <p
+                          class="text-[10px] font-black text-green-700 dark:text-green-400 truncate uppercase"
+                        >
+                          Wang, Chen
+                        </p>
+                        <p
+                          class="text-[9px] text-green-600 dark:text-green-500 truncate"
+                        >
+                          VIP Guest • Champagne Service
+                        </p>
+                      </div>
+                    </div>
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+                <!-- Bottom Spacer Row -->
+                <div class="calendar-grid h-16">
+                  <div
+                    class="p-4 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-center"
+                  >
+                    <span
+                      class="text-sm font-bold text-slate-900 dark:text-slate-100 leading-none"
+                      >302</span
+                    >
+                    <span
+                      class="text-[10px] font-medium text-slate-500 uppercase mt-1"
+                      >Penthouse</span
+                    >
+                  </div>
+                  <div
+                    class="relative bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800/50 grid grid-cols-14 col-span-14 h-full"
+                  >
+                    <div
+                      class="absolute left-[200px] top-0 w-[100px] h-full bg-primary/5 pointer-events-none border-x border-primary/10"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Footer Stats -->
+          <div
+            class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between"
+          >
+            <div class="flex items-center gap-8">
+              <div class="flex flex-col">
+                <span
+                  class="text-[10px] text-slate-400 font-bold uppercase tracking-wider"
+                  >Arrivals</span
+                >
+                <span
+                  class="text-sm font-bold text-slate-900 dark:text-slate-100"
+                  >12</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <span
+                  class="text-[10px] text-slate-400 font-bold uppercase tracking-wider"
+                  >Departures</span
+                >
+                <span
+                  class="text-sm font-bold text-slate-900 dark:text-slate-100"
+                  >8</span
+                >
+              </div>
+              <div class="flex flex-col">
+                <span
+                  class="text-[10px] text-slate-400 font-bold uppercase tracking-wider"
+                  >Stay Overs</span
+                >
+                <span
+                  class="text-sm font-bold text-slate-900 dark:text-slate-100"
+                  >45</span
+                >
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 italic"
+                >Last synchronized: 2 mins ago</span
+              >
+              <button class="p-1.5 text-slate-400 hover:text-primary">
+                <span class="material-symbols-outlined text-lg">sync</span>
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

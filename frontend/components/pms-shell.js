@@ -87,9 +87,9 @@ export function PmsShell({
         <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
           <div className="p-6">
             <div className="mb-8 flex flex-col">
-              <h1 className="text-base font-bold">Grand Plaza Hotel</h1>
+              <h1 className="text-base font-bold">Property Workspace</h1>
               <p className="text-xs font-medium text-slate-500">
-                Admin Portal • London
+                Select a property to view live details
               </p>
             </div>
             <nav className="space-y-1">

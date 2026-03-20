@@ -432,7 +432,7 @@ export function PropertiesPage() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Link
-                        href="/rooms-management"
+                        href={`/rooms-management?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
                       >
                         <span className="material-symbols-outlined text-base">bed</span>

@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
+const defaultPropertyId = "PROP001";
+
 const fallbackData = {
-  property: { property_id: "PROP001", name: "Grand Plaza Hotel" },
+  property: { property_id: defaultPropertyId, name: "Selected Property" },
   summary: {
     total_rooms: 5,
     available_inventory: 39,
@@ -17,16 +20,20 @@ const fallbackData = {
   rooms: [],
 };
 
-export function RoomsManagementPage() {
+export function RoomsManagementPage({ propertyId }) {
+  const selectedPropertyId = propertyId || defaultPropertyId;
   const [data, setData] = useState(fallbackData);
   const [apiConnected, setApiConnected] = useState(false);
+  const propertyLocation = "Location info not available";
 
   useEffect(() => {
     let ignore = false;
 
     async function loadOverview() {
       try {
-        const overview = await fetchJson("/rooms/overview?property_id=PROP001");
+        const overview = await fetchJson(
+          `/rooms/overview?property_id=${encodeURIComponent(selectedPropertyId)}`,
+        );
         if (!ignore) {
           setData(overview);
           setApiConnected(true);
@@ -42,7 +49,7 @@ export function RoomsManagementPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [selectedPropertyId]);
 
   const summaryCards = useMemo(
     () => [
@@ -71,7 +78,11 @@ export function RoomsManagementPage() {
           <h2 className="text-3xl font-bold tracking-tight">Rooms Management</h2>
           <p className="max-w-3xl text-sm text-slate-500">
             Summary cards, category panels, and room table below are all fed by
-            the new `/api/v1/rooms/overview` endpoint.
+            {" "}
+            <span className="font-medium text-slate-700">
+              /api/v1/rooms/overview?property_id={selectedPropertyId}
+            </span>
+            .
           </p>
         </div>
         <div
@@ -88,6 +99,44 @@ export function RoomsManagementPage() {
           {apiConnected ? "Rooms API Live" : "Using Local Fallback"}
         </div>
       </div>
+
+      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+              Selected Property
+            </p>
+            <h3 className="mt-2 text-2xl font-bold text-slate-900">{data.property.name}</h3>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <span className="material-symbols-outlined text-primary">badge</span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Property ID
+                  </p>
+                  <p className="font-semibold">{data.property.property_id}</p>
+                </div>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                <span className="material-symbols-outlined text-primary">location_on</span>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Location
+                  </p>
+                  <p className="font-semibold">{propertyLocation}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <Link
+            href="/properties"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+          >
+            <span className="material-symbols-outlined text-base">arrow_back</span>
+            Back to Properties
+          </Link>
+        </div>
+      </section>
 
       <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map(([title, icon, value, note, tone]) => (
@@ -147,6 +196,9 @@ export function RoomsManagementPage() {
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <p className="font-bold">Property</p>
               <p className="text-slate-500">{data.property.name}</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
+                {selectedPropertyId}
+              </p>
             </div>
           </div>
 
@@ -189,7 +241,7 @@ export function RoomsManagementPage() {
                   ["Property ID", data.property.property_id],
                   ["Categories", `${data.categories.length}`],
                   ["Room Rows", `${data.rooms.length}`],
-                  ["Endpoint", "/api/v1/rooms/overview"],
+                  ["Endpoint", `/api/v1/rooms/overview?property_id=${selectedPropertyId}`],
                 ].map(([label, text]) => (
                   <div key={label} className="rounded-lg bg-slate-50 p-3">
                     <p className="font-semibold">{label}</p>
@@ -207,6 +259,12 @@ export function RoomsManagementPage() {
             <p className="mt-1 text-sm text-slate-500">
               Built from backend room and rate-plan relations.
             </p>
+          </div>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <div className="inline-flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium text-primary">
+              <span className="material-symbols-outlined text-base">pin_drop</span>
+              Viewing {data.property.name}
+            </div>
           </div>
           <div className="space-y-3">
             {data.categories.map((category) => (

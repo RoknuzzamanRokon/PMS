@@ -21,7 +21,7 @@ function buildDays(startDate, totalDays) {
 }
 
 const fallbackCalendar = {
-  property: { property_id: "PROP001", name: "Grand Plaza Hotel" },
+  property: { property_id: "PROP001", name: "Selected Property" },
   start_date: new Date().toISOString().slice(0, 10),
   days: 14,
   rows: [],

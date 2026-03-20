@@ -4,14 +4,133 @@
 
 :root {
   color-scheme: light;
+  --app-bg:
+    radial-gradient(circle at top left, rgba(31, 16, 198, 0.08), transparent 28%),
+    linear-gradient(180deg, #fbfbfd 0%, #f3f4f8 100%);
+  --app-fg: #0f172a;
+  --panel-bg: rgba(255, 255, 255, 0.88);
+  --panel-border: rgba(148, 163, 184, 0.22);
+  --panel-shadow: 0 20px 45px -30px rgba(15, 23, 42, 0.28);
+  --muted-text: #64748b;
+  --soft-surface: #f8fafc;
+  --soft-border: #e2e8f0;
+  --scroll-track: #f1f5f9;
+  --scroll-thumb: #cbd5e1;
+}
+
+:root[data-theme="soft-light"] {
+  color-scheme: light;
+  --app-bg:
+    radial-gradient(circle at 12% 16%, rgba(255, 214, 165, 0.42), transparent 24%),
+    radial-gradient(circle at 88% 18%, rgba(253, 230, 138, 0.34), transparent 20%),
+    radial-gradient(circle at 76% 84%, rgba(191, 219, 254, 0.34), transparent 24%),
+    linear-gradient(180deg, #fffdf8 0%, #f9f4ec 52%, #eef4fb 100%);
+  --app-fg: #43352d;
+  --panel-bg: rgba(255, 250, 242, 0.88);
+  --panel-border: rgba(221, 191, 161, 0.42);
+  --panel-shadow: 0 24px 48px -32px rgba(146, 104, 62, 0.26);
+  --muted-text: #8b6f5d;
+  --soft-surface: rgba(255, 246, 236, 0.94);
+  --soft-border: rgba(232, 212, 190, 0.9);
+  --scroll-track: #f7ede4;
+  --scroll-thumb: #d8c0a7;
+}
+
+.dark {
+  color-scheme: dark;
+  --app-bg:
+    radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 22%),
+    linear-gradient(180deg, #060816 0%, #0f172a 48%, #111827 100%);
+  --app-fg: #e5eefb;
+  --panel-bg: rgba(15, 23, 42, 0.78);
+  --panel-border: rgba(148, 163, 184, 0.14);
+  --panel-shadow: 0 30px 60px -34px rgba(2, 6, 23, 0.85);
+  --muted-text: #94a3b8;
+  --soft-surface: rgba(15, 23, 42, 0.7);
+  --soft-border: rgba(51, 65, 85, 0.9);
+  --scroll-track: #0f172a;
+  --scroll-thumb: #334155;
+}
+
+:root[data-theme="midnight"] {
+  color-scheme: dark;
+  --app-bg:
+    radial-gradient(circle at 12% 18%, rgba(244, 114, 182, 0.18), transparent 0 18%),
+    radial-gradient(circle at 78% 14%, rgba(250, 204, 21, 0.16), transparent 0 12%),
+    radial-gradient(circle at 84% 72%, rgba(56, 189, 248, 0.15), transparent 0 20%),
+    radial-gradient(circle at 22% 78%, rgba(129, 140, 248, 0.16), transparent 0 16%),
+    linear-gradient(180deg, #02030a 0%, #09111f 42%, #130f2b 100%);
+  --app-fg: #eef4ff;
+  --panel-bg: rgba(8, 12, 30, 0.72);
+  --panel-border: rgba(148, 163, 184, 0.16);
+  --panel-shadow: 0 34px 70px -36px rgba(1, 4, 20, 0.95);
+  --muted-text: #a9b7d0;
+  --soft-surface: rgba(14, 20, 43, 0.78);
+  --soft-border: rgba(71, 85, 105, 0.95);
+  --scroll-track: #050816;
+  --scroll-thumb: #3b4a6a;
 }
 
 body {
   min-height: 100vh;
+  background: var(--app-bg);
+  color: var(--app-fg);
+  position: relative;
+  overflow-x: hidden;
+  transition:
+    background 200ms ease,
+    color 200ms ease;
+}
+
+body::before,
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+
+body::before {
   background:
-    radial-gradient(circle at top left, rgba(31, 16, 198, 0.08), transparent 28%),
-    linear-gradient(180deg, #fbfbfd 0%, #f3f4f8 100%);
-  color: #0f172a;
+    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 68% 12%, rgba(255, 255, 255, 0.75) 0 1.2px, transparent 1.8px),
+    radial-gradient(circle at 84% 28%, rgba(191, 219, 254, 0.85) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 34% 72%, rgba(255, 255, 255, 0.7) 0 1.1px, transparent 1.8px),
+    radial-gradient(circle at 58% 84%, rgba(253, 224, 71, 0.85) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 10% 86%, rgba(196, 181, 253, 0.7) 0 1.2px, transparent 1.9px);
+}
+
+body::after {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(59, 130, 246, 0.03), rgba(236, 72, 153, 0.04));
+}
+
+:root[data-theme="soft-light"] body::before {
+  background:
+    radial-gradient(circle at 18% 24%, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 72% 14%, rgba(255, 241, 214, 0.95) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 84% 32%, rgba(255, 225, 179, 0.8) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 24% 74%, rgba(255, 255, 255, 0.68) 0 1px, transparent 1.8px);
+}
+
+:root[data-theme="soft-light"] body::after {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.32), transparent 38%),
+    linear-gradient(180deg, rgba(251, 191, 36, 0.08), rgba(125, 211, 252, 0.08));
+}
+
+:root[data-theme="midnight"] body::before,
+:root[data-theme="midnight"] body::after {
+  opacity: 1;
+}
+
+:root[data-theme="soft-light"] body::before,
+:root[data-theme="soft-light"] body::after {
+  opacity: 1;
 }
 
 * {
@@ -43,10 +162,32 @@ a {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--scroll-track);
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--scroll-thumb);
   border-radius: 9999px;
+}
+
+::selection {
+  background: rgba(31, 16, 198, 0.18);
+}
+
+@layer components {
+  .theme-panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--panel-shadow);
+    backdrop-filter: blur(18px);
+  }
+
+  .theme-soft {
+    background: var(--soft-surface);
+    border-color: var(--soft-border);
+  }
+
+  .theme-muted {
+    color: var(--muted-text);
+  }
 }

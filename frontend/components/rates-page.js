@@ -50,10 +50,10 @@ const fallbackRows = [
 
 const toneClasses = {
   default: {
-    box: "rounded-xl border border-slate-200 bg-white px-3 py-2.5",
+    box: "rounded-xl border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900/80",
     note: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400",
     input:
-      "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-slate-900 focus:ring-0",
+      "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-slate-900 focus:ring-0 dark:text-slate-100",
   },
   emerald: {
     box: "rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 ring-1 ring-emerald-100",
@@ -77,10 +77,10 @@ const toneClasses = {
     box: "rounded-xl border border-primary/20 bg-primary/[0.03] px-3 py-2.5",
     note: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-primary/70",
     input:
-      "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-slate-900 focus:ring-0",
+      "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-slate-900 focus:ring-0 dark:text-slate-100",
   },
   disabled: {
-    box: "rounded-xl border border-slate-200 bg-slate-100/70 px-3 py-2.5",
+    box: "rounded-xl border border-slate-200 bg-slate-100/70 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/70",
     note: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400",
     input:
       "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-slate-400 focus:ring-0",
@@ -151,7 +151,7 @@ function StatCard({ stat }) {
   };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
           {stat.label}
@@ -162,8 +162,8 @@ function StatCard({ stat }) {
           {stat.icon}
         </span>
       </div>
-      <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-      <p className="mt-2 text-xs text-slate-500">{stat.note}</p>
+      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stat.note}</p>
     </article>
   );
 }

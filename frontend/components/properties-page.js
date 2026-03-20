@@ -144,7 +144,7 @@ export function PropertiesPage() {
             Property Workspace
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Property Management</h2>
-          <p className="max-w-3xl text-sm text-slate-500">
+          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
             Manage the property list and jump into property actions for rooms, inventory,
             and daily rates from one place.
           </p>
@@ -198,11 +198,11 @@ export function PropertiesPage() {
           <article
             key={title}
             className={[
-              "rounded-xl bg-white p-5 shadow-sm",
+              "rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900/80",
               tone === "emerald" && "border border-emerald-200",
               tone === "blue" && "border border-blue-200",
               tone === "amber" && "border border-amber-200",
-              tone === "primary" && "border border-slate-200",
+              tone === "primary" && "border border-slate-200 dark:border-slate-700",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -226,16 +226,16 @@ export function PropertiesPage() {
               </span>
             </div>
             <p className="text-3xl font-bold">{value}</p>
-            <p className="mt-2 text-xs text-slate-500">{note}</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{note}</p>
           </article>
         ))}
       </section>
 
-      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold">Property Actions</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Create a new property, refresh the feed, or jump to operational modules.
             </p>
           </div>
@@ -251,7 +251,7 @@ export function PropertiesPage() {
             <button
               type="button"
               onClick={() => loadProperties(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
             >
               <span className="material-symbols-outlined text-base">
                 {refreshing ? "sync" : "refresh"}
@@ -264,10 +264,10 @@ export function PropertiesPage() {
         {showCreateForm ? (
           <form
             onSubmit={handleCreateProperty}
-            className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5"
+            className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70"
           >
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 Property Name
                 <input
                   type="text"
@@ -276,12 +276,12 @@ export function PropertiesPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, name: event.target.value }))
                   }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   placeholder="City View Hotel"
                 />
               </label>
 
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 Display Name
                 <input
                   type="text"
@@ -289,19 +289,19 @@ export function PropertiesPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, name_lang: event.target.value }))
                   }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   placeholder="City View Hotel"
                 />
               </label>
 
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700">
+              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                 Property Type
                 <select
                   value={form.property_type}
                   onChange={(event) =>
                     setForm((current) => ({ ...current, property_type: event.target.value }))
                   }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 >
                   {propertyTypeOptions.map((type) => (
                     <option key={type} value={type}>
@@ -326,7 +326,7 @@ export function PropertiesPage() {
                   setShowCreateForm(false);
                   setSubmitError("");
                 }}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700"
+                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
               >
                 Cancel
               </button>
@@ -343,11 +343,11 @@ export function PropertiesPage() {
         ) : null}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold">Properties List</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Search the property feed and open related property actions.
             </p>
           </div>
@@ -360,7 +360,7 @@ export function PropertiesPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search by property ID, name, or type"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             />
           </label>
         </div>
@@ -370,7 +370,7 @@ export function PropertiesPage() {
             {Array.from({ length: 4 }).map((_, index) => (
               <div
                 key={index}
-                className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70"
               >
                 <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr]">
                   <div className="h-5 w-24 rounded bg-slate-200" />
@@ -383,32 +383,32 @@ export function PropertiesPage() {
             ))}
           </div>
         ) : filteredProperties.length ? (
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="hidden bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="hidden bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800/70 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
               <span>Property ID</span>
               <span>Name</span>
               <span>Type</span>
               <span>Created</span>
               <span>Actions</span>
             </div>
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-200 dark:divide-slate-700">
               {filteredProperties.map((property) => (
                 <article
                   key={property.property_id}
-                  className="grid gap-4 px-5 py-4 transition-colors hover:bg-slate-50 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
+                  className="grid gap-4 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
                 >
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Property ID
                     </p>
-                    <p className="font-semibold text-slate-900">{property.property_id}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{property.property_id}</p>
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Name
                     </p>
-                    <p className="font-semibold text-slate-900">{property.name}</p>
-                    <p className="text-sm text-slate-500">{property.name_lang || property.name}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">{property.name}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{property.name_lang || property.name}</p>
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
@@ -422,7 +422,7 @@ export function PropertiesPage() {
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Created
                     </p>
-                    <p className="text-sm font-medium text-slate-700">
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {formatTimestamp(property.created_at)}
                     </p>
                   </div>
@@ -433,21 +433,21 @@ export function PropertiesPage() {
                     <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/rooms-management?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
                         <span className="material-symbols-outlined text-base">bed</span>
                         Rooms
                       </Link>
                       <Link
                         href={`/inventory?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
                         <span className="material-symbols-outlined text-base">calendar_month</span>
                         Inventory
                       </Link>
                       <Link
                         href="/daily-rates"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
                         <span className="material-symbols-outlined text-base">sell</span>
                         Rates
@@ -459,14 +459,14 @@ export function PropertiesPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70">
             <span className="material-symbols-outlined text-3xl text-slate-400">
               holiday_village
             </span>
-            <p className="mt-3 text-base font-semibold text-slate-900">
+            <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">
               {properties.length ? "No matching properties" : "No properties found"}
             </p>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {properties.length
                 ? "Try a different search term to find the property you want."
                 : "Create your first property to start managing rooms, inventory, and rates."}

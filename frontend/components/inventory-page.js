@@ -73,19 +73,19 @@ export function InventoryPage({ propertyId }) {
       sidebarMetricProgress={Math.max(20, Math.min(100, calendar.rows.length * 18))}
     >
       <div className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8">
-        <div className="border-b border-slate-200 bg-white px-6 py-6 lg:px-8">
+        <div className="border-b border-slate-200 bg-white px-6 py-6 dark:border-slate-700 dark:bg-slate-900/80 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold tracking-tight">
                 Inventory Calendar
               </h2>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Real bookings by room from `/api/v1/inventory/calendar` for {calendar.property.name}
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Link
                   href="/properties"
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                 >
                   <span className="material-symbols-outlined text-base">arrow_back</span>
                   Back to Properties
@@ -120,12 +120,12 @@ export function InventoryPage({ propertyId }) {
             ].map(([icon, label, value]) => (
               <div
                 key={label}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5"
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800/70"
               >
                 <span className="material-symbols-outlined text-lg text-slate-400">
                   {icon}
                 </span>
-                <span className="text-xs font-bold text-slate-700">{label}</span>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">{label}</span>
                 <span className="text-xs font-medium text-primary">{value}</span>
               </div>
             ))}
@@ -137,7 +137,7 @@ export function InventoryPage({ propertyId }) {
               ].map(([color, label]) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <span className={`size-2.5 rounded-full ${color}`} />
-                  <span className="text-[11px] font-medium text-slate-500">
+                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                     {label}
                   </span>
                 </div>
@@ -146,10 +146,10 @@ export function InventoryPage({ propertyId }) {
           </div>
         </div>
 
-        <div className="custom-scrollbar flex-1 overflow-auto bg-slate-50">
+        <div className="custom-scrollbar flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/40">
           <div className="min-w-max">
-            <div className="calendar-grid sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-r border-slate-200 p-4">
+            <div className="calendar-grid sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/95">
+              <div className="flex items-center justify-between border-r border-slate-200 p-4 dark:border-slate-700">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Rooms
                 </span>
@@ -161,9 +161,9 @@ export function InventoryPage({ propertyId }) {
                 <div
                   key={`${day.label}-${day.date}`}
                   className={[
-                    "flex flex-col items-center justify-center border-r border-slate-200 p-2",
-                    day.today && "bg-slate-50",
-                    day.weekend && "bg-slate-100/60",
+                    "flex flex-col items-center justify-center border-r border-slate-200 p-2 dark:border-slate-700",
+                    day.today && "bg-slate-50 dark:bg-slate-800/80",
+                    day.weekend && "bg-slate-100/60 dark:bg-slate-800/40",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -179,7 +179,7 @@ export function InventoryPage({ propertyId }) {
                   <span
                     className={[
                       "text-sm font-bold",
-                      day.today ? "text-primary" : "text-slate-800",
+                      day.today ? "text-primary" : "text-slate-800 dark:text-slate-200",
                     ].join(" ")}
                   >
                     {day.date}
@@ -188,17 +188,17 @@ export function InventoryPage({ propertyId }) {
               ))}
             </div>
 
-            <div className="divide-y divide-slate-200">
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {calendar.rows.map((row) => (
                 <div key={row.room_id} className="calendar-grid h-16">
-                  <div className="flex flex-col justify-center border-r border-slate-200 bg-white p-4">
+                  <div className="flex flex-col justify-center border-r border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
                     <span className="text-sm font-bold leading-none">{row.room_id}</span>
-                    <span className="mt-1 text-[10px] font-medium uppercase text-slate-500">
+                    <span className="mt-1 text-[10px] font-medium uppercase text-slate-500 dark:text-slate-400">
                       {row.room_name}
                     </span>
                   </div>
-                  <div className="relative col-span-14 grid h-full grid-cols-14 border-r border-slate-100 bg-white">
-                    <div className="pointer-events-none absolute left-[0px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5" />
+                  <div className="relative col-span-14 grid h-full grid-cols-14 border-r border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900/70">
+                    <div className="pointer-events-none absolute left-[0px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5 dark:border-primary/20 dark:bg-primary/10" />
                     {row.booking ? (
                       <div
                         className="absolute top-2 z-10 h-12 px-1"
@@ -247,7 +247,7 @@ export function InventoryPage({ propertyId }) {
                         </div>
                       </div>
                     ) : (
-                      <div className="absolute inset-y-0 left-0 flex items-center px-4 text-xs font-medium text-slate-400">
+                      <div className="absolute inset-y-0 left-0 flex items-center px-4 text-xs font-medium text-slate-400 dark:text-slate-500">
                         No booking in selected window
                       </div>
                     )}

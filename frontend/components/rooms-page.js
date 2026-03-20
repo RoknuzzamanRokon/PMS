@@ -76,10 +76,10 @@ export function RoomsManagementPage({ propertyId }) {
             Property + Room Type + Inventory
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Rooms Management</h2>
-          <p className="max-w-3xl text-sm text-slate-500">
+          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
             Summary cards, category panels, and room table below are all fed by
             {" "}
-            <span className="font-medium text-slate-700">
+              <span className="font-medium text-slate-700 dark:text-slate-300">
               /api/v1/rooms/overview?property_id={selectedPropertyId}
             </span>
             .
@@ -100,15 +100,15 @@ export function RoomsManagementPage({ propertyId }) {
         </div>
       </div>
 
-      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
               Selected Property
             </p>
-            <h3 className="mt-2 text-2xl font-bold text-slate-900">{data.property.name}</h3>
+            <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">{data.property.name}</h3>
             <div className="mt-4 flex flex-wrap gap-3">
-              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                 <span className="material-symbols-outlined text-primary">badge</span>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -117,7 +117,7 @@ export function RoomsManagementPage({ propertyId }) {
                   <p className="font-semibold">{data.property.property_id}</p>
                 </div>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                 <span className="material-symbols-outlined text-primary">location_on</span>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -130,7 +130,7 @@ export function RoomsManagementPage({ propertyId }) {
           </div>
           <Link
             href="/properties"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
           >
             <span className="material-symbols-outlined text-base">arrow_back</span>
             Back to Properties
@@ -143,11 +143,11 @@ export function RoomsManagementPage({ propertyId }) {
           <article
             key={title}
             className={[
-              "rounded-xl bg-white p-5 shadow-sm",
+              "rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900/80",
               tone === "emerald" && "border border-emerald-200",
               tone === "blue" && "border border-blue-200",
               tone === "amber" && "border border-amber-200",
-              tone === "slate" && "border border-slate-200",
+              tone === "slate" && "border border-slate-200 dark:border-slate-700",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -162,7 +162,7 @@ export function RoomsManagementPage({ propertyId }) {
                   tone === "emerald" && "bg-emerald-100 text-emerald-600",
                   tone === "blue" && "bg-blue-100 text-blue-600",
                   tone === "amber" && "bg-amber-100 text-amber-600",
-                  tone === "slate" && "bg-slate-100 text-slate-600",
+                  tone === "slate" && "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -172,30 +172,30 @@ export function RoomsManagementPage({ propertyId }) {
             </div>
             <p className="text-3xl font-bold">{value}</p>
             {title === "Occupancy" ? (
-              <div className="mt-3 h-2 w-full rounded-full bg-slate-100">
+              <div className="mt-3 h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
                   className="h-full rounded-full bg-primary"
                   style={{ width: `${data.summary.occupancy_percent}%` }}
                 />
               </div>
             ) : null}
-            <p className="mt-2 text-xs text-slate-500">{note}</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{note}</p>
           </article>
         ))}
       </section>
 
       <section className="mb-8 grid gap-4 xl:grid-cols-[1.4fr_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-xl font-bold">Status Overview</h3>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 Real inventory and occupancy metrics from the backend overview feed.
               </p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-800/70">
               <p className="font-bold">Property</p>
-              <p className="text-slate-500">{data.property.name}</p>
+              <p className="text-slate-500 dark:text-slate-400">{data.property.name}</p>
               <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-400">
                 {selectedPropertyId}
               </p>
@@ -203,10 +203,10 @@ export function RoomsManagementPage({ propertyId }) {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 p-4">
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-bold">Inventory Mix</p>
-                <span className="text-xs font-medium text-slate-500">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   API totals
                 </span>
               </div>
@@ -218,10 +218,10 @@ export function RoomsManagementPage({ propertyId }) {
                 ].map(([label, value, width, color, text]) => (
                   <div key={label}>
                     <div className="mb-1 flex items-center justify-between text-xs">
-                      <span className="font-medium text-slate-500">{label}</span>
+                      <span className="font-medium text-slate-500 dark:text-slate-400">{label}</span>
                       <span className={`font-bold ${text}`}>{value}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-100">
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                       <div className={`h-full rounded-full ${width} ${color}`} />
                     </div>
                   </div>
@@ -229,7 +229,7 @@ export function RoomsManagementPage({ propertyId }) {
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 p-4">
+            <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-bold">Operational Feed</p>
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -243,9 +243,9 @@ export function RoomsManagementPage({ propertyId }) {
                   ["Room Rows", `${data.rooms.length}`],
                   ["Endpoint", `/api/v1/rooms/overview?property_id=${selectedPropertyId}`],
                 ].map(([label, text]) => (
-                  <div key={label} className="rounded-lg bg-slate-50 p-3">
+                  <div key={label} className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/70">
                     <p className="font-semibold">{label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{text}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{text}</p>
                   </div>
                 ))}
               </div>
@@ -253,10 +253,10 @@ export function RoomsManagementPage({ propertyId }) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
           <div className="mb-4">
             <h3 className="text-xl font-bold">Room Categories</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Built from backend room and rate-plan relations.
             </p>
           </div>
@@ -268,11 +268,11 @@ export function RoomsManagementPage({ propertyId }) {
           </div>
           <div className="space-y-3">
             {data.categories.map((category) => (
-              <article key={category.room_id} className="rounded-xl border border-slate-200 p-4">
+              <article key={category.room_id} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
                     <p className="font-bold">{category.room_name}</p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       {category.room_id} • {category.rate_plan_count} rate plans
                     </p>
                   </div>
@@ -281,13 +281,13 @@ export function RoomsManagementPage({ propertyId }) {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
                     Base Rate: ${Number(category.base_rate).toFixed(2)}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
                     Available: {category.available_inventory}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
                     Sold: {category.sold_inventory}
                   </span>
                 </div>
@@ -297,17 +297,17 @@ export function RoomsManagementPage({ propertyId }) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold">Room Inventory Table</h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Directly rendered from the room overview response.
             </p>
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-700">
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
                 <th className="pb-3">Room</th>
@@ -318,14 +318,14 @@ export function RoomsManagementPage({ propertyId }) {
                 <th className="pb-3">Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {data.rooms.map((row) => (
                 <tr key={row.room_id}>
                   {[row.room_id, row.property_id, `$${Number(row.base_rate).toFixed(2)}`, row.status, row.housekeeping_status, row.note].map(
                     (cell, index) => (
                       <td
                         key={`${row.room_id}-${index}`}
-                        className="py-4 pr-4 text-slate-600 first:font-bold first:text-slate-900"
+                        className="py-4 pr-4 text-slate-600 first:font-bold first:text-slate-900 dark:text-slate-300 dark:first:text-slate-100"
                       >
                         {cell}
                       </td>

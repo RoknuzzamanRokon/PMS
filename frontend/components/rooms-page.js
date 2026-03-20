@@ -1,20 +1,66 @@
-import { PmsShell } from "./pms-shell";
+"use client";
 
-const summaryCards = [
-  ["Total Rooms", "meeting_room", "128", "Across 6 active room categories for Grand Plaza Hotel.", "slate"],
-  ["Available", "check_circle", "74", "57.8% of total inventory open for sale tonight.", "emerald"],
-  ["Booked", "bedtime", "42", "Includes stayovers and confirmed arrivals in inventory.", "blue"],
-  ["Blocked", "block", "12", "Held for maintenance, owner use, or manual restriction.", "amber"],
-  ["Occupancy", "bar_chart", "78.4%", "Based on booked plus blocked rooms versus total rooms.", "slate"],
-];
+import { useEffect, useMemo, useState } from "react";
+import { PmsShell } from "./pms-shell";
+import { fetchJson } from "../lib/api";
+
+const fallbackData = {
+  property: { property_id: "PROP001", name: "Grand Plaza Hotel" },
+  summary: {
+    total_rooms: 5,
+    available_inventory: 39,
+    sold_inventory: 58,
+    blocked_inventory: 2,
+    occupancy_percent: 69.7,
+  },
+  categories: [],
+  rooms: [],
+};
 
 export function RoomsManagementPage() {
+  const [data, setData] = useState(fallbackData);
+  const [apiConnected, setApiConnected] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadOverview() {
+      try {
+        const overview = await fetchJson("/rooms/overview?property_id=PROP001");
+        if (!ignore) {
+          setData(overview);
+          setApiConnected(true);
+        }
+      } catch {
+        if (!ignore) {
+          setApiConnected(false);
+        }
+      }
+    }
+
+    loadOverview();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const summaryCards = useMemo(
+    () => [
+      ["Total Rooms", "meeting_room", String(data.summary.total_rooms), `${data.property.name} is synced from the backend property feed.`, "slate"],
+      ["Available", "check_circle", String(data.summary.available_inventory), "Available inventory across linked rate plans.", "emerald"],
+      ["Booked", "bedtime", String(data.summary.sold_inventory), "Sold inventory from current rate plan totals.", "blue"],
+      ["Blocked", "block", String(data.summary.blocked_inventory), "Derived from CTA, CTD, or stop-sell flags.", "amber"],
+      ["Occupancy", "bar_chart", `${data.summary.occupancy_percent}%`, "Calculated from sold versus total inventory.", "slate"],
+    ],
+    [data],
+  );
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or categories..."
       sidebarMetricLabel="Total Occupancy"
-      sidebarMetricValue="78.4%"
-      sidebarMetricProgress={78}
+      sidebarMetricValue={`${data.summary.occupancy_percent}%`}
+      sidebarMetricProgress={Math.max(10, Math.min(100, Math.round(data.summary.occupancy_percent)))}
     >
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
@@ -24,19 +70,22 @@ export function RoomsManagementPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Rooms Management</h2>
           <p className="max-w-3xl text-sm text-slate-500">
-            Monitor hotel room status, manage room categories, and add single
-            or multiple rooms from one operational workspace.
+            Summary cards, category panels, and room table below are all fed by
+            the new `/api/v1/rooms/overview` endpoint.
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-            <span className="material-symbols-outlined">file_download</span>
-            Export Room List
-          </button>
-          <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90">
-            <span className="material-symbols-outlined">add_business</span>
-            Add Rooms
-          </button>
+        <div
+          className={[
+            "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+            apiConnected
+              ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border border-amber-200 bg-amber-50 text-amber-700",
+          ].join(" ")}
+        >
+          <span className="material-symbols-outlined text-base">
+            {apiConnected ? "sync" : "cloud_off"}
+          </span>
+          {apiConnected ? "Rooms API Live" : "Using Local Fallback"}
         </div>
       </div>
 
@@ -75,7 +124,10 @@ export function RoomsManagementPage() {
             <p className="text-3xl font-bold">{value}</p>
             {title === "Occupancy" ? (
               <div className="mt-3 h-2 w-full rounded-full bg-slate-100">
-                <div className="h-full w-[78%] rounded-full bg-primary" />
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${data.summary.occupancy_percent}%` }}
+                />
               </div>
             ) : null}
             <p className="mt-2 text-xs text-slate-500">{note}</p>
@@ -89,13 +141,12 @@ export function RoomsManagementPage() {
             <div>
               <h3 className="text-xl font-bold">Status Overview</h3>
               <p className="mt-1 text-sm text-slate-500">
-                Schema-safe inventory metrics with space for future operational
-                room statuses.
+                Real inventory and occupancy metrics from the backend overview feed.
               </p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <p className="font-bold">Property</p>
-              <p className="text-slate-500">Grand Plaza Hotel • London</p>
+              <p className="text-slate-500">{data.property.name}</p>
             </div>
           </div>
 
@@ -104,14 +155,14 @@ export function RoomsManagementPage() {
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-sm font-bold">Inventory Mix</p>
                 <span className="text-xs font-medium text-slate-500">
-                  ROOM_INVENTORY
+                  API totals
                 </span>
               </div>
               <div className="space-y-3">
                 {[
-                  ["Available", "74 rooms", "w-[58%]", "bg-emerald-500", "text-emerald-600"],
-                  ["Booked", "42 rooms", "w-[33%]", "bg-blue-500", "text-blue-600"],
-                  ["Blocked", "12 rooms", "w-[9%]", "bg-amber-500", "text-amber-600"],
+                  ["Available", `${data.summary.available_inventory} units`, "w-[55%]", "bg-emerald-500", "text-emerald-600"],
+                  ["Booked", `${data.summary.sold_inventory} units`, "w-[35%]", "bg-blue-500", "text-blue-600"],
+                  ["Blocked", `${data.summary.blocked_inventory} flags`, "w-[10%]", "bg-amber-500", "text-amber-600"],
                 ].map(([label, value, width, color, text]) => (
                   <div key={label}>
                     <div className="mb-1 flex items-center justify-between text-xs">
@@ -128,17 +179,17 @@ export function RoomsManagementPage() {
 
             <div className="rounded-xl border border-slate-200 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-bold">Future Operational Status</p>
+                <p className="text-sm font-bold">Operational Feed</p>
                 <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
-                  Reserved
+                  Live
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
-                  ["Ready", "Placeholder for housekeeping-ready state."],
-                  ["Dirty", "Placeholder for turnover tracking."],
-                  ["Maintenance", "Planned extension beyond blocked inventory."],
-                  ["Out of Order", "Future exception state for operations."],
+                  ["Property ID", data.property.property_id],
+                  ["Categories", `${data.categories.length}`],
+                  ["Room Rows", `${data.rooms.length}`],
+                  ["Endpoint", "/api/v1/rooms/overview"],
                 ].map(([label, text]) => (
                   <div key={label} className="rounded-lg bg-slate-50 p-3">
                     <p className="font-semibold">{label}</p>
@@ -154,40 +205,33 @@ export function RoomsManagementPage() {
           <div className="mb-4">
             <h3 className="text-xl font-bold">Room Categories</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Manage `ROOM_TYPE` details and inventory baselines.
+              Built from backend room and rate-plan relations.
             </p>
           </div>
           <div className="space-y-3">
-            {[
-              ["Deluxe King", "ROOM_TYPE: DLX-KING • 24 rooms", "Active", "emerald", ["Max Adults: 2", "Max Children: 1", "Amenities: Wi-Fi, City View"]],
-              ["Executive Twin", "ROOM_TYPE: EXE-TWN • 18 rooms", "Linked", "blue", ["Max Adults: 2", "Max Children: 2", "Amenities: Work Desk, Smart TV"]],
-              ["Family Suite", "ROOM_TYPE: FAM-STE • 14 rooms", "Premium", "amber", ["Max Adults: 4", "Max Children: 2", "Amenities: Sofa Bed, Bathtub"]],
-            ].map(([title, subtitle, badge, tone, pills]) => (
-              <article key={title} className="rounded-xl border border-slate-200 p-4">
+            {data.categories.map((category) => (
+              <article key={category.room_id} className="rounded-xl border border-slate-200 p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-bold">{title}</p>
-                    <p className="text-xs text-slate-500">{subtitle}</p>
+                    <p className="font-bold">{category.room_name}</p>
+                    <p className="text-xs text-slate-500">
+                      {category.room_id} • {category.rate_plan_count} rate plans
+                    </p>
                   </div>
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
-                      tone === "emerald" && "bg-emerald-100 text-emerald-700",
-                      tone === "blue" && "bg-blue-100 text-blue-700",
-                      tone === "amber" && "bg-amber-100 text-amber-700",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
-                  >
-                    {badge}
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                    Active
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  {pills.map((pill) => (
-                    <span key={pill} className="rounded-full bg-slate-100 px-2.5 py-1">
-                      {pill}
-                    </span>
-                  ))}
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Base Rate: ${Number(category.base_rate).toFixed(2)}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Available: {category.available_inventory}
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1">
+                    Sold: {category.sold_inventory}
+                  </span>
                 </div>
               </article>
             ))}
@@ -200,16 +244,8 @@ export function RoomsManagementPage() {
           <div>
             <h3 className="text-xl font-bold">Room Inventory Table</h3>
             <p className="mt-1 text-sm text-slate-500">
-              Example listing for active rooms and their operational state.
+              Directly rendered from the room overview response.
             </p>
-          </div>
-          <div className="flex gap-2">
-            <button className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              Filter
-            </button>
-            <button className="rounded-lg bg-primary px-3 py-2 text-sm font-bold text-white">
-              Add Single Room
-            </button>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -217,26 +253,26 @@ export function RoomsManagementPage() {
             <thead>
               <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-400">
                 <th className="pb-3">Room</th>
-                <th className="pb-3">Category</th>
-                <th className="pb-3">Floor</th>
+                <th className="pb-3">Property</th>
+                <th className="pb-3">Base Rate</th>
                 <th className="pb-3">Status</th>
                 <th className="pb-3">Housekeeping</th>
                 <th className="pb-3">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {[
-                ["101", "Deluxe King", "1", "Available", "Ready", "Near elevator"],
-                ["203", "Executive Twin", "2", "Booked", "Clean", "VIP pre-assigned"],
-                ["407", "Family Suite", "4", "Blocked", "Maintenance", "AC inspection"],
-                ["611", "Presidential Suite", "6", "Booked", "Inspection", "Late arrival"],
-              ].map((row) => (
-                <tr key={row[0]}>
-                  {row.map((cell, index) => (
-                    <td key={`${row[0]}-${index}`} className="py-4 pr-4 text-slate-600 first:font-bold first:text-slate-900">
-                      {cell}
-                    </td>
-                  ))}
+              {data.rooms.map((row) => (
+                <tr key={row.room_id}>
+                  {[row.room_id, row.property_id, `$${Number(row.base_rate).toFixed(2)}`, row.status, row.housekeeping_status, row.note].map(
+                    (cell, index) => (
+                      <td
+                        key={`${row.room_id}-${index}`}
+                        className="py-4 pr-4 text-slate-600 first:font-bold first:text-slate-900"
+                      >
+                        {cell}
+                      </td>
+                    ),
+                  )}
                 </tr>
               ))}
             </tbody>

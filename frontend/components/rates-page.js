@@ -1,49 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
 const todayIndex = 4;
 
-const summaryStats = [
-  {
-    label: "Publish Queue",
-    value: "14 changes",
-    note: "7 need review before push",
-    icon: "publish",
-    tone: "primary",
-  },
-  {
-    label: "ADR Today",
-    value: "$214.50",
-    note: "+$16.30 vs comp set",
-    icon: "payments",
-    tone: "emerald",
-  },
-  {
-    label: "High Demand Days",
-    value: "5 days",
-    note: "Weekend compression building",
-    icon: "trending_up",
-    tone: "amber",
-  },
-  {
-    label: "Restrictions Active",
-    value: "3 rules",
-    note: "Min stay and CTA mix applied",
-    icon: "rule_settings",
-    tone: "blue",
-  },
-];
-
-const roomGroups = [
+const fallbackRows = [
   {
     title: "Deluxe Suite",
-    code: "DLX-SUI",
+    code: "RATE001",
     subtitle: "12 rooms",
     occupancy: "92%",
     strategy: "Push premium on Fri-Sun",
+    stopSell: false,
+    cta: false,
+    ctd: false,
     cells: [
       { note: "Base", value: "$240", tone: "default" },
       { note: "High", value: "$285", tone: "emerald" },
@@ -56,10 +29,13 @@ const roomGroups = [
   },
   {
     title: "Standard Double",
-    code: "STD-DBL",
+    code: "RATE002",
     subtitle: "45 rooms",
     occupancy: "54%",
     strategy: "Keep parity with compset",
+    stopSell: false,
+    cta: false,
+    ctd: false,
     cells: [
       { note: "Base", value: "$145", tone: "default" },
       { note: "Base", value: "$145", tone: "default" },
@@ -68,38 +44,6 @@ const roomGroups = [
       { note: "Today", value: "$145", tone: "today-soft" },
       { note: "Lift", value: "$165", tone: "amber" },
       { note: "Lift", value: "$185", tone: "emerald" },
-    ],
-  },
-  {
-    title: "Executive Twin",
-    code: "EXE-TWN",
-    subtitle: "18 rooms",
-    occupancy: "76%",
-    strategy: "Corporate pace is healthy",
-    cells: [
-      { note: "Base", value: "$180", tone: "default" },
-      { note: "Base", value: "$180", tone: "default" },
-      { note: "Lift", value: "$195", tone: "amber" },
-      { note: "Lift", value: "$195", tone: "amber" },
-      { note: "Today", value: "$210", tone: "primary" },
-      { note: "Push", value: "$225", tone: "emerald" },
-      { note: "Push", value: "$235", tone: "emerald" },
-    ],
-  },
-  {
-    title: "Single Economy",
-    code: "SGL-ECO",
-    subtitle: "8 rooms",
-    occupancy: "33%",
-    strategy: "Use as entry price fence",
-    cells: [
-      { note: "Closed", value: "Sold Out", tone: "disabled" },
-      { note: "Base", value: "$95", tone: "default" },
-      { note: "Base", value: "$95", tone: "default" },
-      { note: "Soft", value: "$85", tone: "default" },
-      { note: "Today", value: "$85", tone: "today-soft" },
-      { note: "Lift", value: "$110", tone: "amber" },
-      { note: "Lift", value: "$125", tone: "default" },
     ],
   },
 ];
@@ -123,12 +67,6 @@ const toneClasses = {
     input:
       "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-amber-700 focus:ring-0",
   },
-  blue: {
-    box: "rounded-xl border border-blue-200 bg-blue-50/80 px-3 py-2.5 ring-1 ring-blue-100",
-    note: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-blue-600",
-    input:
-      "w-full border-none bg-transparent p-0 text-left text-sm font-bold text-blue-700 focus:ring-0",
-  },
   primary: {
     box: "rounded-xl border-2 border-primary bg-primary/[0.03] px-3 py-2.5 shadow-sm",
     note: "mb-1 block text-[10px] font-bold uppercase tracking-wider text-primary",
@@ -149,31 +87,57 @@ const toneClasses = {
   },
 };
 
-const insightCards = [
-  {
-    title: "Today's Suggestions",
-    items: [
-      "Deluxe Suite can hold +$20 without dropping below target conversion.",
-      "Executive Twin is pacing above forecast for the next 3 nights.",
-      "Single Economy should stay low to protect funnel entry.",
-    ],
-  },
-  {
-    title: "Restriction Watch",
-    items: [
-      "Add 2-night minimum for Saturday on Deluxe Suite.",
-      "Close arrival on Single Economy for Oct 22 if occupancy crosses 80%.",
-      "Review OTA markup before pushing publish batch.",
-    ],
-  },
-];
-
 function createDays() {
   return Array.from({ length: totalDays }, (_, index) => {
     const date = new Date(2023, 9, index + 1);
     return {
       shortDay: date.toLocaleDateString("en-US", { weekday: "short" }),
       dayNum: String(index + 1).padStart(2, "0"),
+    };
+  });
+}
+
+function getTone(item, index) {
+  if (item.availability === "SOLD_OUT") {
+    return "disabled";
+  }
+  if (index === todayIndex) {
+    return "primary";
+  }
+  if (item.availability === "LOW") {
+    return "amber";
+  }
+  return Number(item.base_rate) >= 220 ? "emerald" : "default";
+}
+
+function buildRowsFromApi(rooms, ratePlans, calendarByRateId) {
+  if (!ratePlans.length) {
+    return fallbackRows;
+  }
+
+  const roomMap = new Map(rooms.map((room) => [room.room_id, room]));
+
+  return ratePlans.map((ratePlan) => {
+    const room = roomMap.get(ratePlan.room_id);
+    const calendar = calendarByRateId[ratePlan.rate_id] || [];
+    const occupancyPercent = ratePlan.total_inventory
+      ? Math.round((ratePlan.sold_inventory / ratePlan.total_inventory) * 100)
+      : 0;
+
+    return {
+      title: room?.room_name || ratePlan.title,
+      code: ratePlan.rate_id,
+      subtitle: `${ratePlan.available_inventory} available`,
+      occupancy: `${occupancyPercent}%`,
+      strategy: ratePlan.description || ratePlan.cancellation_policy,
+      stopSell: Boolean(ratePlan.stop_sell),
+      cta: Boolean(ratePlan.closed_to_arrival),
+      ctd: Boolean(ratePlan.closed_to_departure),
+      cells: calendar.map((item, index) => ({
+        note: item.availability === "LOW" ? "Review" : index === todayIndex ? "Today" : item.availability,
+        value: item.availability === "SOLD_OUT" ? "Sold Out" : `$${Number(item.base_rate).toFixed(0)}`,
+        tone: getTone(item, index),
+      })),
     };
   });
 }
@@ -206,33 +170,146 @@ function StatCard({ stat }) {
 
 export function DailyRatesPage() {
   const [range, setRange] = useState(7);
+  const [properties, setProperties] = useState([]);
+  const [selectedProperty, setSelectedProperty] = useState("PROP001");
+  const [rows, setRows] = useState(fallbackRows);
+  const [rooms, setRooms] = useState([]);
+  const [apiConnected, setApiConnected] = useState(false);
   const days = useMemo(createDays, []);
 
-  const rows = useMemo(
-    () =>
-      roomGroups.map((row) => ({
-        ...row,
-        cells: Array.from({ length: totalDays }, (_, index) => {
-          const seed = row.cells[index % row.cells.length];
-          if (index === todayIndex) {
-            return {
-              ...seed,
-              note: "Today",
-              tone: seed.tone === "disabled" ? "disabled" : "primary",
-            };
-          }
-          return { ...seed };
-        }),
-      })),
-    [],
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadRates() {
+      try {
+        const propertyList = await fetchJson("/properties");
+        if (ignore) {
+          return;
+        }
+
+        const propertyId = propertyList[0]?.property_id || "PROP001";
+        setProperties(propertyList);
+        setSelectedProperty(propertyId);
+
+        const roomList = await fetchJson(`/rooms?property_id=${propertyId}`);
+        if (ignore) {
+          return;
+        }
+        setRooms(roomList);
+
+        const ratePlanLists = await Promise.all(
+          roomList.map((room) =>
+            fetchJson(`/rate-plans?room_id=${room.room_id}`).catch(() => []),
+          ),
+        );
+
+        const primaryRatePlans = ratePlanLists
+          .map((list) => list[0])
+          .filter(Boolean);
+
+        const calendarEntries = await Promise.all(
+          primaryRatePlans.map((ratePlan) =>
+            fetchJson(`/rate-plans/${ratePlan.rate_id}/calendar`).catch(() => []),
+          ),
+        );
+
+        if (ignore) {
+          return;
+        }
+
+        const calendarByRateId = Object.fromEntries(
+          primaryRatePlans.map((ratePlan, index) => [
+            ratePlan.rate_id,
+            calendarEntries[index],
+          ]),
+        );
+
+        setRows(buildRowsFromApi(roomList, primaryRatePlans, calendarByRateId));
+        setApiConnected(true);
+      } catch {
+        if (!ignore) {
+          setApiConnected(false);
+          setRows(fallbackRows);
+        }
+      }
+    }
+
+    loadRates();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const summaryStats = useMemo(() => {
+    const visibleRows = rows.length ? rows : fallbackRows;
+    const allCells = visibleRows.flatMap((row) => row.cells.slice(0, range));
+    const numericRates = allCells
+      .map((cell) => Number(String(cell.value).replace(/[^0-9.]/g, "")))
+      .filter((value) => !Number.isNaN(value) && value > 0);
+    const adr = numericRates.length
+      ? numericRates.reduce((sum, value) => sum + value, 0) / numericRates.length
+      : 0;
+
+    return [
+      {
+        label: "Publish Queue",
+        value: `${allCells.filter((cell) => cell.tone === "amber").length} changes`,
+        note: apiConnected ? "Derived from calendar review cells" : "Static demo queue",
+        icon: "publish",
+        tone: "primary",
+      },
+      {
+        label: "ADR Window",
+        value: `$${adr.toFixed(2)}`,
+        note: `${visibleRows.length} room groups in view`,
+        icon: "payments",
+        tone: "emerald",
+      },
+      {
+        label: "Low Availability",
+        value: `${allCells.filter((cell) => cell.tone === "amber").length} days`,
+        note: "Potential pressure dates in selected view",
+        icon: "trending_up",
+        tone: "amber",
+      },
+      {
+        label: "Restriction Flags",
+        value: `${visibleRows.filter((row) => row.stopSell || row.cta || row.ctd).length} plans`,
+        note: "CTA, CTD, or stop-sell enabled",
+        icon: "rule_settings",
+        tone: "blue",
+      },
+    ];
+  }, [apiConnected, range, rows]);
+
+  const insightCards = useMemo(
+    () => [
+      {
+        title: "API Connection",
+        items: [
+          apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
+          `Loaded ${properties.length || 1} properties and ${rooms.length || rows.length} room records.`,
+          apiConnected ? "Calendar cells are now backed by `/rate-plans/{rate_id}/calendar`." : "Start the backend to hydrate this matrix with live data.",
+        ],
+      },
+      {
+        title: "Active Property",
+        items: [
+          `Property: ${selectedProperty || "PROP001"}`,
+          `${rooms.length} rooms fetched for rate review.`,
+          "Use these endpoints next for inline edits: bulk-upsert calendar and publish workflows.",
+        ],
+      },
+    ],
+    [apiConnected, properties.length, rooms.length, rows.length, selectedProperty],
   );
 
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
-      sidebarMetricLabel="Total Occupancy"
-      sidebarMetricValue="84.2%"
-      sidebarMetricProgress={84}
+      sidebarMetricLabel="Rate Plans Loaded"
+      sidebarMetricValue={`${rows.length}`}
+      sidebarMetricProgress={Math.max(20, Math.min(100, rows.length * 20))}
     >
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
@@ -242,15 +319,24 @@ export function DailyRatesPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Daily Rates &amp; Yield</h2>
           <p className="max-w-3xl text-sm text-slate-500">
-            Focus the pricing team on the days and room types that actually need
-            action, with clearer signals for review, publish, and restrictions.
+            This screen now consumes FastAPI properties, rooms, rate plans, and
+            calendar data while preserving the demo PMS design.
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50">
-            <span className="material-symbols-outlined">history</span>
-            View Audit Log
-          </button>
+          <div
+            className={[
+              "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+              apiConnected
+                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border border-amber-200 bg-amber-50 text-amber-700",
+            ].join(" ")}
+          >
+            <span className="material-symbols-outlined text-base">
+              {apiConnected ? "hub" : "cloud_off"}
+            </span>
+            {apiConnected ? "FastAPI Live" : "Fallback Mode"}
+          </div>
           <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90">
             <span className="material-symbols-outlined">publish</span>
             Publish Changes
@@ -267,38 +353,18 @@ export function DailyRatesPage() {
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex gap-2 rounded-lg bg-slate-100 p-1">
-              {["All Rooms", "Deluxe", "Standard", "Single"].map((label, index) => (
-                <button
-                  key={label}
-                  className={[
-                    "rounded-md px-4 py-1.5 text-sm",
-                    index === 0
-                      ? "bg-white font-medium text-slate-900 shadow-sm"
-                      : "font-medium text-slate-500 hover:text-slate-900",
-                  ].join(" ")}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="h-8 w-px bg-slate-200" />
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              <span className="material-symbols-outlined text-base text-primary">
-                calendar_month
+            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+              Property:{" "}
+              <span className="font-bold text-slate-900">
+                {selectedProperty || "PROP001"}
               </span>
-              October 2023
             </div>
-            <div className="flex items-center gap-1 rounded-lg border border-slate-200 p-1">
-              <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-50">
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <button className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
-                Today
-              </button>
-              <button className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-50">
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
+            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+              Rooms Loaded:{" "}
+              <span className="font-bold text-slate-900">{rooms.length || rows.length}</span>
+            </div>
+            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+              Rate Plans: <span className="font-bold text-slate-900">{rows.length}</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
@@ -326,10 +392,10 @@ export function DailyRatesPage() {
 
           <div className="mt-4 flex flex-wrap gap-3">
             {[
-              ["Auto Rules", "6 active"],
-              ["Channel", "Direct + OTA"],
-              ["Restriction Mode", "Soft"],
-              ["Review Scope", "Only flagged cells"],
+              ["API", apiConnected ? "Connected" : "Offline"],
+              ["Rooms Endpoint", `/rooms?property_id=${selectedProperty || "PROP001"}`],
+              ["Rate Plans", "/rate-plans?room_id=ROOM001"],
+              ["Calendar", "/rate-plans/{rate_id}/calendar"],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -368,15 +434,15 @@ export function DailyRatesPage() {
           <div>
             <h3 className="text-lg font-bold text-slate-900">Rate Matrix</h3>
             <p className="text-sm text-slate-500">
-              Edit flagged prices quickly without losing room-type context.
+              Demo frontend hydrated from FastAPI rate-plan and calendar endpoints.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wider">
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
-              Strong demand
+              High rate
             </span>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
-              Suggest review
+              Low inventory
             </span>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
               Today
@@ -437,10 +503,27 @@ export function DailyRatesPage() {
                   <p className="mt-3 text-xs font-medium text-slate-500">
                     {row.strategy}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {row.stopSell ? (
+                      <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-700">
+                        Stop Sell
+                      </span>
+                    ) : null}
+                    {row.cta ? (
+                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">
+                        CTA
+                      </span>
+                    ) : null}
+                    {row.ctd ? (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                        CTD
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 {row.cells.slice(0, range).map((cell, index) => {
-                  const styles = toneClasses[cell.tone];
+                  const styles = toneClasses[cell.tone] || toneClasses.default;
                   return (
                     <div
                       key={`${row.code}-${index}`}

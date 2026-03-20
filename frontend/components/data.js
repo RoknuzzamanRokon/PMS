@@ -3,6 +3,7 @@ export const profileImage =
 
 export const navItems = [
   { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/properties", label: "Property", icon: "apartment" },
   { href: "/inventory", label: "Inventory Calendar", icon: "calendar_month" },
   { href: "/rooms-management", label: "Rooms Management", icon: "bed" },
   { href: "/daily-rates", label: "Daily Rates", icon: "sell" },

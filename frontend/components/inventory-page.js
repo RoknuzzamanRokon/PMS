@@ -1,52 +1,70 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { fetchJson } from "../lib/api";
 
-const days = [
-  ["Mon", "12 Oct", false, false],
-  ["Tue", "13 Oct", false, false],
-  ["Today", "14 Oct", true, false],
-  ["Thu", "15 Oct", false, false],
-  ["Fri", "16 Oct", false, false],
-  ["Sat", "17 Oct", false, true],
-  ["Sun", "18 Oct", false, true],
-  ["Mon", "19 Oct", false, false],
-  ["Tue", "20 Oct", false, false],
-  ["Wed", "21 Oct", false, false],
-  ["Thu", "22 Oct", false, false],
-  ["Fri", "23 Oct", false, false],
-  ["Sat", "24 Oct", false, true],
-  ["Sun", "25 Oct", false, true],
-];
+function buildDays(startDate, totalDays) {
+  const start = new Date(startDate);
+  return Array.from({ length: totalDays }, (_, index) => {
+    const current = new Date(start);
+    current.setDate(start.getDate() + index);
+    const today = index === 0;
+    const shortDay = current.toLocaleDateString("en-US", { weekday: "short" });
+    return {
+      label: today ? "Today" : shortDay,
+      date: current.toLocaleDateString("en-US", { day: "2-digit", month: "short" }),
+      today,
+      weekend: shortDay === "Sat" || shortDay === "Sun",
+    };
+  });
+}
 
-const rows = [
-  {
-    room: "101",
-    type: "Deluxe King",
-    booking: { left: "0px", width: "300px", tone: "blue", guest: "Smith, James", meta: "#RES-40291 • 3 Guests" },
-  },
-  {
-    room: "102",
-    type: "Deluxe King",
-    booking: { left: "100px", width: "400px", tone: "green", guest: "Garcia, Maria", meta: "#RES-40262 • Checked-in" },
-  },
-  {
-    room: "204",
-    type: "Executive Twin",
-    booking: { left: "220px", width: "180px", tone: "amber", guest: "Pending Hold", meta: "Corporate allotment" },
-  },
-  {
-    room: "305",
-    type: "Family Suite",
-    booking: { left: "500px", width: "280px", tone: "blue", guest: "Chen, Sofia", meta: "#RES-40318 • 4 Guests" },
-  },
-];
+const fallbackCalendar = {
+  property: { property_id: "PROP001", name: "Grand Plaza Hotel" },
+  start_date: new Date().toISOString().slice(0, 10),
+  days: 14,
+  rows: [],
+};
 
 export function InventoryPage() {
+  const [calendar, setCalendar] = useState(fallbackCalendar);
+  const [apiConnected, setApiConnected] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadCalendar() {
+      try {
+        const data = await fetchJson("/inventory/calendar?property_id=PROP001&days=14");
+        if (!ignore) {
+          setCalendar(data);
+          setApiConnected(true);
+        }
+      } catch {
+        if (!ignore) {
+          setApiConnected(false);
+        }
+      }
+    }
+
+    loadCalendar();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const days = useMemo(
+    () => buildDays(calendar.start_date, calendar.days),
+    [calendar.days, calendar.start_date],
+  );
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
-      sidebarMetricLabel="Total Occupancy"
-      sidebarMetricValue="84.2%"
-      sidebarMetricProgress={84}
+      sidebarMetricLabel="Calendar Rows"
+      sidebarMetricValue={`${calendar.rows.length}`}
+      sidebarMetricProgress={Math.max(20, Math.min(100, calendar.rows.length * 18))}
     >
       <div className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8">
         <div className="border-b border-slate-200 bg-white px-6 py-6 lg:px-8">
@@ -56,32 +74,29 @@ export function InventoryPage() {
                 Inventory Calendar
               </h2>
               <p className="text-sm text-slate-500">
-                Real-time room availability for Oct 12 - Oct 25, 2023
+                Real bookings by room from `/api/v1/inventory/calendar` for {calendar.property.name}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex rounded-lg bg-slate-100 p-1">
-                <button className="rounded-md p-1.5 text-slate-600 hover:bg-white hover:text-primary">
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                <button className="rounded-md bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm">
-                  Today
-                </button>
-                <button className="rounded-md p-1.5 text-slate-600 hover:bg-white hover:text-primary">
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
-              </div>
-              <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20">
-                <span className="material-symbols-outlined text-sm">add</span>
-                <span>Quick Booking</span>
-              </button>
+            <div
+              className={[
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
+                apiConnected
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border border-amber-200 bg-amber-50 text-amber-700",
+              ].join(" ")}
+            >
+              <span className="material-symbols-outlined text-base">
+                {apiConnected ? "view_timeline" : "cloud_off"}
+              </span>
+              {apiConnected ? "Inventory API Live" : "Using Local Fallback"}
             </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
             {[
-              ["filter_alt", "Room Type:", "All Types"],
-              ["stairs", "Floor:", "All Floors"],
+              ["filter_alt", "Property:", calendar.property.property_id],
+              ["calendar_month", "Start:", calendar.start_date],
+              ["hotel", "Rows:", `${calendar.rows.length}`],
             ].map(([icon, label, value]) => (
               <div
                 key={label}
@@ -122,13 +137,13 @@ export function InventoryPage() {
                   unfold_more
                 </span>
               </div>
-              {days.map(([day, date, today, weekend]) => (
+              {days.map((day) => (
                 <div
-                  key={date}
+                  key={`${day.label}-${day.date}`}
                   className={[
                     "flex flex-col items-center justify-center border-r border-slate-200 p-2",
-                    today && "bg-slate-50",
-                    weekend && "bg-slate-100/60",
+                    day.today && "bg-slate-50",
+                    day.weekend && "bg-slate-100/60",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -136,77 +151,86 @@ export function InventoryPage() {
                   <span
                     className={[
                       "text-[10px] font-bold uppercase",
-                      today ? "text-primary" : "text-slate-400",
+                      day.today ? "text-primary" : "text-slate-400",
                     ].join(" ")}
                   >
-                    {day}
+                    {day.label}
                   </span>
                   <span
                     className={[
                       "text-sm font-bold",
-                      today ? "text-primary" : "text-slate-800",
+                      day.today ? "text-primary" : "text-slate-800",
                     ].join(" ")}
                   >
-                    {date}
+                    {day.date}
                   </span>
                 </div>
               ))}
             </div>
 
             <div className="divide-y divide-slate-200">
-              {rows.map((row) => (
-                <div key={row.room} className="calendar-grid h-16">
+              {calendar.rows.map((row) => (
+                <div key={row.room_id} className="calendar-grid h-16">
                   <div className="flex flex-col justify-center border-r border-slate-200 bg-white p-4">
-                    <span className="text-sm font-bold leading-none">{row.room}</span>
+                    <span className="text-sm font-bold leading-none">{row.room_id}</span>
                     <span className="mt-1 text-[10px] font-medium uppercase text-slate-500">
-                      {row.type}
+                      {row.room_name}
                     </span>
                   </div>
                   <div className="relative col-span-14 grid h-full grid-cols-14 border-r border-slate-100 bg-white">
-                    <div className="pointer-events-none absolute left-[200px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5" />
-                    <div
-                      className="absolute top-2 z-10 h-12 px-1"
-                      style={{ left: row.booking.left, width: row.booking.width }}
-                    >
+                    <div className="pointer-events-none absolute left-[0px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5" />
+                    {row.booking ? (
                       <div
-                        className={[
-                          "flex h-full cursor-pointer flex-col justify-center overflow-hidden rounded-lg border-l-4 p-2 transition-all",
-                          row.booking.tone === "blue" &&
-                            "border-blue-500 bg-blue-500/15 hover:bg-blue-500/25",
-                          row.booking.tone === "green" &&
-                            "border-green-500 bg-green-500/15 hover:bg-green-500/25",
-                          row.booking.tone === "amber" &&
-                            "border-amber-500 bg-amber-500/15 hover:bg-amber-500/25",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                        className="absolute top-2 z-10 h-12 px-1"
+                        style={{
+                          left: `${row.booking.left_days * 100}px`,
+                          width: `${row.booking.duration_days * 100}px`,
+                        }}
                       >
-                        <p
+                        <div
                           className={[
-                            "truncate text-[10px] font-black uppercase",
-                            row.booking.tone === "blue" && "text-blue-700",
-                            row.booking.tone === "green" && "text-green-700",
-                            row.booking.tone === "amber" && "text-amber-700",
+                            "flex h-full cursor-pointer flex-col justify-center overflow-hidden rounded-lg border-l-4 p-2 transition-all",
+                            row.booking.tone === "blue" &&
+                              "border-blue-500 bg-blue-500/15 hover:bg-blue-500/25",
+                            row.booking.tone === "green" &&
+                              "border-green-500 bg-green-500/15 hover:bg-green-500/25",
+                            row.booking.tone === "amber" &&
+                              "border-amber-500 bg-amber-500/15 hover:bg-amber-500/25",
                           ]
                             .filter(Boolean)
                             .join(" ")}
                         >
-                          {row.booking.guest}
-                        </p>
-                        <p
-                          className={[
-                            "truncate text-[9px]",
-                            row.booking.tone === "blue" && "text-blue-600",
-                            row.booking.tone === "green" && "text-green-600",
-                            row.booking.tone === "amber" && "text-amber-600",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
-                          {row.booking.meta}
-                        </p>
+                          <p
+                            className={[
+                              "truncate text-[10px] font-black uppercase",
+                              row.booking.tone === "blue" && "text-blue-700",
+                              row.booking.tone === "green" && "text-green-700",
+                              row.booking.tone === "amber" && "text-amber-700",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            {row.booking.guest_name}
+                          </p>
+                          <p
+                            className={[
+                              "truncate text-[9px]",
+                              row.booking.tone === "blue" && "text-blue-600",
+                              row.booking.tone === "green" && "text-green-600",
+                              row.booking.tone === "amber" && "text-amber-600",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            {row.booking.meta}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="absolute inset-y-0 left-0 flex items-center px-4 text-xs font-medium text-slate-400">
+                        No booking in selected window
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

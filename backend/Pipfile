@@ -8,6 +8,8 @@ python-dotenv = "*"
 sqlalchemy = "*"
 pymysql = "*"
 ipykernel = "*"
+fastapi = "*"
+uvicorn = "*"
 
 [dev-packages]
 

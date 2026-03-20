@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
+
+const defaultPropertyId = "PROP001";
 
 function buildDays(startDate, totalDays) {
   const start = new Date(startDate);
@@ -21,13 +24,14 @@ function buildDays(startDate, totalDays) {
 }
 
 const fallbackCalendar = {
-  property: { property_id: "PROP001", name: "Selected Property" },
+  property: { property_id: defaultPropertyId, name: "Selected Property" },
   start_date: new Date().toISOString().slice(0, 10),
   days: 14,
   rows: [],
 };
 
-export function InventoryPage() {
+export function InventoryPage({ propertyId }) {
+  const selectedPropertyId = propertyId || defaultPropertyId;
   const [calendar, setCalendar] = useState(fallbackCalendar);
   const [apiConnected, setApiConnected] = useState(false);
 
@@ -36,7 +40,9 @@ export function InventoryPage() {
 
     async function loadCalendar() {
       try {
-        const data = await fetchJson("/inventory/calendar?property_id=PROP001&days=14");
+        const data = await fetchJson(
+          `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=14`,
+        );
         if (!ignore) {
           setCalendar(data);
           setApiConnected(true);
@@ -52,7 +58,7 @@ export function InventoryPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [selectedPropertyId]);
 
   const days = useMemo(
     () => buildDays(calendar.start_date, calendar.days),
@@ -76,6 +82,19 @@ export function InventoryPage() {
               <p className="text-sm text-slate-500">
                 Real bookings by room from `/api/v1/inventory/calendar` for {calendar.property.name}
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/properties"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary"
+                >
+                  <span className="material-symbols-outlined text-base">arrow_back</span>
+                  Back to Properties
+                </Link>
+                <div className="inline-flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-sm font-medium text-primary">
+                  <span className="material-symbols-outlined text-base">pin_drop</span>
+                  Viewing {calendar.property.name}
+                </div>
+              </div>
             </div>
             <div
               className={[
@@ -97,6 +116,7 @@ export function InventoryPage() {
               ["filter_alt", "Property:", calendar.property.property_id],
               ["calendar_month", "Start:", calendar.start_date],
               ["hotel", "Rows:", `${calendar.rows.length}`],
+              ["link", "Endpoint:", `/inventory/calendar?property_id=${selectedPropertyId}&days=14`],
             ].map(([icon, label, value]) => (
               <div
                 key={label}

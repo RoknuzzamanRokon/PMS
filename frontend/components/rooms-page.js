@@ -81,6 +81,32 @@ function getCompletionSummary(status) {
   };
 }
 
+function getRoomLaunchBadge(status) {
+  const summary = getCompletionSummary(status);
+
+  if (status?.sales_ready) {
+    return {
+      label: "Active",
+      className: "bg-emerald-100 text-emerald-700",
+      detail: "Live for sale",
+    };
+  }
+
+  if (summary.completedCount === 0) {
+    return {
+      label: "Pending",
+      className: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+      detail: "Not started",
+    };
+  }
+
+  return {
+    label: "Processing",
+    className: "bg-amber-100 text-amber-700",
+    detail: `${summary.percent}% complete`,
+  };
+}
+
 export function RoomsManagementPage({ propertyId }) {
   const selectedPropertyId = propertyId || defaultPropertyId;
   const [activeManagementSection, setActiveManagementSection] = useState("add-room");
@@ -868,55 +894,64 @@ export function RoomsManagementPage({ propertyId }) {
             </div>
           </div>
           <div className="space-y-3">
-            {data.categories.map((category) => (
-              <button
-                key={category.room_id}
-                type="button"
-                onClick={() => openRoomStatus(category)}
-                className="w-full rounded-xl border border-slate-200 p-4 text-left transition hover:border-primary hover:shadow-sm dark:border-slate-700"
-              >
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-bold">{category.room_name}</p>
-                      {(roomLaunchStatuses[category.room_id]?.sales_ready) ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                          <span className="material-symbols-outlined text-xs">check_circle</span>
-                          Live
-                        </span>
-                      ) : null}
+            {data.categories.map((category) => {
+              const roomStatus = roomLaunchStatuses[category.room_id] || createRoomLaunchStatus();
+              const roomSummary = getCompletionSummary(roomStatus);
+              const roomBadge = getRoomLaunchBadge(roomStatus);
+
+              return (
+                <button
+                  key={category.room_id}
+                  type="button"
+                  onClick={() => openRoomStatus(category)}
+                  className="w-full rounded-xl border border-slate-200 p-4 text-left transition hover:border-primary hover:shadow-sm dark:border-slate-700"
+                >
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold">{category.room_name}</p>
+                        {roomStatus.sales_ready ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                            <span className="material-symbols-outlined text-xs">check_circle</span>
+                            Live
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {category.room_id} • {category.rate_plan_count} rate plans
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {category.room_id} • {category.rate_plan_count} rate plans
-                    </p>
+                    <div className="text-right">
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
+                          roomBadge.className,
+                        ].join(" ")}
+                      >
+                        {roomBadge.label}
+                      </span>
+                      <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {roomBadge.detail} • {roomSummary.percent}% complete
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                      Active
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Base Rate: ${Number(category.base_rate).toFixed(2)}
                     </span>
-                    <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                      {getCompletionSummary(
-                        roomLaunchStatuses[category.room_id] || createRoomLaunchStatus(),
-                      ).percent}% complete
-                    </p>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Available: {category.available_inventory}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
+                      Sold: {category.sold_inventory}
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
+                      Click to manage go-live status
+                    </span>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
-                    Base Rate: ${Number(category.base_rate).toFixed(2)}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
-                    Available: {category.available_inventory}
-                  </span>
-                  <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
-                    Sold: {category.sold_inventory}
-                  </span>
-                  <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
-                    Click to manage go-live status
-                  </span>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -1,15 +1,137 @@
-from datetime import date
+from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import RateCalendar, RatePlan
-from ..schemas import CalendarBulkUpsertRequest, CalendarItemRead, RatePlanCreate, RatePlanRead
+from ..models import (
+    AvailabilityStatus,
+    Property,
+    RateCalendar,
+    RateCancellationPolicy,
+    RatePlan,
+    ReservationRoom,
+    Room,
+)
+from ..schemas import (
+    AvailabilityStatusRead,
+    CalendarBulkUpsertRequest,
+    CalendarItemRead,
+    RatePlanCreate,
+    RatePlanRead,
+    RatePlanUpdate,
+)
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/rate-plans", tags=["rate-plans"])
+
+
+@router.get("/availability-statuses", response_model=list[AvailabilityStatusRead])
+def list_availability_statuses(db: Session = Depends(get_db)):
+    return db.execute(select(AvailabilityStatus).order_by(AvailabilityStatus.id.asc())).scalars().all()
+
+
+@router.get("/daily-rates")
+def daily_rates_matrix(
+    property_id: str = Query(...),
+    start_date: date | None = Query(None),
+    days: int = Query(30, ge=1, le=30),
+    db: Session = Depends(get_db),
+):
+    start = start_date or date.today()
+    end = start + timedelta(days=days - 1)
+
+    property_obj = db.scalar(select(Property).where(Property.property_id == property_id))
+
+    rooms = (
+        db.execute(select(Room).where(Room.property_id == property_id).order_by(Room.room_name.asc()))
+        .scalars()
+        .all()
+    )
+    room_ids = [room.room_id for room in rooms]
+
+    rate_plans = (
+        db.execute(
+            select(RatePlan)
+            .where(RatePlan.room_id.in_(room_ids))
+            .order_by(RatePlan.room_id.asc(), RatePlan.created_at.desc())
+        )
+        .scalars()
+        .all()
+        if room_ids
+        else []
+    )
+    rate_ids = [rate_plan.rate_id for rate_plan in rate_plans]
+
+    calendars = (
+        db.execute(
+            select(RateCalendar)
+            .where(
+                RateCalendar.rate_id.in_(rate_ids),
+                RateCalendar.stay_date >= start,
+                RateCalendar.stay_date <= end,
+            )
+            .order_by(RateCalendar.rate_id.asc(), RateCalendar.stay_date.asc())
+        )
+        .scalars()
+        .all()
+        if rate_ids
+        else []
+    )
+
+    calendar_by_rate_id: dict[str, list[dict]] = {}
+    for item in calendars:
+        calendar_by_rate_id.setdefault(item.rate_id, []).append(
+            {
+                "stay_date": item.stay_date.isoformat(),
+                "currency": item.currency,
+                "base_rate": item.base_rate,
+                "tax": item.tax,
+                "availability": item.availability,
+            }
+        )
+
+    return {
+        "property": {
+            "property_id": property_obj.property_id if property_obj else property_id,
+            "name": property_obj.name if property_obj else property_id,
+        },
+        "start_date": start.isoformat(),
+        "days": days,
+        "rooms": [
+            {
+                "room_id": room.room_id,
+                "property_id": room.property_id,
+                "room_name": room.room_name,
+                "room_name_lang": room.room_name_lang,
+                "room_status": room.room_status,
+                "base_rate": room.base_rate,
+                "tax_and_service_fee": room.tax_and_service_fee,
+            }
+            for room in rooms
+        ],
+        "rate_plans": [
+            {
+                "rate_id": rate_plan.rate_id,
+                "room_id": rate_plan.room_id,
+                "title": rate_plan.title,
+                "description": rate_plan.description,
+                "meal_plan": rate_plan.meal_plan,
+                "currency": rate_plan.currency,
+                "base_rate": rate_plan.base_rate,
+                "total_inventory": rate_plan.total_inventory,
+                "available_inventory": rate_plan.available_inventory,
+                "sold_inventory": rate_plan.sold_inventory,
+                "closed_to_arrival": rate_plan.closed_to_arrival,
+                "closed_to_departure": rate_plan.closed_to_departure,
+                "stop_sell": rate_plan.stop_sell,
+                "cancellation_policy": rate_plan.cancellation_policy,
+                "calendar": calendar_by_rate_id.get(rate_plan.rate_id, []),
+            }
+            for rate_plan in rate_plans
+        ],
+    }
 
 
 @router.get("", response_model=list[RatePlanRead])
@@ -53,6 +175,57 @@ def get_rate_plan(rate_id: str, db: Session = Depends(get_db)):
     if not rate_plan:
         raise HTTPException(status_code=404, detail="Rate plan not found")
     return rate_plan
+
+
+@router.patch("/{rate_id}", response_model=RatePlanRead)
+def update_rate_plan(rate_id: str, payload: RatePlanUpdate, db: Session = Depends(get_db)):
+    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
+    if not rate_plan:
+        raise HTTPException(status_code=404, detail="Rate plan not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    bool_fields = {"is_refundable", "status", "closed_to_arrival", "closed_to_departure", "stop_sell"}
+
+    for field, value in updates.items():
+        if field in bool_fields and value is not None:
+            setattr(rate_plan, field, int(value))
+        else:
+            setattr(rate_plan, field, value)
+
+    db.commit()
+    db.refresh(rate_plan)
+    return rate_plan
+
+
+@router.delete("/{rate_id}")
+def delete_rate_plan(rate_id: str, db: Session = Depends(get_db)):
+    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
+    if not rate_plan:
+        raise HTTPException(status_code=404, detail="Rate plan not found")
+
+    linked_reservation = db.scalar(select(ReservationRoom.id).where(ReservationRoom.rate_id == rate_id).limit(1))
+    if linked_reservation:
+        raise HTTPException(
+            status_code=409,
+            detail="Rate plan is linked to reservations and cannot be removed.",
+        )
+
+    deleted_calendar_rows = db.execute(
+        delete(RateCalendar).where(RateCalendar.rate_id == rate_id)
+    ).rowcount or 0
+    deleted_policy_rows = db.execute(
+        delete(RateCancellationPolicy).where(RateCancellationPolicy.rate_id == rate_id)
+    ).rowcount or 0
+
+    db.delete(rate_plan)
+    db.commit()
+
+    return {
+        "rate_id": rate_id,
+        "room_id": rate_plan.room_id,
+        "deleted_calendar_rows": deleted_calendar_rows,
+        "deleted_policy_rows": deleted_policy_rows,
+    }
 
 
 @router.post("/{rate_id}/calendar/bulk-upsert")

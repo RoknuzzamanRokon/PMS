@@ -41,6 +41,14 @@ class Property(TimestampMixin, Base):
     property_type: Mapped[str] = mapped_column(String(64))
 
 
+class PropertyAmenity(Base):
+    __tablename__ = "property_amenities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_id: Mapped[str] = mapped_column(String(100), ForeignKey("properties.property_id"), index=True)
+    amenity_code: Mapped[str] = mapped_column(String(255), ForeignKey("z_amenities_codes.code"), index=True)
+
+
 class Room(TimestampMixin, Base):
     __tablename__ = "rooms"
 
@@ -49,12 +57,21 @@ class Room(TimestampMixin, Base):
     room_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     room_name: Mapped[str] = mapped_column(String(128))
     room_name_lang: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    room_status: Mapped[str] = mapped_column(String(32), default="PROCESSING")
     base_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     tax_and_service_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     surcharges: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     mandatory_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     resort_fee: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     mandatory_tax: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
+
+
+class RoomAmenity(Base):
+    __tablename__ = "room_amenities"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    room_id: Mapped[str] = mapped_column(String(100), ForeignKey("rooms.room_id"), index=True)
+    amenity_code: Mapped[str] = mapped_column(String(255), ForeignKey("z_amenities_codes.code"), index=True)
 
 
 class RatePlan(TimestampMixin, Base):
@@ -64,6 +81,7 @@ class RatePlan(TimestampMixin, Base):
     rate_id: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     room_id: Mapped[str] = mapped_column(String(32), ForeignKey("rooms.room_id"), index=True)
     title: Mapped[str] = mapped_column(String(128))
+    supplier_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     meal_plan: Mapped[str] = mapped_column(String(32), default="RO")
     is_refundable: Mapped[int] = mapped_column(Integer, default=1)
@@ -99,6 +117,19 @@ class RateCalendar(TimestampMixin, Base):
     base_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     tax: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     availability: Mapped[str] = mapped_column(String(32), default="AVAILABLE")
+
+
+class RateCancellationPolicy(TimestampMixin, Base):
+    __tablename__ = "rate_cancellation_policies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    rate_id: Mapped[str] = mapped_column(String(255), ForeignKey("rate_plans.rate_id"), index=True)
+    season_start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    season_end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    days_before_arrival: Mapped[int] = mapped_column(Integer)
+    penalty_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    penalty_value: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
 
 class Guest(TimestampMixin, Base):
@@ -152,3 +183,40 @@ class Payment(TimestampMixin, Base):
     payment_method: Mapped[str] = mapped_column(String(32), default="CARD")
     payment_status: Mapped[str] = mapped_column(String(32), default="CAPTURED")
     transaction_ref: Mapped[str] = mapped_column(String(64))
+
+
+class AmenityCode(Base):
+    __tablename__ = "z_amenities_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    for_room: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    for_property: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class AvailabilityStatus(Base):
+    __tablename__ = "z_availability_status"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column("desc", String(255), nullable=True)
+
+
+class MealPlan(Base):
+    __tablename__ = "z_meal_plan"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column("desc", String(255), nullable=True)
+
+
+class PropertyType(Base):
+    __tablename__ = "z_property_type"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    description: Mapped[str | None] = mapped_column("desc", String(255), nullable=True)

@@ -5,6 +5,7 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from .database import Base, SessionLocal, engine
 from .routes.api import api_router
@@ -26,9 +27,32 @@ app.add_middleware(
 app.include_router(api_router)
 
 
+def ensure_rate_plan_supplier_column() -> None:
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("rate_plans")}
+    if "supplier_name" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE rate_plans ADD COLUMN supplier_name VARCHAR(128)"))
+
+
+def ensure_room_status_column() -> None:
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("rooms")}
+    if "room_status" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE rooms ADD COLUMN room_status VARCHAR(32) DEFAULT 'PROCESSING'"))
+        connection.execute(text("UPDATE rooms SET room_status = 'PROCESSING' WHERE room_status IS NULL"))
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_rate_plan_supplier_column()
+    ensure_room_status_column()
     with SessionLocal() as db:
         seed_database(db)
 

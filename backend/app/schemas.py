@@ -41,10 +41,83 @@ class PropertyRead(APIModel):
     updated_at: datetime
 
 
+class PropertyRoomRatePlanSummary(BaseModel):
+    rate_id: str
+    title: str
+    supplier_name: Optional[str] = None
+    currency: str
+    status: int
+    base_rate: Decimal
+    current_rate: Decimal
+    total_inventory: int
+    available_inventory: int
+    sold_inventory: int
+    stop_sell: int
+    closed_to_arrival: int
+    closed_to_departure: int
+
+
+class ComingSoonField(BaseModel):
+    available: bool
+    message: str
+
+
+class MediaAssetField(BaseModel):
+    available: bool
+    message: str
+    url: Optional[str] = None
+
+
+class PropertyRoomSummary(BaseModel):
+    room_id: str
+    room_name: str
+    room_name_lang: Optional[str] = None
+    base_rate: Decimal
+    current_rate: Decimal
+    total_inventory: int
+    available_inventory: int
+    sold_inventory: int
+    blocked_inventory: int
+    active_rate_plan_count: int
+    status: str
+    image: MediaAssetField
+    amenities: ComingSoonField
+    facilities: ComingSoonField
+    rate_plans: list[PropertyRoomRatePlanSummary]
+
+
+class PropertyStatusCounts(BaseModel):
+    pending: int
+    processing: int
+    active: int
+    blocked: int
+
+
+class PropertyInventorySummary(BaseModel):
+    total_rooms: int
+    total_rate_plans: int
+    total_inventory: int
+    available_inventory: int
+    sold_inventory: int
+    blocked_inventory: int
+    average_base_rate: Decimal
+    average_current_rate: Decimal
+    room_status_counts: PropertyStatusCounts
+
+
+class PropertyDetailRead(PropertyRead):
+    summary: PropertyInventorySummary
+    property_base_image: MediaAssetField
+    amenities: ComingSoonField
+    facilities: ComingSoonField
+    rooms: list[PropertyRoomSummary]
+
+
 class RoomBase(BaseModel):
     property_id: str
     room_name: str
     room_name_lang: Optional[str] = None
+    room_status: str = "PROCESSING"
     base_rate: Decimal = Decimal("0")
     tax_and_service_fee: Decimal = Decimal("0")
     surcharges: Decimal = Decimal("0")
@@ -57,11 +130,25 @@ class RoomCreate(RoomBase):
     room_id: Optional[str] = None
 
 
+class RoomUpdate(BaseModel):
+    property_id: Optional[str] = None
+    room_name: Optional[str] = None
+    room_name_lang: Optional[str] = None
+    room_status: Optional[str] = None
+    base_rate: Optional[Decimal] = None
+    tax_and_service_fee: Optional[Decimal] = None
+    surcharges: Optional[Decimal] = None
+    mandatory_fee: Optional[Decimal] = None
+    resort_fee: Optional[Decimal] = None
+    mandatory_tax: Optional[Decimal] = None
+
+
 class RoomRead(APIModel):
     room_id: str
     property_id: str
     room_name: str
     room_name_lang: Optional[str] = None
+    room_status: str
     base_rate: Decimal
     tax_and_service_fee: Decimal
     surcharges: Decimal
@@ -72,9 +159,31 @@ class RoomRead(APIModel):
     updated_at: datetime
 
 
+class RoomRatePlanSummary(BaseModel):
+    rate_id: str
+    title: str
+    supplier_name: Optional[str] = None
+    currency: str
+    status: int
+    meal_plan: str
+    base_rate: Decimal
+    total_inventory: int
+    available_inventory: int
+    sold_inventory: int
+    stop_sell: int
+    closed_to_arrival: int
+    closed_to_departure: int
+
+
+class RoomDetailRead(RoomRead):
+    current_rate_plan: Optional[RoomRatePlanSummary] = None
+    rate_plans: list[RoomRatePlanSummary]
+
+
 class RatePlanBase(BaseModel):
     room_id: str
     title: str
+    supplier_name: Optional[str] = None
     description: Optional[str] = None
     meal_plan: str = "RO"
     is_refundable: bool = True
@@ -104,10 +213,40 @@ class RatePlanCreate(RatePlanBase):
     rate_id: Optional[str] = None
 
 
+class RatePlanUpdate(BaseModel):
+    room_id: Optional[str] = None
+    title: Optional[str] = None
+    supplier_name: Optional[str] = None
+    description: Optional[str] = None
+    meal_plan: Optional[str] = None
+    is_refundable: Optional[bool] = None
+    bed_type: Optional[str] = None
+    cancellation_policy: Optional[str] = None
+    status: Optional[bool] = None
+    min_stay: Optional[int] = None
+    max_stay: Optional[int] = None
+    currency: Optional[str] = None
+    base_rate: Optional[Decimal] = None
+    tax_and_service_fee: Optional[Decimal] = None
+    surcharges: Optional[Decimal] = None
+    mandatory_fee: Optional[Decimal] = None
+    resort_fee: Optional[Decimal] = None
+    mandatory_tax: Optional[Decimal] = None
+    total_inventory: Optional[int] = None
+    available_inventory: Optional[int] = None
+    sold_inventory: Optional[int] = None
+    closed_to_arrival: Optional[bool] = None
+    closed_to_departure: Optional[bool] = None
+    stop_sell: Optional[bool] = None
+    extra_adult_rate: Optional[Decimal] = None
+    extra_child_rate: Optional[Decimal] = None
+
+
 class RatePlanRead(APIModel):
     rate_id: str
     room_id: str
     title: str
+    supplier_name: Optional[str] = None
     description: Optional[str] = None
     meal_plan: str
     is_refundable: int
@@ -160,6 +299,13 @@ class CalendarItemRead(APIModel):
     availability: str
     created_at: datetime
     updated_at: datetime
+
+
+class AvailabilityStatusRead(APIModel):
+    id: int
+    code: str
+    title: Optional[str] = None
+    description: Optional[str] = None
 
 
 class GuestCreate(BaseModel):

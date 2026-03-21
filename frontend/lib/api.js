@@ -11,9 +11,30 @@ export async function fetchJson(path, options = {}) {
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    let message = "";
+
+    try {
+      const payload = await response.json();
+      message =
+        payload?.detail ||
+        payload?.message ||
+        payload?.error ||
+        "";
+    } catch {
+      message = await response.text();
+    }
+
     throw new Error(message || `Request failed: ${response.status}`);
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return null;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  return response.text();
 }

@@ -6,7 +6,7 @@ from ..database import get_db
 from sqlalchemy import func
 
 from ..models import Property, RatePlan, ReservationRoom, Room
-from ..schemas import RoomCreate, RoomRead
+from ..schemas import RoomCreate, RoomDetailRead, RoomRead, RoomUpdate
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
@@ -81,6 +81,7 @@ def rooms_overview(property_id: str, db: Session = Depends(get_db)):
                 "room_id": room.room_id,
                 "room_name": room.room_name,
                 "base_rate": float(room.base_rate),
+                "room_status": room.room_status,
                 "rate_plan_count": len(rate_plan_by_room.get(room.room_id, [])),
                 "reservation_count": reservation_count_by_room.get(room.room_id, 0),
                 "available_inventory": sum(item.available_inventory for item in rate_plan_by_room.get(room.room_id, [])),
@@ -94,11 +95,7 @@ def rooms_overview(property_id: str, db: Session = Depends(get_db)):
                 "room_name": room.room_name,
                 "property_id": room.property_id,
                 "base_rate": float(room.base_rate),
-                "status": "Blocked"
-                if any(item.stop_sell for item in rate_plan_by_room.get(room.room_id, []))
-                else "Booked"
-                if reservation_count_by_room.get(room.room_id, 0)
-                else "Available",
+                "status": room.room_status,
                 "housekeeping_status": "Inspect"
                 if reservation_count_by_room.get(room.room_id, 0)
                 else "Ready",
@@ -109,9 +106,72 @@ def rooms_overview(property_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.get("/{room_id}", response_model=RoomRead)
+@router.get("/{room_id}", response_model=RoomDetailRead)
 def get_room(room_id: str, db: Session = Depends(get_db)):
     room = db.scalar(select(Room).where(Room.room_id == room_id))
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
+
+    rate_plans = (
+        db.execute(
+            select(RatePlan)
+            .where(RatePlan.room_id == room_id)
+            .order_by(RatePlan.status.desc(), RatePlan.created_at.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    current_rate_plan = next((item for item in rate_plans if item.status), None)
+    if current_rate_plan is None and rate_plans:
+        current_rate_plan = rate_plans[0]
+
+    def serialize_rate_plan(item: RatePlan):
+        return {
+            "rate_id": item.rate_id,
+            "title": item.title,
+            "supplier_name": item.supplier_name,
+            "currency": item.currency,
+            "status": item.status,
+            "meal_plan": item.meal_plan,
+            "base_rate": item.base_rate,
+            "total_inventory": item.total_inventory,
+            "available_inventory": item.available_inventory,
+            "sold_inventory": item.sold_inventory,
+            "stop_sell": item.stop_sell,
+            "closed_to_arrival": item.closed_to_arrival,
+            "closed_to_departure": item.closed_to_departure,
+        }
+
+    return {
+        "room_id": room.room_id,
+        "property_id": room.property_id,
+        "room_name": room.room_name,
+        "room_name_lang": room.room_name_lang,
+        "room_status": room.room_status,
+        "base_rate": room.base_rate,
+        "tax_and_service_fee": room.tax_and_service_fee,
+        "surcharges": room.surcharges,
+        "mandatory_fee": room.mandatory_fee,
+        "resort_fee": room.resort_fee,
+        "mandatory_tax": room.mandatory_tax,
+        "created_at": room.created_at,
+        "updated_at": room.updated_at,
+        "current_rate_plan": serialize_rate_plan(current_rate_plan) if current_rate_plan else None,
+        "rate_plans": [serialize_rate_plan(item) for item in rate_plans],
+    }
+
+
+@router.patch("/{room_id}", response_model=RoomRead)
+def update_room(room_id: str, payload: RoomUpdate, db: Session = Depends(get_db)):
+    room = db.scalar(select(Room).where(Room.room_id == room_id))
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(room, field, value)
+
+    db.commit()
+    db.refresh(room)
     return room

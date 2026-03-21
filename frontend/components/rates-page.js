@@ -1,11 +1,12 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
-const todayIndex = 4;
+const defaultPropertyId = "PROP001";
 
 const fallbackRows = [
   {
@@ -87,45 +88,128 @@ const toneClasses = {
   },
 };
 
-function createDays() {
-  return Array.from({ length: totalDays }, (_, index) => {
-    const date = new Date(2023, 9, index + 1);
+function createDays(startDate, total) {
+  const start = startDate ? new Date(startDate) : new Date();
+
+  return Array.from({ length: total }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
     return {
+      isoDate: toIsoDateFromParts(date.getFullYear(), date.getMonth(), date.getDate()),
       shortDay: date.toLocaleDateString("en-US", { weekday: "short" }),
-      dayNum: String(index + 1).padStart(2, "0"),
+      dayNum: String(date.getDate()).padStart(2, "0"),
+      month: date.toLocaleDateString("en-US", { month: "short" }),
     };
   });
 }
 
 function getTone(item, index) {
-  if (item.availability === "SOLD_OUT") {
+  if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"].includes(item.availability)) {
     return "disabled";
   }
-  if (index === todayIndex) {
+  if (index === 0) {
     return "primary";
   }
-  if (item.availability === "LOW") {
+  if (["BOOKED", "CTA", "CTD"].includes(item.availability)) {
     return "amber";
   }
   return Number(item.base_rate) >= 220 ? "emerald" : "default";
 }
 
-function buildRowsFromApi(rooms, ratePlans, calendarByRateId) {
+function toIsoDateFromParts(year, month, day) {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function parseRateValue(value) {
+  const numeric = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function formatRateValue(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toFixed(2) : "0.00";
+}
+
+function parseIntegerValue(value) {
+  const numeric = Number.parseInt(String(value), 10);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function createRatePlanForm(room) {
+  return {
+    room_id: room?.room_id || "",
+    title: room?.room_name ? `${room.room_name} Flexible` : "",
+    description: "Best flexible rate",
+    meal_plan: "BB",
+    is_refundable: true,
+    bed_type: "King",
+    cancellation_policy: "24h flexible",
+    status: true,
+    min_stay: "1",
+    max_stay: "30",
+    currency: "USD",
+    base_rate: formatRateValue(room?.base_rate ?? 0),
+    tax_and_service_fee: formatRateValue(room?.tax_and_service_fee ?? 0),
+    surcharges: "5.00",
+    mandatory_fee: "3.00",
+    resort_fee: "2.00",
+    mandatory_tax: "7.00",
+    total_inventory: "12",
+    available_inventory: "4",
+    sold_inventory: "8",
+    closed_to_arrival: false,
+    closed_to_departure: false,
+    stop_sell: false,
+    extra_adult_rate: "25.00",
+    extra_child_rate: "15.00",
+  };
+}
+
+function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) {
   if (!ratePlans.length) {
-    return fallbackRows;
+    return [];
   }
 
   const roomMap = new Map(rooms.map((room) => [room.room_id, room]));
+  const start = startDate ? new Date(startDate) : new Date();
 
   return ratePlans.map((ratePlan) => {
     const room = roomMap.get(ratePlan.room_id);
     const calendar = calendarByRateId[ratePlan.rate_id] || [];
+    const calendarMap = new Map(calendar.map((item) => [item.stay_date, item]));
     const occupancyPercent = ratePlan.total_inventory
       ? Math.round((ratePlan.sold_inventory / ratePlan.total_inventory) * 100)
       : 0;
+    const cells = Array.from({ length: total }, (_, index) => {
+      const currentDate = new Date(start);
+      currentDate.setDate(start.getDate() + index);
+      const stayDate = toIsoDateFromParts(
+        currentDate.getFullYear(),
+        currentDate.getMonth(),
+        currentDate.getDate(),
+      );
+      const item = calendarMap.get(stayDate);
+      const availability = item?.availability || "AVAILABLE";
+      const baseRate = formatRateValue(item?.base_rate ?? ratePlan.base_rate ?? 0);
+      const tax = formatRateValue(item?.tax ?? 0);
+      return {
+        stay_date: stayDate,
+        currency: item?.currency || ratePlan.currency || "USD",
+        tax,
+        availability,
+        base_rate: baseRate,
+        original_base_rate: baseRate,
+        original_availability: availability,
+        changed: false,
+        note: ["BOOKED", "CTA", "CTD"].includes(availability) ? "Review" : index === 0 ? "Today" : availability,
+        tone: getTone({ availability, base_rate: Number(baseRate) }, index),
+      };
+    });
 
     return {
+      roomId: ratePlan.room_id,
       title: room?.room_name || ratePlan.title,
+      roomLabel: room?.room_id || ratePlan.room_id,
       code: ratePlan.rate_id,
       subtitle: `${ratePlan.available_inventory} available`,
       occupancy: `${occupancyPercent}%`,
@@ -133,11 +217,7 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId) {
       stopSell: Boolean(ratePlan.stop_sell),
       cta: Boolean(ratePlan.closed_to_arrival),
       ctd: Boolean(ratePlan.closed_to_departure),
-      cells: calendar.map((item, index) => ({
-        note: item.availability === "LOW" ? "Review" : index === todayIndex ? "Today" : item.availability,
-        value: item.availability === "SOLD_OUT" ? "Sold Out" : `$${Number(item.base_rate).toFixed(0)}`,
-        tone: getTone(item, index),
-      })),
+      cells,
     };
   });
 }
@@ -168,49 +248,76 @@ function StatCard({ stat }) {
   );
 }
 
-export function DailyRatesPage() {
+export function DailyRatesPage({ propertyId }) {
+  const router = useRouter();
   const [range, setRange] = useState(7);
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [properties, setProperties] = useState([]);
-  const [selectedProperty, setSelectedProperty] = useState("PROP001");
-  const [rows, setRows] = useState(fallbackRows);
+  const [selectedProperty, setSelectedProperty] = useState(propertyId || defaultPropertyId);
+  const [rows, setRows] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [propertyName, setPropertyName] = useState("Selected Property");
+  const [calendarStartDate, setCalendarStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [apiConnected, setApiConnected] = useState(false);
-  const days = useMemo(createDays, []);
+  const [loadingRates, setLoadingRates] = useState(false);
+  const [publishError, setPublishError] = useState("");
+  const [publishSuccess, setPublishSuccess] = useState("");
+  const [publishing, setPublishing] = useState(false);
+  const [deletingRateId, setDeletingRateId] = useState("");
+  const [bulkError, setBulkError] = useState("");
+  const [bulkSuccess, setBulkSuccess] = useState("");
+  const [availabilityStatuses, setAvailabilityStatuses] = useState([]);
+  const [showRatePlanModal, setShowRatePlanModal] = useState(false);
+  const [selectedRoomForRatePlan, setSelectedRoomForRatePlan] = useState(null);
+  const [ratePlanModalError, setRatePlanModalError] = useState("");
+  const [ratePlanModalSuccess, setRatePlanModalSuccess] = useState("");
+  const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
+  const [roomListMessage, setRoomListMessage] = useState("");
+  const [bulkForm, setBulkForm] = useState({
+    rate_id: "",
+    start_date: new Date().toISOString().slice(0, 10),
+    end_date: new Date().toISOString().slice(0, 10),
+    base_rate: "",
+    availability: "",
+  });
+  const [newRatePlanForm, setNewRatePlanForm] = useState(createRatePlanForm(null));
+  const days = useMemo(() => createDays(calendarStartDate, totalDays), [calendarStartDate]);
+  const visibleDays = useMemo(() => days.slice(0, range), [days, range]);
+
+  useEffect(() => {
+    setSelectedProperty(propertyId || defaultPropertyId);
+  }, [propertyId]);
+
+  useEffect(() => {
+    setSelectedDateIndex((current) => Math.min(current, Math.max(range - 1, 0)));
+  }, [range, calendarStartDate]);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadRates() {
+      setLoadingRates(true);
       try {
-        const propertyList = await fetchJson("/properties");
+        const [propertyList, statusList] = await Promise.all([
+          fetchJson("/properties"),
+          fetchJson("/rate-plans/availability-statuses").catch(() => []),
+        ]);
         if (ignore) {
           return;
         }
 
-        const propertyId = propertyList[0]?.property_id || "PROP001";
         setProperties(propertyList);
-        setSelectedProperty(propertyId);
+        setAvailabilityStatuses(statusList);
 
-        const roomList = await fetchJson(`/rooms?property_id=${propertyId}`);
-        if (ignore) {
-          return;
+        const resolvedPropertyId =
+          propertyId || propertyList[0]?.property_id || defaultPropertyId;
+
+        if (!ignore) {
+          setSelectedProperty(resolvedPropertyId);
         }
-        setRooms(roomList);
 
-        const ratePlanLists = await Promise.all(
-          roomList.map((room) =>
-            fetchJson(`/rate-plans?room_id=${room.room_id}`).catch(() => []),
-          ),
-        );
-
-        const primaryRatePlans = ratePlanLists
-          .map((list) => list[0])
-          .filter(Boolean);
-
-        const calendarEntries = await Promise.all(
-          primaryRatePlans.map((ratePlan) =>
-            fetchJson(`/rate-plans/${ratePlan.rate_id}/calendar`).catch(() => []),
-          ),
+        const data = await fetchJson(
+          `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
         );
 
         if (ignore) {
@@ -218,18 +325,25 @@ export function DailyRatesPage() {
         }
 
         const calendarByRateId = Object.fromEntries(
-          primaryRatePlans.map((ratePlan, index) => [
-            ratePlan.rate_id,
-            calendarEntries[index],
-          ]),
+          (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
         );
 
-        setRows(buildRowsFromApi(roomList, primaryRatePlans, calendarByRateId));
+        setPropertyName(data.property?.name || resolvedPropertyId);
+        setRooms(data.rooms || []);
+        setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
         setApiConnected(true);
+        setPublishError("");
       } catch {
         if (!ignore) {
           setApiConnected(false);
-          setRows(fallbackRows);
+          setRows([]);
+          setRooms([]);
+          setPropertyName("Selected Property");
+          setAvailabilityStatuses([]);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingRates(false);
         }
       }
     }
@@ -238,13 +352,363 @@ export function DailyRatesPage() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [propertyId, calendarStartDate]);
+
+  useEffect(() => {
+    setBulkForm((current) => {
+      const nextRateId = rows[0]?.code || "";
+      const hasSelectedRow = rows.some((row) => row.code === current.rate_id);
+      return {
+        ...current,
+        rate_id: hasSelectedRow ? current.rate_id : nextRateId,
+        start_date: current.start_date || calendarStartDate,
+        end_date: current.end_date || calendarStartDate,
+      };
+    });
+  }, [rows, calendarStartDate]);
+
+  const pendingChanges = useMemo(
+    () => rows.reduce((count, row) => count + row.cells.filter((cell) => cell.changed).length, 0),
+    [rows],
+  );
+  const roomList = useMemo(() => {
+    return rooms
+      .filter((room) => String(room.room_status || "").toUpperCase() === "LIVE")
+      .map((room) => {
+      const linkedRatePlans = rows.filter((row) => row.roomId === room.room_id);
+      return {
+        ...room,
+        linked_rate_plan_count: linkedRatePlans.length,
+        active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell).length,
+        preview_rate_plan: linkedRatePlans[0] || null,
+      };
+      });
+  }, [rooms, rows]);
+  const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
+  const selectedStayDate = selectedDay?.isoDate || "";
+  const selectedDateSummary = useMemo(() => {
+    if (!selectedStayDate) {
+      return { queued: 0, booked: 0, blocked: 0 };
+    }
+
+    return rows.reduce(
+      (summary, row) => {
+        const cell = row.cells.find((item) => item.stay_date === selectedStayDate);
+        if (!cell) {
+          return summary;
+        }
+
+        if (cell.changed) {
+          summary.queued += 1;
+        }
+        if (["BOOKED", "CTA", "CTD"].includes(cell.availability)) {
+          summary.booked += 1;
+        }
+        if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"].includes(cell.availability)) {
+          summary.blocked += 1;
+        }
+        return summary;
+      },
+      { queued: 0, booked: 0, blocked: 0 },
+    );
+  }, [rows, selectedStayDate]);
+
+  function handleSelectedDateChange(value) {
+    if (!value) {
+      return;
+    }
+
+    const start = new Date(calendarStartDate);
+    const next = new Date(value);
+    const diff = Math.floor((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diff >= 0 && diff < range) {
+      setSelectedDateIndex(diff);
+      return;
+    }
+
+    setCalendarStartDate(value);
+    setSelectedDateIndex(0);
+  }
+
+  async function refreshDailyRates(propertyIdOverride) {
+    const resolvedPropertyId = propertyIdOverride || selectedProperty || propertyId || defaultPropertyId;
+    const data = await fetchJson(
+      `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
+    );
+    const calendarByRateId = Object.fromEntries(
+      (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
+    );
+    setPropertyName(data.property?.name || resolvedPropertyId);
+    setRooms(data.rooms || []);
+    setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
+    setApiConnected(true);
+  }
+
+  function openRatePlanModal(room) {
+    setSelectedRoomForRatePlan(room);
+    setNewRatePlanForm(createRatePlanForm(room));
+    setRatePlanModalError("");
+    setRatePlanModalSuccess("");
+    setShowRatePlanModal(true);
+  }
+
+  function closeRatePlanModal() {
+    setShowRatePlanModal(false);
+    setSelectedRoomForRatePlan(null);
+    setRatePlanModalError("");
+    setRatePlanModalSuccess("");
+    setNewRatePlanForm(createRatePlanForm(null));
+  }
+
+  async function handleCreateRatePlan(event) {
+    event.preventDefault();
+
+    if (!newRatePlanForm.room_id) {
+      setRatePlanModalError("Select a room first.");
+      return;
+    }
+
+    setSavingNewRatePlan(true);
+    setRatePlanModalError("");
+    setRatePlanModalSuccess("");
+
+    try {
+      await fetchJson("/rate-plans", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id: newRatePlanForm.room_id,
+          title: newRatePlanForm.title.trim(),
+          description: newRatePlanForm.description.trim(),
+          meal_plan: newRatePlanForm.meal_plan.trim(),
+          is_refundable: Boolean(newRatePlanForm.is_refundable),
+          bed_type: newRatePlanForm.bed_type.trim(),
+          cancellation_policy: newRatePlanForm.cancellation_policy.trim(),
+          status: Boolean(newRatePlanForm.status),
+          min_stay: parseIntegerValue(newRatePlanForm.min_stay),
+          max_stay: parseIntegerValue(newRatePlanForm.max_stay),
+          currency: newRatePlanForm.currency.trim(),
+          base_rate: Number(newRatePlanForm.base_rate),
+          tax_and_service_fee: Number(newRatePlanForm.tax_and_service_fee),
+          surcharges: Number(newRatePlanForm.surcharges),
+          mandatory_fee: Number(newRatePlanForm.mandatory_fee),
+          resort_fee: Number(newRatePlanForm.resort_fee),
+          mandatory_tax: Number(newRatePlanForm.mandatory_tax),
+          total_inventory: parseIntegerValue(newRatePlanForm.total_inventory),
+          available_inventory: parseIntegerValue(newRatePlanForm.available_inventory),
+          sold_inventory: parseIntegerValue(newRatePlanForm.sold_inventory),
+          closed_to_arrival: Boolean(newRatePlanForm.closed_to_arrival),
+          closed_to_departure: Boolean(newRatePlanForm.closed_to_departure),
+          stop_sell: Boolean(newRatePlanForm.stop_sell),
+          extra_adult_rate: Number(newRatePlanForm.extra_adult_rate),
+          extra_child_rate: Number(newRatePlanForm.extra_child_rate),
+        }),
+      });
+
+      await refreshDailyRates(newRatePlanForm.room_id ? selectedProperty : undefined);
+      setRoomListMessage(`Added a new rate plan for ${newRatePlanForm.room_id}.`);
+      closeRatePlanModal();
+    } catch (error) {
+      setRatePlanModalError(error.message || "Could not create the rate plan.");
+    } finally {
+      setSavingNewRatePlan(false);
+    }
+  }
+
+  async function handleRemoveRatePlan(row) {
+    if (!row?.code || deletingRateId) {
+      return;
+    }
+
+    const hasPendingChanges = row.cells.some((cell) => cell.changed);
+    const confirmationMessage = hasPendingChanges
+      ? `Remove rate plan ${row.code}? Pending calendar changes for this plan will be lost.`
+      : `Remove rate plan ${row.code}?`;
+
+    if (!window.confirm(confirmationMessage)) {
+      return;
+    }
+
+    setDeletingRateId(row.code);
+    setPublishError("");
+    setPublishSuccess("");
+    setBulkError("");
+    setBulkSuccess("");
+
+    try {
+      await fetchJson(`/rate-plans/${encodeURIComponent(row.code)}`, {
+        method: "DELETE",
+      });
+
+      await refreshDailyRates(selectedProperty || propertyId || defaultPropertyId);
+      setPublishSuccess(`Removed rate plan ${row.code}.`);
+    } catch (error) {
+      setPublishError(error.message || `Could not remove rate plan ${row.code}.`);
+    } finally {
+      setDeletingRateId("");
+    }
+  }
+
+  function updateCell(rateId, stayDate, updates) {
+    setRows((currentRows) =>
+      currentRows.map((row) => {
+        if (row.code !== rateId) {
+          return row;
+        }
+
+        return {
+          ...row,
+          cells: row.cells.map((cell, index) => {
+            if (cell.stay_date !== stayDate) {
+              return cell;
+            }
+
+            const nextCell = {
+              ...cell,
+              ...updates,
+            };
+            const nextBaseRate = formatRateValue(nextCell.base_rate);
+            const nextAvailability = nextCell.availability || "AVAILABLE";
+
+            return {
+              ...nextCell,
+              base_rate: nextBaseRate,
+              availability: nextAvailability,
+              changed:
+                nextBaseRate !== formatRateValue(nextCell.original_base_rate) ||
+                nextAvailability !== nextCell.original_availability,
+              note: ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
+            };
+          }),
+        };
+      }),
+    );
+  }
+
+  function shiftCalendar(daysToShift) {
+    const current = new Date(calendarStartDate);
+    current.setDate(current.getDate() + daysToShift);
+    setCalendarStartDate(current.toISOString().slice(0, 10));
+  }
+
+  function applyBulkChanges(event) {
+    event.preventDefault();
+
+    if (!bulkForm.rate_id) {
+      setBulkError("Select a rate plan first.");
+      return;
+    }
+
+    if (!bulkForm.start_date || !bulkForm.end_date) {
+      setBulkError("Choose both a start and end date.");
+      return;
+    }
+
+    if (bulkForm.start_date > bulkForm.end_date) {
+      setBulkError("Bulk start date must be before end date.");
+      return;
+    }
+
+    if (!bulkForm.base_rate.trim() && !bulkForm.availability.trim()) {
+      setBulkError("Enter a rate, availability, or both for the bulk update.");
+      return;
+    }
+
+    let updatedCount = 0;
+    setRows((currentRows) =>
+      currentRows.map((row) => {
+        if (row.code !== bulkForm.rate_id) {
+          return row;
+        }
+
+        return {
+          ...row,
+          cells: row.cells.map((cell, index) => {
+            if (cell.stay_date < bulkForm.start_date || cell.stay_date > bulkForm.end_date) {
+              return cell;
+            }
+
+            updatedCount += 1;
+            const nextBaseRate = bulkForm.base_rate.trim()
+              ? formatRateValue(parseRateValue(bulkForm.base_rate))
+              : cell.base_rate;
+            const nextAvailability = bulkForm.availability || cell.availability;
+
+            return {
+              ...cell,
+              base_rate: nextBaseRate,
+              availability: nextAvailability,
+              changed:
+                nextBaseRate !== formatRateValue(cell.original_base_rate) ||
+                nextAvailability !== cell.original_availability,
+              note: ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
+            };
+          }),
+        };
+      }),
+    );
+
+    setBulkError("");
+    setBulkSuccess(updatedCount ? `Queued ${updatedCount} calendar cells for update.` : "No cells matched the selected range.");
+    setPublishSuccess("");
+  }
+
+  async function publishChanges() {
+    if (!pendingChanges) {
+      setPublishError("There are no pending calendar changes to publish.");
+      return;
+    }
+
+    setPublishing(true);
+    setPublishError("");
+    setPublishSuccess("");
+    setBulkSuccess("");
+
+    try {
+      const payloadsByRateId = rows.reduce((groups, row) => {
+        const changedItems = row.cells
+          .filter((cell) => cell.changed)
+          .map((cell) => ({
+            stay_date: cell.stay_date,
+            currency: cell.currency || "USD",
+            base_rate: Number(cell.base_rate),
+            tax: Number(cell.tax || 0),
+            availability: cell.availability,
+          }));
+
+        if (changedItems.length) {
+          groups[row.code] = changedItems;
+        }
+
+        return groups;
+      }, {});
+
+      await Promise.all(
+        Object.entries(payloadsByRateId).map(([rateId, items]) =>
+          fetchJson(`/rate-plans/${rateId}/calendar/bulk-upsert`, {
+            method: "POST",
+            body: JSON.stringify({ items }),
+          }),
+        ),
+      );
+
+      setPublishSuccess(`Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`);
+
+      await refreshDailyRates(selectedProperty || propertyId || defaultPropertyId);
+    } catch (error) {
+      setPublishError(error.message || "Could not publish calendar changes.");
+    } finally {
+      setPublishing(false);
+    }
+  }
 
   const summaryStats = useMemo(() => {
     const visibleRows = rows.length ? rows : fallbackRows;
     const allCells = visibleRows.flatMap((row) => row.cells.slice(0, range));
     const numericRates = allCells
-      .map((cell) => Number(String(cell.value).replace(/[^0-9.]/g, "")))
+      .map((cell) => Number(cell.base_rate ?? String(cell.value).replace(/[^0-9.]/g, "")))
       .filter((value) => !Number.isNaN(value) && value > 0);
     const adr = numericRates.length
       ? numericRates.reduce((sum, value) => sum + value, 0) / numericRates.length
@@ -253,8 +717,8 @@ export function DailyRatesPage() {
     return [
       {
         label: "Publish Queue",
-        value: `${allCells.filter((cell) => cell.tone === "amber").length} changes`,
-        note: apiConnected ? "Derived from calendar review cells" : "Static demo queue",
+        value: `${pendingChanges} changes`,
+        note: apiConnected ? "Editable calendar cells waiting to publish." : "Static demo queue",
         icon: "publish",
         tone: "primary",
       },
@@ -267,7 +731,7 @@ export function DailyRatesPage() {
       },
       {
         label: "Low Availability",
-        value: `${allCells.filter((cell) => cell.tone === "amber").length} days`,
+        value: `${allCells.filter((cell) => ["BOOKED", "CTA", "CTD"].includes(cell.availability)).length} days`,
         note: "Potential pressure dates in selected view",
         icon: "trending_up",
         tone: "amber",
@@ -280,7 +744,7 @@ export function DailyRatesPage() {
         tone: "blue",
       },
     ];
-  }, [apiConnected, range, rows]);
+  }, [apiConnected, pendingChanges, range, rows]);
 
   const insightCards = useMemo(
     () => [
@@ -289,20 +753,41 @@ export function DailyRatesPage() {
         items: [
           apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
           `Loaded ${properties.length || 1} properties and ${rooms.length || rows.length} room records.`,
-          apiConnected ? "Calendar cells are now backed by `/rate-plans/{rate_id}/calendar`." : "Start the backend to hydrate this matrix with live data.",
+          apiConnected ? "Single-day and bulk calendar edits publish through `/rate-plans/{rate_id}/calendar/bulk-upsert`." : "Start the backend to hydrate this matrix with live data.",
         ],
       },
       {
         title: "Active Property",
         items: [
-          `Property: ${selectedProperty || "PROP001"}`,
+          `Property: ${selectedProperty || defaultPropertyId}`,
           `${rooms.length} rooms fetched for rate review.`,
-          "Use these endpoints next for inline edits: bulk-upsert calendar and publish workflows.",
+          `Calendar start: ${calendarStartDate}`,
         ],
       },
     ],
-    [apiConnected, properties.length, rooms.length, rows.length, selectedProperty],
+    [apiConnected, calendarStartDate, properties.length, rooms.length, rows.length, selectedProperty],
   );
+
+  const availabilityOptions = useMemo(() => {
+    if (availabilityStatuses.length) {
+      return availabilityStatuses.map((status) => ({
+        value: status.title,
+        label: status.title,
+        description: status.description,
+      }));
+    }
+
+    return [
+      { value: "AVAILABLE", label: "AVAILABLE", description: "" },
+      { value: "BOOKED", label: "BOOKED", description: "" },
+      { value: "STOP_SELL", label: "STOP_SELL", description: "" },
+      { value: "CTA", label: "CTA", description: "" },
+      { value: "CTD", label: "CTD", description: "" },
+      { value: "OUT_OF_ORDER", label: "OUT_OF_ORDER", description: "" },
+      { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE", description: "" },
+      { value: "OVERBOOKED", label: "OVERBOOKED", description: "" },
+    ];
+  }, [availabilityStatuses]);
 
   return (
     <PmsShell
@@ -319,8 +804,8 @@ export function DailyRatesPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight">Daily Rates &amp; Yield</h2>
           <p className="max-w-3xl text-sm text-slate-500">
-            This screen now consumes FastAPI properties, rooms, rate plans, and
-            calendar data while preserving the demo PMS design.
+            This screen now consumes a property-level FastAPI daily-rates feed and
+            shows all rooms with their linked rate plans.
           </p>
         </div>
         <div className="flex gap-3">
@@ -335,11 +820,16 @@ export function DailyRatesPage() {
             <span className="material-symbols-outlined text-base">
               {apiConnected ? "hub" : "cloud_off"}
             </span>
-            {apiConnected ? "FastAPI Live" : "Fallback Mode"}
+            {loadingRates ? "Refreshing..." : apiConnected ? "FastAPI Live" : "Fallback Mode"}
           </div>
-          <button className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90">
+          <button
+            type="button"
+            onClick={publishChanges}
+            disabled={publishing || !pendingChanges}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          >
             <span className="material-symbols-outlined">publish</span>
-            Publish Changes
+            {publishing ? "Publishing..." : `Publish Changes${pendingChanges ? ` (${pendingChanges})` : ""}`}
           </button>
         </div>
       </div>
@@ -356,9 +846,27 @@ export function DailyRatesPage() {
             <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
               Property:{" "}
               <span className="font-bold text-slate-900">
-                {selectedProperty || "PROP001"}
+                {selectedProperty || defaultPropertyId}
               </span>
             </div>
+            <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+              <span className="mr-2">Switch:</span>
+              <select
+                value={selectedProperty}
+                onChange={(event) => {
+                  const nextPropertyId = event.target.value;
+                  setSelectedProperty(nextPropertyId);
+                  router.push(`/daily-rates?property_id=${encodeURIComponent(nextPropertyId)}`);
+                }}
+                className="bg-transparent font-bold text-slate-900 outline-none"
+              >
+                {properties.map((property) => (
+                  <option key={property.property_id} value={property.property_id}>
+                    {property.property_id}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
               Rooms Loaded:{" "}
               <span className="font-bold text-slate-900">{rooms.length || rows.length}</span>
@@ -366,26 +874,31 @@ export function DailyRatesPage() {
             <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
               Rate Plans: <span className="font-bold text-slate-900">{rows.length}</span>
             </div>
+            <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+              <span className="mr-2">Start:</span>
+              <input
+                type="date"
+                value={calendarStartDate}
+                onChange={(event) => setCalendarStartDate(event.target.value)}
+                className="bg-transparent font-bold text-slate-900 outline-none"
+              />
+            </label>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                View
-              </span>
               <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
-                {[7, 15, 30].map((size) => (
-                  <button
-                    key={size}
-                    type="button"
-                    onClick={() => setRange(size)}
-                    className={[
-                      "rounded-md px-3 py-1.5 text-sm transition-colors",
-                      range === size
-                        ? "bg-white font-bold text-slate-900 shadow-sm"
-                        : "font-medium text-slate-500 hover:text-slate-900",
-                    ].join(" ")}
-                  >
-                    {size} Days
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => shiftCalendar(-range)}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => shiftCalendar(range)}
+                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+                >
+                  Next
+                </button>
               </div>
             </div>
           </div>
@@ -393,9 +906,9 @@ export function DailyRatesPage() {
           <div className="mt-4 flex flex-wrap gap-3">
             {[
               ["API", apiConnected ? "Connected" : "Offline"],
-              ["Rooms Endpoint", `/rooms?property_id=${selectedProperty || "PROP001"}`],
-              ["Rate Plans", "/rate-plans?room_id=ROOM001"],
-              ["Calendar", "/rate-plans/{rate_id}/calendar"],
+              ["Property", `${selectedProperty || defaultPropertyId} • ${propertyName}`],
+              ["Daily Rates", `/rate-plans/daily-rates?property_id=${selectedProperty || defaultPropertyId}&days=${totalDays}&start_date=${calendarStartDate}`],
+              ["Calendar Save", "/rate-plans/{rate_id}/calendar/bulk-upsert"],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -411,6 +924,143 @@ export function DailyRatesPage() {
         </div>
 
         <div className="grid gap-4">
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Active Room List</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Rooms from the daily-rates API with quick add-rate-plan actions.
+                </p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                {roomList.length} rooms
+              </div>
+            </div>
+            {roomListMessage ? (
+              <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                {roomListMessage}
+              </p>
+            ) : null}
+            <div className="mt-4 space-y-3">
+              {roomList.map((room) => (
+                <div
+                  key={room.room_id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">{room.room_name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {[room.room_id, `$${Number(room.base_rate || 0).toFixed(2)}`, `${room.linked_rate_plan_count} plans`].join(" • ")}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 shadow-sm">
+                      Active {room.active_rate_plan_count}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openRatePlanModal(room)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                    >
+                      <span className="material-symbols-outlined text-base">edit_square</span>
+                      Edit
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {!roomList.length ? (
+                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
+                  No rooms found for this property.
+                </div>
+              ) : null}
+            </div>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="text-base font-bold text-slate-900">Bulk Editor</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Queue a date-range update for one rate plan, then publish all pending changes.
+            </p>
+            <form onSubmit={applyBulkChanges} className="mt-4 space-y-3">
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate Plan</span>
+                <select
+                  value={bulkForm.rate_id}
+                  onChange={(event) => {
+                    setBulkForm((current) => ({ ...current, rate_id: event.target.value }));
+                    setBulkError("");
+                    setBulkSuccess("");
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                >
+                  <option value="">Select rate plan</option>
+                  {rows.map((row) => (
+                    <option key={row.code} value={row.code}>
+                      {row.code} - {row.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Start Date</span>
+                  <input
+                    type="date"
+                    value={bulkForm.start_date}
+                    onChange={(event) => setBulkForm((current) => ({ ...current, start_date: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">End Date</span>
+                  <input
+                    type="date"
+                    value={bulkForm.end_date}
+                    onChange={(event) => setBulkForm((current) => ({ ...current, end_date: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Base Rate</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={bulkForm.base_rate}
+                    onChange={(event) => setBulkForm((current) => ({ ...current, base_rate: event.target.value }))}
+                    placeholder="Leave blank to keep"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Availability</span>
+                  <select
+                    value={bulkForm.availability}
+                    onChange={(event) => setBulkForm((current) => ({ ...current, availability: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  >
+                    <option value="">Keep existing</option>
+                    {availabilityOptions.map((status) => (
+                      <option key={status.value} value={status.value}>
+                        {status.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <button
+                type="submit"
+                disabled={!apiConnected || !rows.length}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+              >
+                <span className="material-symbols-outlined text-base">calendar_edit</span>
+                Apply To Range
+              </button>
+            </form>
+            {bulkError ? <p className="mt-3 text-sm font-medium text-rose-600">{bulkError}</p> : null}
+            {bulkSuccess ? <p className="mt-3 text-sm font-medium text-emerald-600">{bulkSuccess}</p> : null}
+          </article>
           {insightCards.map((card) => (
             <article
               key={card.title}
@@ -430,44 +1080,113 @@ export function DailyRatesPage() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
+          <div className="flex min-w-0 flex-col">
             <h3 className="text-lg font-bold text-slate-900">Rate Matrix</h3>
             <p className="text-sm text-slate-500">
-              Demo frontend hydrated from FastAPI rate-plan and calendar endpoints.
+              Edit a single day directly in the grid, or queue bulk changes from the editor.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wider">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              {[7, 15, 30].map((size) => (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    setRange(size);
+                    setSelectedDateIndex(0);
+                  }}
+                  className={[
+                    "rounded-lg px-3 py-2 text-sm transition-all",
+                    range === size
+                      ? "bg-slate-900 font-bold text-white shadow-sm"
+                      : "font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900",
+                  ].join(" ")}
+                >
+                  {size} Days
+                </button>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+              <span className="material-symbols-outlined text-base text-slate-400">calendar_month</span>
+              <input
+                type="date"
+                value={selectedStayDate}
+                onChange={(event) => handleSelectedDateChange(event.target.value)}
+                className="bg-transparent text-slate-900 outline-none"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wider">
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
               High rate
-            </span>
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
+              </span>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
               Low inventory
-            </span>
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
+              </span>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
               Today
-            </span>
+              </span>
+            </div>
+          </div>
+        </div>
+        {publishError ? (
+          <div className="border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700">
+            {publishError}
+          </div>
+        ) : null}
+        {publishSuccess ? (
+          <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
+            {publishSuccess}
+          </div>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-3">
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+            Selected Date: <span className="text-primary">{selectedStayDate || "N/A"}</span>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+            Queued changes: <span className="font-bold text-slate-900">{selectedDateSummary.queued}</span>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+            Warning states: <span className="font-bold text-amber-700">{selectedDateSummary.booked}</span>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+            Blocked states: <span className="font-bold text-rose-700">{selectedDateSummary.blocked}</span>
           </div>
         </div>
 
         <div className="custom-scrollbar overflow-x-auto overflow-y-hidden">
-          <div className="min-w-max" style={{ "--rate-days": String(range) }}>
-            <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white">
-              <div className="border-r border-slate-200 px-5 py-4">
+          <div
+            className={[
+              "w-full",
+              range === 7 && "min-w-[820px]",
+              range === 15 && "min-w-[1320px]",
+              range === 30 && "min-w-[2460px]",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{ "--rate-days": String(range) }}
+          >
+            <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+              <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Room Type
                 </p>
               </div>
-              {days.slice(0, range).map((day, index) => {
-                const isToday = index === todayIndex;
+              {visibleDays.map((day, index) => {
+                const isToday = index === 0;
+                const isSelected = index === selectedDateIndex;
                 const weekend = day.shortDay === "Sat" || day.shortDay === "Sun";
                 return (
-                  <div
-                    key={`${day.shortDay}-${day.dayNum}`}
+                  <button
+                    type="button"
+                    key={day.isoDate}
+                    onClick={() => setSelectedDateIndex(index)}
                     className={[
-                      "border-r border-slate-100 px-3 py-4 text-center",
-                      isToday && "bg-primary/[0.04]",
-                      !isToday && weekend && "bg-slate-50",
+                      "border-r border-slate-100 px-3 py-4 text-center transition-colors",
+                      isToday && "bg-primary/[0.07]",
+                      !isToday && weekend && "bg-slate-50/80",
+                      isSelected && "ring-2 ring-inset ring-primary/40",
                     ].join(" ")}
                   >
                     <p
@@ -479,28 +1198,36 @@ export function DailyRatesPage() {
                       {isToday ? "Today" : day.shortDay}
                     </p>
                     <p className="mt-1 text-sm font-bold text-slate-900">
-                      {day.dayNum} Oct
+                      {day.dayNum} {day.month}
                     </p>
-                  </div>
+                  </button>
                 );
               })}
             </div>
 
+            {!rows.length ? (
+              <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
+                {apiConnected
+                  ? `No rate plans found for ${selectedProperty || defaultPropertyId} in this calendar window.`
+                  : "Backend offline. Start the API to load editable daily rates."}
+              </div>
+            ) : null}
+
             {rows.map((row) => (
-              <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0">
-                <div className="border-r border-slate-200 bg-slate-50/60 px-5 py-4">
+              <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
+                <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-slate-900">{row.title}</p>
-                      <p className="text-xs text-slate-500">
-                        {row.code} • {row.subtitle}
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[row.roomLabel, row.code, row.subtitle].filter(Boolean).join(" • ")}
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 shadow-sm">
                       {row.occupancy}
                     </span>
                   </div>
-                  <p className="mt-3 text-xs font-medium text-slate-500">
+                  <p className="mt-3 line-clamp-2 text-xs font-medium text-slate-500">
                     {row.strategy}
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -520,26 +1247,67 @@ export function DailyRatesPage() {
                       </span>
                     ) : null}
                   </div>
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRatePlan(row)}
+                      disabled={!apiConnected || publishing || deletingRateId === row.code}
+                      className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      {deletingRateId === row.code ? "Removing..." : "Remove Plan"}
+                    </button>
+                  </div>
                 </div>
 
                 {row.cells.slice(0, range).map((cell, index) => {
                   const styles = toneClasses[cell.tone] || toneClasses.default;
+                  const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
+                  const cellAvailability = cell.availability || "AVAILABLE";
                   return (
                     <div
                       key={`${row.code}-${index}`}
                       className={[
                         "border-r border-slate-100 px-2 py-3",
-                        index === todayIndex && "bg-primary/[0.02]",
+                        index === 0 && "bg-primary/[0.03]",
                       ]
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      <div className={styles.box}>
+                      <div className={`${styles.box} min-h-[122px] transition-shadow hover:shadow-md`}>
                         <span className={styles.note}>{cell.note}</span>
-                        <input className={styles.input} defaultValue={cell.value} />
-                        <div className="mt-2 flex items-center justify-between text-[10px] font-medium text-slate-400">
-                          <span>BAR</span>
-                          <span>Edit</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className={styles.input}
+                          value={cellRate}
+                          disabled={!apiConnected || !cell.stay_date}
+                          onChange={(event) => {
+                            updateCell(row.code, cell.stay_date, { base_rate: event.target.value });
+                            setPublishError("");
+                            setPublishSuccess("");
+                          }}
+                        />
+                        <select
+                          value={cellAvailability}
+                          disabled={!apiConnected || !cell.stay_date}
+                          onChange={(event) => {
+                            updateCell(row.code, cell.stay_date, { availability: event.target.value });
+                            setPublishError("");
+                            setPublishSuccess("");
+                          }}
+                          className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 outline-none"
+                        >
+                          {availabilityOptions.map((status) => (
+                            <option key={status.value} value={status.value}>
+                              {status.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-medium text-slate-400">
+                          <span>{cell.stay_date || "Demo"}</span>
+                          <span>{cell.changed ? "Queued" : apiConnected ? "Saved" : "Preview"}</span>
                         </div>
                       </div>
                     </div>
@@ -550,6 +1318,166 @@ export function DailyRatesPage() {
           </div>
         </div>
       </section>
+      {showRatePlanModal ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plan</p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900">
+                  Add Rate Plan for {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Create a new rate plan directly from the daily-rates workspace.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeRatePlanModal}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleCreateRatePlan} className="mt-6 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Room ID</span>
+                  <input
+                    value={newRatePlanForm.room_id}
+                    readOnly
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</span>
+                  <input
+                    value={newRatePlanForm.title}
+                    onChange={(event) => setNewRatePlanForm((current) => ({ ...current, title: event.target.value }))}
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+              </div>
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
+                <textarea
+                  value={newRatePlanForm.description}
+                  onChange={(event) => setNewRatePlanForm((current) => ({ ...current, description: event.target.value }))}
+                  rows={3}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                />
+              </label>
+              <div className="grid gap-4 md:grid-cols-4">
+                {[
+                  ["meal_plan", "Meal Plan"],
+                  ["bed_type", "Bed Type"],
+                  ["currency", "Currency"],
+                  ["cancellation_policy", "Cancellation"],
+                ].map(([field, label]) => (
+                  <label key={field} className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                    <input
+                      value={newRatePlanForm[field]}
+                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="grid gap-4 md:grid-cols-4">
+                {[
+                  ["base_rate", "Base Rate"],
+                  ["tax_and_service_fee", "Tax & Service"],
+                  ["surcharges", "Surcharges"],
+                  ["mandatory_fee", "Mandatory Fee"],
+                  ["resort_fee", "Resort Fee"],
+                  ["mandatory_tax", "Mandatory Tax"],
+                  ["extra_adult_rate", "Extra Adult"],
+                  ["extra_child_rate", "Extra Child"],
+                ].map(([field, label]) => (
+                  <label key={field} className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newRatePlanForm[field]}
+                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="grid gap-4 md:grid-cols-4">
+                {[
+                  ["min_stay", "Min Stay"],
+                  ["max_stay", "Max Stay"],
+                  ["total_inventory", "Total Inventory"],
+                  ["available_inventory", "Available"],
+                  ["sold_inventory", "Sold"],
+                ].map(([field, label]) => (
+                  <label key={field} className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={newRatePlanForm[field]}
+                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                    />
+                  </label>
+                ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-5">
+                {[
+                  ["is_refundable", "Refundable"],
+                  ["status", "Active"],
+                  ["closed_to_arrival", "CTA"],
+                  ["closed_to_departure", "CTD"],
+                  ["stop_sell", "Stop Sell"],
+                ].map(([field, label]) => (
+                  <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(newRatePlanForm[field])}
+                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.checked }))}
+                      className="size-4 rounded border-slate-300"
+                    />
+                    <span>{label}</span>
+                  </label>
+                ))}
+              </div>
+              {ratePlanModalError ? (
+                <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  {ratePlanModalError}
+                </p>
+              ) : null}
+              {ratePlanModalSuccess ? (
+                <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                  {ratePlanModalSuccess}
+                </p>
+              ) : null}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeRatePlanModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingNewRatePlan}
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {savingNewRatePlan ? "Saving..." : "Create Rate Plan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </PmsShell>
   );
 }

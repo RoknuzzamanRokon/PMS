@@ -114,7 +114,47 @@ Optional: `property_id`
 
 ### `GET /api/v1/properties/{property_id}`
 
-Returns one property by `property_id`.
+Returns one property by `property_id` with expanded operational detail.
+
+Response sections:
+
+- top-level property fields
+- `summary`
+- `rooms`
+
+`summary` now includes:
+
+- `total_rooms`
+- `total_rate_plans`
+- `total_inventory`
+- `available_inventory`
+- `sold_inventory`
+- `blocked_inventory`
+- `average_base_rate`
+- `average_current_rate`
+- `room_status_counts`
+
+Additional property-level placeholders now include:
+
+- `property_base_image`
+- `amenities`
+- `facilities`
+
+Each room now includes:
+
+- room identity fields
+- `base_rate`
+- `current_rate`
+- `total_inventory`
+- `available_inventory`
+- `sold_inventory`
+- `blocked_inventory`
+- `active_rate_plan_count`
+- `status`
+- `image`
+- `amenities`
+- `facilities`
+- `rate_plans`
 
 ## Rooms
 
@@ -177,7 +217,32 @@ Response sections:
 
 ### `GET /api/v1/rooms/{room_id}`
 
-Returns one room by `room_id`.
+Returns one room by `room_id` with linked rate-plan detail.
+
+Response sections:
+
+- room fields
+- `current_rate_plan`
+- `rate_plans`
+
+### `PATCH /api/v1/rooms/{room_id}`
+
+Updates one room by `room_id`.
+
+Request body can include any editable room fields:
+
+```json
+{
+  "room_name": "Deluxe Suite Updated",
+  "room_name_lang": "Deluxe Suite Updated",
+  "base_rate": 260,
+  "tax_and_service_fee": 20,
+  "surcharges": 7,
+  "mandatory_fee": 4,
+  "resort_fee": 3,
+  "mandatory_tax": 8
+}
+```
 
 ## Rate Plans
 
@@ -205,6 +270,7 @@ Request body example:
 {
   "room_id": "ROOM001",
   "title": "Deluxe Flexible",
+  "supplier_name": "Direct Supplier",
   "description": "Best flexible rate",
   "meal_plan": "BB",
   "is_refundable": true,
@@ -236,6 +302,24 @@ Optional: `rate_id`
 ### `GET /api/v1/rate-plans/{rate_id}`
 
 Returns one rate plan by `rate_id`.
+
+### `PATCH /api/v1/rate-plans/{rate_id}`
+
+Updates one rate plan by `rate_id`.
+
+Editable fields include `supplier_name` and all other rate-plan fields.
+
+Request body example:
+
+```json
+{
+  "title": "Deluxe Flexible Updated",
+  "supplier_name": "Booking Holdings",
+  "base_rate": 285,
+  "available_inventory": 6,
+  "status": true
+}
+```
 
 ### `POST /api/v1/rate-plans/{rate_id}/calendar/bulk-upsert`
 

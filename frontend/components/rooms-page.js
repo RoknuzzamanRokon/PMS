@@ -25,6 +25,7 @@ function createRoomForm(propertyId) {
     property_id: propertyId,
     room_name: "",
     room_name_lang: "",
+    room_status: "PROCESSING",
     base_rate: "240",
     tax_and_service_fee: "18",
     surcharges: "5",
@@ -39,6 +40,35 @@ function createImageForm() {
     room_name: "",
     image_url: "https://images.example.com/rooms/deluxe-suite.jpg",
     alt_text: "",
+  };
+}
+
+function createRoomEditorForm(room = {}) {
+  return {
+    room_name: room.room_name || "",
+    room_name_lang: room.room_name_lang || "",
+    room_status: room.room_status || room.status || "PROCESSING",
+    base_rate: room.base_rate != null ? String(room.base_rate) : "0",
+    tax_and_service_fee: room.tax_and_service_fee != null ? String(room.tax_and_service_fee) : "0",
+    surcharges: room.surcharges != null ? String(room.surcharges) : "0",
+    mandatory_fee: room.mandatory_fee != null ? String(room.mandatory_fee) : "0",
+    resort_fee: room.resort_fee != null ? String(room.resort_fee) : "0",
+    mandatory_tax: room.mandatory_tax != null ? String(room.mandatory_tax) : "0",
+  };
+}
+
+function createRatePlanEditorForm(ratePlan = {}) {
+  return {
+    rate_id: ratePlan.rate_id || "",
+    title: ratePlan.title || "",
+    supplier_name: ratePlan.supplier_name || "",
+    meal_plan: ratePlan.meal_plan || "RO",
+    currency: ratePlan.currency || "USD",
+    base_rate: ratePlan.base_rate != null ? String(ratePlan.base_rate) : "0",
+    available_inventory: ratePlan.available_inventory != null ? String(ratePlan.available_inventory) : "0",
+    total_inventory: ratePlan.total_inventory != null ? String(ratePlan.total_inventory) : "0",
+    sold_inventory: ratePlan.sold_inventory != null ? String(ratePlan.sold_inventory) : "0",
+    status: Boolean(ratePlan.status),
   };
 }
 
@@ -107,6 +137,41 @@ function getRoomLaunchBadge(status) {
   };
 }
 
+function getBackendRoomStatusBadge(roomStatus) {
+  switch ((roomStatus || "PROCESSING").toUpperCase()) {
+    case "LIVE":
+      return {
+        label: "Live",
+        className: "bg-emerald-100 text-emerald-700",
+        detail: "Active selling stage",
+      };
+    case "BLOCKED":
+      return {
+        label: "Blocked",
+        className: "bg-rose-100 text-rose-700",
+        detail: "Sales blocked",
+      };
+    case "MAINTENANCE":
+      return {
+        label: "Maintenance",
+        className: "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200",
+        detail: "Under maintenance",
+      };
+    case "INACTIVE":
+      return {
+        label: "Inactive",
+        className: "bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-200",
+        detail: "Not currently active",
+      };
+    default:
+      return {
+        label: "Processing",
+        className: "bg-amber-100 text-amber-700",
+        detail: "Setup in progress",
+      };
+  }
+}
+
 export function RoomsManagementPage({ propertyId }) {
   const selectedPropertyId = propertyId || defaultPropertyId;
   const [activeManagementSection, setActiveManagementSection] = useState("add-room");
@@ -123,6 +188,17 @@ export function RoomsManagementPage({ propertyId }) {
   const [roomLaunchStatuses, setRoomLaunchStatuses] = useState({});
   const [activeRoomId, setActiveRoomId] = useState("");
   const [roomStatusMode, setRoomStatusMode] = useState("form");
+  const [activeRoomDetail, setActiveRoomDetail] = useState(null);
+  const [roomEditorForm, setRoomEditorForm] = useState(() => createRoomEditorForm());
+  const [loadingRoomDetail, setLoadingRoomDetail] = useState(false);
+  const [savingRoomDetail, setSavingRoomDetail] = useState(false);
+  const [roomDetailError, setRoomDetailError] = useState("");
+  const [roomDetailSuccess, setRoomDetailSuccess] = useState("");
+  const [selectedRatePlanId, setSelectedRatePlanId] = useState("");
+  const [ratePlanEditorForm, setRatePlanEditorForm] = useState(() => createRatePlanEditorForm());
+  const [savingRatePlan, setSavingRatePlan] = useState(false);
+  const [ratePlanError, setRatePlanError] = useState("");
+  const [ratePlanSuccess, setRatePlanSuccess] = useState("");
   const propertyLocation = "Location info not available";
   const roomStatusStorageKey = `inno-rooms-room-launch-status:${selectedPropertyId}`;
 
@@ -158,6 +234,14 @@ export function RoomsManagementPage({ propertyId }) {
     }
     setActiveRoomId("");
     setRoomStatusMode("form");
+    setActiveRoomDetail(null);
+    setRoomEditorForm(createRoomEditorForm());
+    setSelectedRatePlanId("");
+    setRatePlanEditorForm(createRatePlanEditorForm());
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+    setRatePlanError("");
+    setRatePlanSuccess("");
   }, [roomStatusStorageKey]);
 
   useEffect(() => {
@@ -165,6 +249,25 @@ export function RoomsManagementPage({ propertyId }) {
       window.localStorage.setItem(roomStatusStorageKey, JSON.stringify(roomLaunchStatuses));
     } catch {}
   }, [roomLaunchStatuses, roomStatusStorageKey]);
+
+  function applyRoomDetailToEditors(roomDetail, fallbackCategory) {
+    setActiveRoomDetail(roomDetail);
+    setRoomEditorForm(createRoomEditorForm(roomDetail));
+    const preferredRatePlan =
+      roomDetail?.current_rate_plan || roomDetail?.rate_plans?.[0] || null;
+    setSelectedRatePlanId(preferredRatePlan?.rate_id || "");
+    setRatePlanEditorForm(createRatePlanEditorForm(preferredRatePlan || {}));
+    if (!roomDetail && fallbackCategory) {
+      setRoomEditorForm(
+        createRoomEditorForm({
+          room_name: fallbackCategory.room_name,
+          room_name_lang: fallbackCategory.room_name,
+          room_status: fallbackCategory.room_status || fallbackCategory.status || "PROCESSING",
+          base_rate: fallbackCategory.base_rate,
+        }),
+      );
+    }
+  }
 
   const summaryCards = useMemo(
     () => [
@@ -189,6 +292,8 @@ export function RoomsManagementPage({ propertyId }) {
   const activeCompletionSummary = activeLaunchStatus
     ? getCompletionSummary(activeLaunchStatus)
     : null;
+
+  const activeRatePlans = activeRoomDetail?.rate_plans || [];
 
   async function handleCreateRoom(event) {
     event.preventDefault();
@@ -241,7 +346,7 @@ export function RoomsManagementPage({ propertyId }) {
     );
   }
 
-  function openRoomStatus(category) {
+  async function openRoomStatus(category) {
     const existingStatus = roomLaunchStatuses[category.room_id] || createRoomLaunchStatus();
     setRoomLaunchStatuses((current) => ({
       ...current,
@@ -249,6 +354,21 @@ export function RoomsManagementPage({ propertyId }) {
     }));
     setActiveRoomId(category.room_id);
     setRoomStatusMode(existingStatus.sales_ready ? "success" : "form");
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+    setRatePlanError("");
+    setRatePlanSuccess("");
+    setLoadingRoomDetail(true);
+
+    try {
+      const roomDetail = await fetchJson(`/rooms/${category.room_id}`);
+      applyRoomDetailToEditors(roomDetail, category);
+    } catch (error) {
+      applyRoomDetailToEditors(null, category);
+      setRoomDetailError(error.message || "Could not load room details.");
+    } finally {
+      setLoadingRoomDetail(false);
+    }
   }
 
   function updateActiveRoomStatus(key, value) {
@@ -277,6 +397,87 @@ export function RoomsManagementPage({ propertyId }) {
 
     updateActiveRoomStatus("sales_ready", nextValue);
     setRoomStatusMode(nextValue ? "success" : "form");
+  }
+
+  async function handleSaveRoomDetail(event) {
+    event.preventDefault();
+
+    if (!activeCategory) {
+      return;
+    }
+
+    setSavingRoomDetail(true);
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+
+    try {
+      const updatedRoom = await fetchJson(`/rooms/${activeCategory.room_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          room_name: roomEditorForm.room_name.trim(),
+          room_name_lang: roomEditorForm.room_name_lang.trim() || roomEditorForm.room_name.trim(),
+          room_status: roomEditorForm.room_status.trim() || "PROCESSING",
+          base_rate: numberValue(roomEditorForm.base_rate),
+          tax_and_service_fee: numberValue(roomEditorForm.tax_and_service_fee),
+          surcharges: numberValue(roomEditorForm.surcharges),
+          mandatory_fee: numberValue(roomEditorForm.mandatory_fee),
+          resort_fee: numberValue(roomEditorForm.resort_fee),
+          mandatory_tax: numberValue(roomEditorForm.mandatory_tax),
+        }),
+      });
+
+      applyRoomDetailToEditors(updatedRoom, activeCategory);
+      setRoomDetailSuccess(`Saved changes for ${updatedRoom.room_id}.`);
+      await loadOverview();
+    } catch (error) {
+      setRoomDetailError(error.message || "Could not save room changes.");
+    } finally {
+      setSavingRoomDetail(false);
+    }
+  }
+
+  async function handleSaveRatePlan(event) {
+    event.preventDefault();
+
+    if (!selectedRatePlanId) {
+      setRatePlanError("Select a rate plan first.");
+      return;
+    }
+
+    setSavingRatePlan(true);
+    setRatePlanError("");
+    setRatePlanSuccess("");
+
+    try {
+      await fetchJson(`/rate-plans/${selectedRatePlanId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: ratePlanEditorForm.title.trim(),
+          supplier_name: ratePlanEditorForm.supplier_name.trim(),
+          meal_plan: ratePlanEditorForm.meal_plan.trim(),
+          currency: ratePlanEditorForm.currency.trim(),
+          base_rate: numberValue(ratePlanEditorForm.base_rate),
+          available_inventory: Math.trunc(numberValue(ratePlanEditorForm.available_inventory)),
+          total_inventory: Math.trunc(numberValue(ratePlanEditorForm.total_inventory)),
+          sold_inventory: Math.trunc(numberValue(ratePlanEditorForm.sold_inventory)),
+          status: Boolean(ratePlanEditorForm.status),
+        }),
+      });
+
+      const refreshedRoom = await fetchJson(`/rooms/${activeCategory.room_id}`);
+      applyRoomDetailToEditors(refreshedRoom, activeCategory);
+      setSelectedRatePlanId(selectedRatePlanId);
+      const refreshedSelected = (refreshedRoom.rate_plans || []).find(
+        (item) => item.rate_id === selectedRatePlanId,
+      );
+      setRatePlanEditorForm(createRatePlanEditorForm(refreshedSelected || refreshedRoom.current_rate_plan || {}));
+      setRatePlanSuccess(`Saved changes for ${selectedRatePlanId}.`);
+      await loadOverview();
+    } catch (error) {
+      setRatePlanError(error.message || "Could not save rate plan changes.");
+    } finally {
+      setSavingRatePlan(false);
+    }
   }
 
   return (
@@ -897,7 +1098,8 @@ export function RoomsManagementPage({ propertyId }) {
             {data.categories.map((category) => {
               const roomStatus = roomLaunchStatuses[category.room_id] || createRoomLaunchStatus();
               const roomSummary = getCompletionSummary(roomStatus);
-              const roomBadge = getRoomLaunchBadge(roomStatus);
+              const roomBadge = getBackendRoomStatusBadge(category.room_status);
+              const launchBadge = getRoomLaunchBadge(roomStatus);
 
               return (
                 <button
@@ -910,7 +1112,7 @@ export function RoomsManagementPage({ propertyId }) {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-bold">{category.room_name}</p>
-                        {roomStatus.sales_ready ? (
+                        {String(category.room_status || "").toUpperCase() === "LIVE" ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
                             <span className="material-symbols-outlined text-xs">check_circle</span>
                             Live
@@ -931,7 +1133,7 @@ export function RoomsManagementPage({ propertyId }) {
                         {roomBadge.label}
                       </span>
                       <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        {roomBadge.detail} • {roomSummary.percent}% complete
+                        {roomBadge.detail} • Checklist {roomSummary.percent}% complete
                       </p>
                     </div>
                   </div>
@@ -944,6 +1146,12 @@ export function RoomsManagementPage({ propertyId }) {
                     </span>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-800">
                       Sold: {category.sold_inventory}
+                    </span>
+                    <span className="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                      Stage: {category.room_status || "PROCESSING"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      Launch: {launchBadge.label}
                     </span>
                     <span className="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">
                       Click to manage go-live status
@@ -1010,10 +1218,13 @@ export function RoomsManagementPage({ propertyId }) {
                       Room Complete Status
                     </p>
                     <h3 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100 sm:text-2xl">
-                      {activeCategory.room_name}
+                      {roomEditorForm.room_name || activeCategory.room_name}
                     </h3>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                       {activeCategory.room_id} for {data.property.name}
+                    </p>
+                    <p className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      Current Stage: {roomEditorForm.room_status || activeCategory.room_status || activeCategory.status || "PROCESSING"}
                     </p>
                   </div>
                   <button
@@ -1085,30 +1296,377 @@ export function RoomsManagementPage({ propertyId }) {
               </div>
 
               <div className="min-w-0">
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <form
+                  onSubmit={handleSaveRoomDetail}
+                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                >
                   <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                     Room Information
                   </h4>
-                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                    {[
-                      ["Room", activeCategory.room_name],
-                      ["Room ID", activeCategory.room_id],
-                      ["Base Rate", `$${Number(activeCategory.base_rate).toFixed(2)}`],
-                      ["Rate Plans", `${activeCategory.rate_plan_count}`],
-                      ["Available", `${activeCategory.available_inventory}`],
-                      ["Sold", `${activeCategory.sold_inventory}`],
-                    ].map(([label, value]) => (
-                      <div key={label} className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-800/70">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">
-                          {label}
-                        </p>
-                        <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
-                          {value}
-                        </p>
-                      </div>
-                    ))}
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Edit room data here and save with the room ID API.
+                  </p>
+
+                  <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Room ID
+                      <input
+                        type="text"
+                        readOnly
+                        value={activeCategory.room_id}
+                        className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-slate-500 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Room Name
+                      <input
+                        type="text"
+                        value={roomEditorForm.room_name}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, room_name: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Display Name
+                      <input
+                        type="text"
+                        value={roomEditorForm.room_name_lang}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, room_name_lang: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Room Status
+                      <select
+                        value={roomEditorForm.room_status}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, room_status: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        {["PROCESSING", "LIVE", "BLOCKED", "MAINTENANCE", "INACTIVE"].map((statusOption) => (
+                          <option key={statusOption} value={statusOption}>
+                            {statusOption}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Base Rate
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.base_rate}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, base_rate: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Tax & Service Fee
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.tax_and_service_fee}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, tax_and_service_fee: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Surcharges
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.surcharges}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, surcharges: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Mandatory Fee
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.mandatory_fee}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, mandatory_fee: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Resort Fee
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.resort_fee}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, resort_fee: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Mandatory Tax
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={roomEditorForm.mandatory_tax}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, mandatory_tax: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
                   </div>
-                </div>
+
+                  {loadingRoomDetail ? (
+                    <p className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700">
+                      Loading room details...
+                    </p>
+                  ) : null}
+
+                  {roomDetailError ? (
+                    <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {roomDetailError}
+                    </p>
+                  ) : null}
+
+                  {roomDetailSuccess ? (
+                    <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                      {roomDetailSuccess}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="submit"
+                      disabled={savingRoomDetail || loadingRoomDetail}
+                      className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <span className="material-symbols-outlined text-base">
+                        {savingRoomDetail ? "sync" : "save"}
+                      </span>
+                      {savingRoomDetail ? "Saving..." : "Save Room Changes"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setRoomEditorForm(createRoomEditorForm(activeRoomDetail || activeCategory))
+                      }
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                    >
+                      <span className="material-symbols-outlined text-base">restart_alt</span>
+                      Reset
+                    </button>
+                  </div>
+                </form>
+
+                {/* <form
+                  onSubmit={handleSaveRatePlan}
+                  className="mt-5 rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                >
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    Current Rate Plan
+                  </h4>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Load and update the selected rate plan using the rate plan API.
+                  </p>
+
+                  <div className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300 sm:col-span-2">
+                      Rate Plan
+                      <select
+                        value={selectedRatePlanId}
+                        onChange={(event) => {
+                          const nextRateId = event.target.value;
+                          const selectedPlan = activeRatePlans.find((item) => item.rate_id === nextRateId);
+                          setSelectedRatePlanId(nextRateId);
+                          setRatePlanEditorForm(createRatePlanEditorForm(selectedPlan || {}));
+                          setRatePlanError("");
+                          setRatePlanSuccess("");
+                        }}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      >
+                        <option value="">Select rate plan</option>
+                        {activeRatePlans.map((item) => (
+                          <option key={item.rate_id} value={item.rate_id}>
+                            {item.rate_id} - {item.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Title
+                      <input
+                        type="text"
+                        value={ratePlanEditorForm.title}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, title: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Supplier Name
+                      <input
+                        type="text"
+                        value={ratePlanEditorForm.supplier_name}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, supplier_name: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Meal Plan
+                      <input
+                        type="text"
+                        value={ratePlanEditorForm.meal_plan}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, meal_plan: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Currency
+                      <input
+                        type="text"
+                        value={ratePlanEditorForm.currency}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, currency: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Base Rate
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={ratePlanEditorForm.base_rate}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, base_rate: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Available Inventory
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={ratePlanEditorForm.available_inventory}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, available_inventory: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Total Inventory
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={ratePlanEditorForm.total_inventory}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, total_inventory: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex flex-col gap-2 font-medium text-slate-700 dark:text-slate-300">
+                      Sold Inventory
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={ratePlanEditorForm.sold_inventory}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, sold_inventory: event.target.value }))
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      />
+                    </label>
+
+                    <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300 sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(ratePlanEditorForm.status)}
+                        onChange={(event) =>
+                          setRatePlanEditorForm((current) => ({ ...current, status: event.target.checked }))
+                        }
+                        className="size-5 rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                      Active rate plan status
+                    </label>
+                  </div>
+
+                  {ratePlanError ? (
+                    <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                      {ratePlanError}
+                    </p>
+                  ) : null}
+
+                  {ratePlanSuccess ? (
+                    <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                      {ratePlanSuccess}
+                    </p>
+                  ) : null}
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="submit"
+                      disabled={savingRatePlan || !selectedRatePlanId}
+                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900"
+                    >
+                      <span className="material-symbols-outlined text-base">
+                        {savingRatePlan ? "sync" : "sell"}
+                      </span>
+                      {savingRatePlan ? "Saving Rate Plan..." : "Save Rate Plan"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selectedPlan = activeRatePlans.find((item) => item.rate_id === selectedRatePlanId);
+                        setRatePlanEditorForm(createRatePlanEditorForm(selectedPlan || {}));
+                        setRatePlanError("");
+                        setRatePlanSuccess("");
+                      }}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                    >
+                      <span className="material-symbols-outlined text-base">restart_alt</span>
+                      Reset
+                    </button>
+                  </div>
+                </form> */}
 
                 <div className="mt-5 rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
                   <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">

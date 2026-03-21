@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import Guest, Payment, Property, RateCalendar, RatePlan, Reservation, ReservationRoom, Room, User
+from .models import AvailabilityStatus, Guest, Payment, Property, RateCalendar, RatePlan, Reservation, ReservationRoom, Room, User
 
 
 def _exists(db: Session, model, field_name: str, value: str) -> bool:
@@ -18,6 +18,31 @@ def _exists(db: Session, model, field_name: str, value: str) -> bool:
 
 def seed_database(db: Session) -> None:
     today = date.today()
+
+    availability_status_records = [
+        (1, "1", "AVAILABLE", "Room is free and can be booked."),
+        (2, "2", "BOOKED", "Room is already reserved by a guest."),
+        (3, "3", "STOP_SELL", "Hotel stops selling the room even if inventory exists."),
+        (4, "4", "CTA", "Guests cannot check-in on that date, but they may stay if they checked in earlier."),
+        (5, "5", "CTD", "Guests cannot check out on that date."),
+        (6, "6", "OUT_OF_ORDER", "Room cannot be sold because of maintenance or damage."),
+        (7, "7", "OUT_OF_SERVICE", "Room is temporarily unavailable but not under major repair."),
+        (11, "8", "OVERBOOKED", "Hotel sells more rooms than available intentionally."),
+    ]
+    for status_id, code, title, description in availability_status_records:
+        status = db.scalar(select(AvailabilityStatus).where(AvailabilityStatus.code == code))
+        if status:
+            status.title = title
+            status.description = description
+        else:
+            db.add(
+                AvailabilityStatus(
+                    id=status_id,
+                    code=code,
+                    title=title,
+                    description=description,
+                )
+            )
 
     if not _exists(db, User, "username", "admin"):
         db.add(
@@ -57,6 +82,7 @@ def seed_database(db: Session) -> None:
                     room_id=room_id,
                     room_name=room_name,
                     room_name_lang=room_name,
+                    room_status="PROCESSING",
                     base_rate=base_rate,
                     tax_and_service_fee=tax_fee,
                     surcharges=Decimal("5.00"),
@@ -122,9 +148,13 @@ def seed_database(db: Session) -> None:
         for offset in range(30):
             stay_date = today + timedelta(days=offset)
             seasonal_lift = Decimal(str((offset % 7) * 5))
-            availability = "LOW" if offset in (5, 6, 12, 13) else "AVAILABLE"
+            availability = "BOOKED" if offset in (5, 6, 12, 13) else "AVAILABLE"
             if rate_id == "RATE005" and offset in (0, 1):
-                availability = "SOLD_OUT"
+                availability = "STOP_SELL"
+            if rate_id == "RATE004" and offset == 9:
+                availability = "CTA"
+            if rate_id == "RATE003" and offset == 11:
+                availability = "CTD"
             db.add(
                 RateCalendar(
                     rate_id=rate_id,

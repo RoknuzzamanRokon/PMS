@@ -46,6 +46,25 @@ function formatTimestamp(value) {
   }).format(date);
 }
 
+function formatNumericValue(value, fallback = "0") {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric.toLocaleString("en-US") : fallback;
+}
+
+function formatCurrencyValue(value, currency = "USD") {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return `${currency} 0.00`;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numeric);
+}
+
 export function PropertiesPage() {
   const [properties, setProperties] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
@@ -56,6 +75,10 @@ export function PropertiesPage() {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null);
+  const [loadingPropertyDetail, setLoadingPropertyDetail] = useState(false);
+  const [propertyDetailError, setPropertyDetailError] = useState("");
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -128,6 +151,29 @@ export function PropertiesPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleViewProperty(propertyId) {
+    setShowDetailsModal(true);
+    setLoadingPropertyDetail(true);
+    setPropertyDetailError("");
+    setSelectedPropertyDetail(null);
+
+    try {
+      const detail = await fetchJson(`/properties/${encodeURIComponent(propertyId)}`);
+      setSelectedPropertyDetail(detail);
+    } catch (error) {
+      setPropertyDetailError(error.message || "Could not load property details.");
+    } finally {
+      setLoadingPropertyDetail(false);
+    }
+  }
+
+  function closeDetailsModal() {
+    setShowDetailsModal(false);
+    setSelectedPropertyDetail(null);
+    setPropertyDetailError("");
+    setLoadingPropertyDetail(false);
   }
 
   return (
@@ -431,6 +477,14 @@ export function PropertiesPage() {
                       Actions
                     </p>
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleViewProperty(property.property_id)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                      >
+                        <span className="material-symbols-outlined text-base">visibility</span>
+                        Views
+                      </button>
                       <Link
                         href={`/rooms-management?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
@@ -474,6 +528,238 @@ export function PropertiesPage() {
           </div>
         )}
       </section>
+
+      {showDetailsModal ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  Property Details
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {selectedPropertyDetail?.name || "Loading property"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {selectedPropertyDetail?.property_id || "Fetching full property data from the API."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeDetailsModal}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {loadingPropertyDetail ? (
+              <div className="mt-6 space-y-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/70"
+                  />
+                ))}
+              </div>
+            ) : propertyDetailError ? (
+              <p className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {propertyDetailError}
+              </p>
+            ) : selectedPropertyDetail ? (
+              <div className="mt-6 space-y-6">
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    ["Property Type", formatPropertyType(selectedPropertyDetail.property_type)],
+                    ["Total Rooms", formatNumericValue(selectedPropertyDetail.summary?.total_rooms)],
+                    ["Rate Plans", formatNumericValue(selectedPropertyDetail.summary?.total_rate_plans)],
+                    ["Inventory", `${formatNumericValue(selectedPropertyDetail.summary?.available_inventory)} available / ${formatNumericValue(selectedPropertyDetail.summary?.total_inventory)} total`],
+                  ].map(([label, value]) => (
+                    <article
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {label}
+                      </p>
+                      <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                        {value}
+                      </p>
+                    </article>
+                  ))}
+                </section>
+
+                <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                  <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      Summary
+                    </h4>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {[
+                        ["Average Base Rate", formatCurrencyValue(selectedPropertyDetail.summary?.average_base_rate)],
+                        ["Average Current Rate", formatCurrencyValue(selectedPropertyDetail.summary?.average_current_rate)],
+                        ["Sold Inventory", formatNumericValue(selectedPropertyDetail.summary?.sold_inventory)],
+                        ["Blocked Inventory", formatNumericValue(selectedPropertyDetail.summary?.blocked_inventory)],
+                      ].map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60"
+                        >
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            {label}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+
+                  <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      Readiness
+                    </h4>
+                    <div className="mt-4 space-y-3">
+                      {[
+                        ["Base Image", selectedPropertyDetail.property_base_image],
+                        ["Amenities", selectedPropertyDetail.amenities],
+                        ["Facilities", selectedPropertyDetail.facilities],
+                      ].map(([label, info]) => (
+                        <div
+                          key={label}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/60"
+                        >
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            {label}
+                          </p>
+                          <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                            {info?.available ? "Available" : info?.message || "Coming soon"}
+                          </p>
+                          {info?.url ? (
+                            <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">
+                              {info.url}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </section>
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        Rooms
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Full property room inventory and linked rate plans.
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      {selectedPropertyDetail.rooms?.length || 0} rooms
+                    </div>
+                  </div>
+
+                  <div className="mt-5 space-y-4">
+                    {(selectedPropertyDetail.rooms || []).map((room) => (
+                      <article
+                        key={room.room_id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h5 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                              {room.room_name}
+                            </h5>
+                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                              {[room.room_id, room.room_name_lang || room.room_name, room.status]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            </p>
+                          </div>
+                          <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                            {room.active_rate_plan_count} active plans
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          {[
+                            ["Base Rate", formatCurrencyValue(room.base_rate)],
+                            ["Current Rate", formatCurrencyValue(room.current_rate)],
+                            ["Inventory", `${formatNumericValue(room.available_inventory)} / ${formatNumericValue(room.total_inventory)}`],
+                            ["Sold", formatNumericValue(room.sold_inventory)],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                            >
+                              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                {label}
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Rate Plans
+                          </p>
+                          {(room.rate_plans || []).length ? (
+                            <div className="mt-3 space-y-3">
+                              {room.rate_plans.map((plan) => (
+                                <div
+                                  key={plan.rate_id}
+                                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                        {plan.title}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        {[plan.rate_id, plan.supplier_name || "No supplier", plan.currency]
+                                          .filter(Boolean)
+                                          .join(" • ")}
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                        {formatCurrencyValue(plan.current_rate, plan.currency || "USD")}
+                                      </p>
+                                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                                        Base {formatCurrencyValue(plan.base_rate, plan.currency || "USD")}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">
+                              No rate plans linked to this room yet.
+                            </p>
+                          )}
+                        </div>
+                      </article>
+                    ))}
+
+                    {!selectedPropertyDetail.rooms?.length ? (
+                      <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                        No room details returned for this property.
+                      </p>
+                    ) : null}
+                  </div>
+                </section>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
     </PmsShell>
   );
 }

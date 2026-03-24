@@ -6,7 +6,20 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import AvailabilityStatus, Guest, Payment, Property, RateCalendar, RatePlan, Reservation, ReservationRoom, Room, User
+from .models import (
+    AvailabilityStatus,
+    Guest,
+    MealPlan,
+    Payment,
+    Property,
+    PropertyType,
+    RateCalendar,
+    RatePlan,
+    Reservation,
+    ReservationRoom,
+    Room,
+    User,
+)
 
 
 def _exists(db: Session, model, field_name: str, value: str) -> bool:
@@ -18,6 +31,65 @@ def _exists(db: Session, model, field_name: str, value: str) -> bool:
 
 def seed_database(db: Session) -> None:
     today = date.today()
+
+    property_type_records = [
+        (1, "HOTEL", "Hotel", "Standard hotel accommodation with services and amenities"),
+        (2, "RESORT", "Resort", "Full-service vacation lodging facility with recreational activities"),
+        (3, "APARTMENT", "Apartment", "Self-contained residential unit"),
+        (4, "SERVICED_APARTMENT", "Serviced Apartment", "Furnished apartment with hotel-like amenities for short or long stays"),
+        (5, "HOSTEL", "Hostel", "Budget-oriented shared accommodation"),
+        (6, "GUESTHOUSE", "Guesthouse", "Private house offering accommodation to guests"),
+        (7, "BOUTIQUE_HOTEL", "Boutique Hotel", "Small, stylish, and upscale hotel"),
+        (8, "VILLA", "Villa", "Luxurious detached private residence"),
+        (9, "LODGE", "Lodge", "Rustic accommodation often located in natural or remote settings"),
+        (10, "MOTEL", "Motel", "Roadside hotel designed for motorists with convenient parking"),
+        (11, "BED_AND_BREAKFAST", "Bed and Breakfast", "Small lodging offering overnight stay and breakfast"),
+        (12, "HOMESTAY", "Homestay", "Accommodation within a local family residence"),
+        (13, "RIAD", "Riad", "Traditional Moroccan house with an interior courtyard or garden"),
+        (14, "RYOKAN", "Ryokan", "Traditional Japanese inn with tatami rooms"),
+        (15, "RESIDENCE", "Residence", "Premium residential accommodation suited for extended stays"),
+    ]
+    for property_type_id, code, title, description in property_type_records:
+        property_type = db.scalar(select(PropertyType).where(PropertyType.code == code))
+        if property_type:
+            property_type.title = title
+            property_type.description = description
+        else:
+            db.add(
+                PropertyType(
+                    id=property_type_id,
+                    code=code,
+                    title=title,
+                    description=description,
+                )
+            )
+
+    meal_plan_records = [
+        (1, "RO", "Room Only", "No meals included"),
+        (2, "BB", "Bed & Breakfast", "Breakfast only"),
+        (3, "HB", "Half Board", "Breakfast + Dinner"),
+        (4, "FB", "Full Board", "Breakfast + Lunch + Dinner"),
+        (5, "AI", "All Inclusive", "All meals + drinks + snacks"),
+        (6, "UAI", "Ultra All Inclusive", "All inclusive + premium drinks/services"),
+        (7, "CB", "Continental Breakfast", "Light breakfast only"),
+        (8, "AB", "American Breakfast", "Full breakfast"),
+        (9, "MAP", "Modified American Plan", "Breakfast + Dinner"),
+        (10, "AP", "American Plan", "Breakfast + Lunch + Dinner"),
+    ]
+    for meal_plan_id, code, title, description in meal_plan_records:
+        meal_plan = db.scalar(select(MealPlan).where(MealPlan.code == code))
+        if meal_plan:
+            meal_plan.title = title
+            meal_plan.description = description
+        else:
+            db.add(
+                MealPlan(
+                    id=meal_plan_id,
+                    code=code,
+                    title=title,
+                    description=description,
+                )
+            )
 
     availability_status_records = [
         (1, "1", "AVAILABLE", "Room is free and can be booked."),

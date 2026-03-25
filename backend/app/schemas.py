@@ -32,6 +32,12 @@ class PropertyCreate(PropertyBase):
     property_id: Optional[str] = None
 
 
+class PropertyUpdate(BaseModel):
+    name: Optional[str] = None
+    name_lang: Optional[str] = None
+    property_type: Optional[str] = None
+
+
 class PropertyRead(APIModel):
     property_id: str
     name: str

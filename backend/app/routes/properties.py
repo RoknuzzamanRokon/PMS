@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Property, RatePlan, Room
-from ..schemas import PropertyCreate, PropertyDetailRead, PropertyRead
+from ..schemas import PropertyCreate, PropertyDetailRead, PropertyRead, PropertyUpdate
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/properties", tags=["properties"])
@@ -22,6 +22,21 @@ def create_property(payload: PropertyCreate, db: Session = Depends(get_db)):
     property_id = payload.property_id or next_code(db, Property, "property_id", "PROP")
     property_obj = Property(property_id=property_id, **payload.model_dump(exclude={"property_id"}))
     db.add(property_obj)
+    db.commit()
+    db.refresh(property_obj)
+    return property_obj
+
+
+@router.patch("/{property_id}", response_model=PropertyRead)
+def update_property(property_id: str, payload: PropertyUpdate, db: Session = Depends(get_db)):
+    property_obj = db.scalar(select(Property).where(Property.property_id == property_id))
+    if not property_obj:
+        raise HTTPException(status_code=404, detail="Property not found")
+
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(property_obj, field, value)
+
     db.commit()
     db.refresh(property_obj)
     return property_obj

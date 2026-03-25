@@ -39,7 +39,7 @@ export function PmsShell({
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
-      <header className="theme-panel sticky top-0 z-50 flex items-center justify-between border-b px-6 py-3">
+      <header className="theme-panel fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3 text-primary">
             <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
@@ -85,7 +85,7 @@ export function PmsShell({
         </div>
       </header>
 
-      <div className="flex grow overflow-hidden">
+      <div className="flex grow overflow-hidden pt-[73px]">
         <aside className="theme-panel hidden w-64 flex-col border-r lg:flex">
           <div className="p-6">
             <div className="mb-8 flex flex-col">

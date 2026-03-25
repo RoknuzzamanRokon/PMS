@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,6 +15,18 @@ router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
 
 @router.post("", response_model=ReservationRead)
 def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)):
+    today = date.today()
+    if payload.check_in_date < today:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Check-in date cannot be in the past. Please use {today.isoformat()} or a later date.",
+        )
+    if payload.check_out_date <= payload.check_in_date:
+        raise HTTPException(
+            status_code=422,
+            detail="Check-out date must be later than check-in date.",
+        )
+
     booking_id = payload.booking_id or next_code(db, Reservation, "booking_id", "BOOK")
     total_price = Decimal("0")
 

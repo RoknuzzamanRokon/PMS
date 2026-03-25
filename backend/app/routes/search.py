@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,18 @@ def search_availability(
     check_out_date: date = Query(...),
     db: Session = Depends(get_db),
 ):
+    today = date.today()
+    if check_in_date < today:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Check-in date cannot be in the past. Please use {today.isoformat()} or a later date.",
+        )
+    if check_out_date <= check_in_date:
+        raise HTTPException(
+            status_code=422,
+            detail="Check-out date must be later than check-in date.",
+        )
+
     room_ids = db.execute(select(Room.room_id).where(Room.property_id == property_id)).scalars().all()
     rate_plans = (
         db.execute(select(RatePlan).where(RatePlan.room_id.in_(room_ids)).order_by(RatePlan.base_rate.asc()))

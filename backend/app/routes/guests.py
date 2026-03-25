@@ -10,6 +10,11 @@ from ..utils import next_code
 router = APIRouter(prefix="/api/v1/guests", tags=["guests"])
 
 
+@router.get("/all", response_model=list[GuestRead])
+def list_guests(db: Session = Depends(get_db)):
+    return db.execute(select(Guest).order_by(Guest.created_at.desc())).scalars().all()
+
+
 @router.post("", response_model=GuestRead)
 def create_guest(payload: GuestCreate, db: Session = Depends(get_db)):
     guest_id = payload.guest_id or next_code(db, Guest, "guest_id", "GST")

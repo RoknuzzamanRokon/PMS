@@ -6,7 +6,6 @@ import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
-const defaultPropertyId = "PROP001";
 
 const fallbackRows = [
   {
@@ -250,10 +249,11 @@ function StatCard({ stat }) {
 
 export function DailyRatesPage({ propertyId }) {
   const router = useRouter();
+  const hasSelectedProperty = Boolean(propertyId);
   const [range, setRange] = useState(7);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [properties, setProperties] = useState([]);
-  const [selectedProperty, setSelectedProperty] = useState(propertyId || defaultPropertyId);
+  const [selectedProperty, setSelectedProperty] = useState(propertyId || "");
   const [rows, setRows] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [propertyName, setPropertyName] = useState("Selected Property");
@@ -267,6 +267,7 @@ export function DailyRatesPage({ propertyId }) {
   const [bulkError, setBulkError] = useState("");
   const [bulkSuccess, setBulkSuccess] = useState("");
   const [availabilityStatuses, setAvailabilityStatuses] = useState([]);
+  const [mealPlans, setMealPlans] = useState([]);
   const [showRatePlanModal, setShowRatePlanModal] = useState(false);
   const [selectedRoomForRatePlan, setSelectedRoomForRatePlan] = useState(null);
   const [ratePlanModalError, setRatePlanModalError] = useState("");
@@ -285,7 +286,7 @@ export function DailyRatesPage({ propertyId }) {
   const visibleDays = useMemo(() => days.slice(0, range), [days, range]);
 
   useEffect(() => {
-    setSelectedProperty(propertyId || defaultPropertyId);
+    setSelectedProperty(propertyId || "");
   }, [propertyId]);
 
   useEffect(() => {
@@ -298,19 +299,32 @@ export function DailyRatesPage({ propertyId }) {
     async function loadRates() {
       setLoadingRates(true);
       try {
-        const [propertyList, statusList] = await Promise.all([
+        const [propertyList, statusList, mealPlanList] = await Promise.all([
           fetchJson("/properties"),
           fetchJson("/rate-plans/availability-statuses").catch(() => []),
+          fetchJson("/meal-plans").catch(() => []),
         ]);
         if (ignore) {
           return;
         }
 
         setProperties(propertyList);
-        setAvailabilityStatuses(statusList);
+        setAvailabilityStatuses(Array.isArray(statusList) ? statusList : []);
+        setMealPlans(Array.isArray(mealPlanList) ? mealPlanList : []);
 
-        const resolvedPropertyId =
-          propertyId || propertyList[0]?.property_id || defaultPropertyId;
+        if (!propertyId) {
+          if (!ignore) {
+            setSelectedProperty("");
+            setRows([]);
+            setRooms([]);
+            setPropertyName("Selected Property");
+            setApiConnected(false);
+            setLoadingRates(false);
+          }
+          return;
+        }
+
+        const resolvedPropertyId = propertyId;
 
         if (!ignore) {
           setSelectedProperty(resolvedPropertyId);
@@ -340,6 +354,7 @@ export function DailyRatesPage({ propertyId }) {
           setRooms([]);
           setPropertyName("Selected Property");
           setAvailabilityStatuses([]);
+          setMealPlans([]);
         }
       } finally {
         if (!ignore) {
@@ -432,7 +447,15 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   async function refreshDailyRates(propertyIdOverride) {
-    const resolvedPropertyId = propertyIdOverride || selectedProperty || propertyId || defaultPropertyId;
+    const resolvedPropertyId = propertyIdOverride || selectedProperty || propertyId || "";
+    if (!resolvedPropertyId) {
+      setRows([]);
+      setRooms([]);
+      setPropertyName("Selected Property");
+      setApiConnected(false);
+      return;
+    }
+
     const data = await fetchJson(
       `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
     );
@@ -540,7 +563,7 @@ export function DailyRatesPage({ propertyId }) {
         method: "DELETE",
       });
 
-      await refreshDailyRates(selectedProperty || propertyId || defaultPropertyId);
+      await refreshDailyRates(selectedProperty || propertyId || "");
       setPublishSuccess(`Removed rate plan ${row.code}.`);
     } catch (error) {
       setPublishError(error.message || `Could not remove rate plan ${row.code}.`);
@@ -696,7 +719,7 @@ export function DailyRatesPage({ propertyId }) {
 
       setPublishSuccess(`Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`);
 
-      await refreshDailyRates(selectedProperty || propertyId || defaultPropertyId);
+      await refreshDailyRates(selectedProperty || propertyId || "");
     } catch (error) {
       setPublishError(error.message || "Could not publish calendar changes.");
     } finally {
@@ -759,7 +782,7 @@ export function DailyRatesPage({ propertyId }) {
       {
         title: "Active Property",
         items: [
-          `Property: ${selectedProperty || defaultPropertyId}`,
+          `Property: ${selectedProperty || "Not selected"}`,
           `${rooms.length} rooms fetched for rate review.`,
           `Calendar start: ${calendarStartDate}`,
         ],
@@ -789,6 +812,23 @@ export function DailyRatesPage({ propertyId }) {
     ];
   }, [availabilityStatuses]);
 
+  const mealPlanOptions = useMemo(() => {
+    if (mealPlans.length) {
+      return mealPlans.map((mealPlan) => ({
+        value: mealPlan.code,
+        label: mealPlan.title || mealPlan.code,
+      }));
+    }
+
+    return [
+      { value: "RO", label: "Room Only" },
+      { value: "BB", label: "Bed & Breakfast" },
+      { value: "HB", label: "Half Board" },
+      { value: "FB", label: "Full Board" },
+      { value: "AI", label: "All Inclusive" },
+    ];
+  }, [mealPlans]);
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
@@ -796,6 +836,29 @@ export function DailyRatesPage({ propertyId }) {
       sidebarMetricValue={`${rows.length}`}
       sidebarMetricProgress={Math.max(20, Math.min(100, rows.length * 20))}
     >
+      {!hasSelectedProperty ? (
+        <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <span className="material-symbols-outlined text-4xl text-slate-400">
+            sell
+          </span>
+          <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Select a property first
+          </h3>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Open daily rates with a `property_id` to view and manage rate plans for a property.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <a
+              href="/properties"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              Go to Properties
+            </a>
+          </div>
+        </section>
+      ) : (
+      <>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -846,7 +909,7 @@ export function DailyRatesPage({ propertyId }) {
             <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
               Property:{" "}
               <span className="font-bold text-slate-900">
-                {selectedProperty || defaultPropertyId}
+                {selectedProperty || "Not selected"}
               </span>
             </div>
             <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
@@ -906,8 +969,8 @@ export function DailyRatesPage({ propertyId }) {
           <div className="mt-4 flex flex-wrap gap-3">
             {[
               ["API", apiConnected ? "Connected" : "Offline"],
-              ["Property", `${selectedProperty || defaultPropertyId} • ${propertyName}`],
-              ["Daily Rates", `/rate-plans/daily-rates?property_id=${selectedProperty || defaultPropertyId}&days=${totalDays}&start_date=${calendarStartDate}`],
+              ["Property", `${selectedProperty || "Not selected"} • ${propertyName}`],
+              ["Daily Rates", `/rate-plans/daily-rates?property_id=${selectedProperty || ""}&days=${totalDays}&start_date=${calendarStartDate}`],
               ["Calendar Save", "/rate-plans/{rate_id}/calendar/bulk-upsert"],
             ].map(([label, value]) => (
               <div
@@ -1208,7 +1271,7 @@ export function DailyRatesPage({ propertyId }) {
             {!rows.length ? (
               <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
                 {apiConnected
-                  ? `No rate plans found for ${selectedProperty || defaultPropertyId} in this calendar window.`
+                  ? `No rate plans found for ${selectedProperty || "this property"} in this calendar window.`
                   : "Backend offline. Start the API to load editable daily rates."}
               </div>
             ) : null}
@@ -1368,8 +1431,23 @@ export function DailyRatesPage({ propertyId }) {
                 />
               </label>
               <div className="grid gap-4 md:grid-cols-4">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Meal Plan</span>
+                  <select
+                    value={newRatePlanForm.meal_plan}
+                    onChange={(event) =>
+                      setNewRatePlanForm((current) => ({ ...current, meal_plan: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  >
+                    {mealPlanOptions.map((mealPlan) => (
+                      <option key={mealPlan.value} value={mealPlan.value}>
+                        {mealPlan.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 {[
-                  ["meal_plan", "Meal Plan"],
                   ["bed_type", "Bed Type"],
                   ["currency", "Currency"],
                   ["cancellation_policy", "Cancellation"],
@@ -1478,6 +1556,8 @@ export function DailyRatesPage({ propertyId }) {
           </div>
         </div>
       ) : null}
+      </>
+      )}
     </PmsShell>
   );
 }

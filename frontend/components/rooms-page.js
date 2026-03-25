@@ -6,16 +6,14 @@ import { useRouter } from "next/navigation";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
-const defaultPropertyId = "PROP001";
-
 const fallbackData = {
-  property: { property_id: defaultPropertyId, name: "Selected Property" },
+  property: { property_id: "", name: "Selected Property" },
   summary: {
-    total_rooms: 5,
-    available_inventory: 39,
-    sold_inventory: 58,
-    blocked_inventory: 2,
-    occupancy_percent: 69.7,
+    total_rooms: 0,
+    available_inventory: 0,
+    sold_inventory: 0,
+    blocked_inventory: 0,
+    occupancy_percent: 0,
   },
   categories: [],
   rooms: [],
@@ -213,7 +211,8 @@ function getBackendRoomStatusBadge(roomStatus) {
 
 export function RoomsManagementPage({ propertyId }) {
   const router = useRouter();
-  const selectedPropertyId = propertyId || defaultPropertyId;
+  const selectedPropertyId = propertyId || "";
+  const hasSelectedProperty = Boolean(selectedPropertyId);
   const [activeManagementSection, setActiveManagementSection] = useState("add-room");
   const [data, setData] = useState(fallbackData);
   const [apiConnected, setApiConnected] = useState(false);
@@ -245,6 +244,13 @@ export function RoomsManagementPage({ propertyId }) {
   const roomStatusStorageKey = `inno-rooms-room-launch-status:${selectedPropertyId}`;
 
   async function loadOverview() {
+    if (!selectedPropertyId) {
+      setData(fallbackData);
+      setApiConnected(false);
+      setLoadingOverview(false);
+      return;
+    }
+
     setLoadingOverview(true);
 
     try {
@@ -384,6 +390,11 @@ export function RoomsManagementPage({ propertyId }) {
   }
 
   function handleSkipForNow() {
+    if (!selectedPropertyId) {
+      router.push("/properties");
+      return;
+    }
+
     router.push(`/inventory?property_id=${encodeURIComponent(selectedPropertyId)}`);
   }
 
@@ -595,6 +606,29 @@ export function RoomsManagementPage({ propertyId }) {
         </div>
       </div>
 
+      {!hasSelectedProperty ? (
+        <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <span className="material-symbols-outlined text-4xl text-slate-400">
+            holiday_village
+          </span>
+          <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Select a property first
+          </h3>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Open this page with a `property_id` to manage rooms, inventory, and room setup.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/properties"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              Go to Properties
+            </Link>
+          </div>
+        </section>
+      ) : (
+      <>
       <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -2085,6 +2119,8 @@ export function RoomsManagementPage({ propertyId }) {
           </table>
         </div>
       </section>
+      </>
+      ) }
     </PmsShell>
   );
 }

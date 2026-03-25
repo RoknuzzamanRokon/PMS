@@ -86,8 +86,8 @@ export function PmsShell({
       </header>
 
       <div className="flex grow overflow-hidden pt-[73px]">
-        <aside className="theme-panel hidden w-64 flex-col border-r lg:flex">
-          <div className="p-6">
+        <aside className="theme-panel relative hidden w-64 shrink-0 flex-col border-r lg:flex">
+          <div className="flex-1 overflow-y-auto p-6 pb-36">
             <div className="mb-8 flex flex-col">
               <h1 className="text-base font-bold">Property Workspace</h1>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -118,7 +118,7 @@ export function PmsShell({
               </a>
             </nav>
           </div>
-          <div className="mt-auto p-6">
+          <div className="absolute inset-x-0 bottom-0 p-6">
             <div className="rounded-2xl bg-primary p-4 text-white shadow-panel">
               <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p>
               <p className="text-xl font-bold">{sidebarMetricValue}</p>

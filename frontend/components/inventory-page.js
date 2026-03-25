@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
-const defaultPropertyId = "PROP001";
 const dayColumnWidth = 100;
 
 const bookingToneClasses = {
@@ -62,14 +61,15 @@ function addDaysToIsoDate(startDate, offsetDays) {
 }
 
 const fallbackCalendar = {
-  property: { property_id: defaultPropertyId, name: "Selected Property" },
+  property: { property_id: "", name: "Selected Property" },
   start_date: new Date().toISOString().slice(0, 10),
   days: 14,
   rows: [],
 };
 
 export function InventoryPage({ propertyId }) {
-  const selectedPropertyId = propertyId || defaultPropertyId;
+  const selectedPropertyId = propertyId || "";
+  const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
   const [apiConnected, setApiConnected] = useState(false);
   const [savingBookingId, setSavingBookingId] = useState("");
@@ -86,6 +86,12 @@ export function InventoryPage({ propertyId }) {
   const [savingEdit, setSavingEdit] = useState(false);
 
   async function loadCalendar() {
+    if (!selectedPropertyId) {
+      setCalendar(fallbackCalendar);
+      setApiConnected(false);
+      return;
+    }
+
     try {
       const data = await fetchJson(
         `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=14`,
@@ -101,6 +107,14 @@ export function InventoryPage({ propertyId }) {
     let ignore = false;
 
     async function loadCalendar() {
+      if (!selectedPropertyId) {
+        if (!ignore) {
+          setCalendar(fallbackCalendar);
+          setApiConnected(false);
+        }
+        return;
+      }
+
       try {
         const data = await fetchJson(
           `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=14`,
@@ -254,6 +268,28 @@ export function InventoryPage({ propertyId }) {
       sidebarMetricValue={`${calendar.rows.length}`}
       sidebarMetricProgress={Math.max(20, Math.min(100, calendar.rows.length * 18))}
     >
+      {!hasSelectedProperty ? (
+        <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <span className="material-symbols-outlined text-4xl text-slate-400">
+            calendar_month
+          </span>
+          <h3 className="mt-4 text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Select a property first
+          </h3>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Open inventory with a `property_id` to view the booking calendar for a property.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <Link
+              href="/properties"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+            >
+              <span className="material-symbols-outlined text-base">arrow_back</span>
+              Go to Properties
+            </Link>
+          </div>
+        </section>
+      ) : (
       <div className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8">
         <div className="border-b border-slate-200 bg-white px-6 py-6 dark:border-slate-700 dark:bg-slate-900/80 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -475,6 +511,7 @@ export function InventoryPage({ propertyId }) {
           </div>
         </div>
       </div>
+      )}
 
       {selectedBooking ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">

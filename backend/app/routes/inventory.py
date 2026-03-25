@@ -46,10 +46,11 @@ def inventory_calendar(
     for reservation, reservation_room, guest in reservations:
         left_days = max(0, (reservation.check_in_date - start).days)
         duration_days = max(1, (reservation.check_out_date - reservation.check_in_date).days)
+        booking_status = (reservation.booking_status or "").upper()
         tone = {
             "CHECKED_IN": "green",
             "PENDING": "amber",
-        }.get(reservation.booking_status, "blue")
+        }.get(booking_status, "blue")
         booking_by_room[reservation_room.room_id] = {
             "left_days": left_days,
             "duration_days": duration_days,
@@ -57,6 +58,9 @@ def inventory_calendar(
             "guest_name": f"{guest.first_name} {guest.last_name}",
             "meta": f"{reservation.booking_id} • {reservation.booking_status}",
             "booking_id": reservation.booking_id,
+            "booking_status": reservation.booking_status,
+            "check_in_date": reservation.check_in_date.isoformat(),
+            "check_out_date": reservation.check_out_date.isoformat(),
         }
 
     rows = [

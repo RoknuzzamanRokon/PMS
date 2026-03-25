@@ -345,6 +345,13 @@ class ReservationCreate(BaseModel):
     rooms: list[ReservationRoomPayload] = Field(default_factory=list)
 
 
+class ReservationPriceBreakdown(BaseModel):
+    base_price: Decimal
+    tax_price: Decimal
+    per_night_price: Decimal
+    total_price: Decimal
+
+
 class ReservationRead(APIModel):
     booking_id: str
     property_id: str
@@ -352,6 +359,7 @@ class ReservationRead(APIModel):
     check_in_date: date
     check_out_date: date
     total_price: Decimal
+    price: ReservationPriceBreakdown
     currency: str
     booking_status: str
     created_at: datetime
@@ -360,6 +368,13 @@ class ReservationRead(APIModel):
 
 class ReservationStatusUpdate(BaseModel):
     booking_status: str
+
+
+class ReservationUpdate(BaseModel):
+    check_in_date: Optional[date] = None
+    check_out_date: Optional[date] = None
+    booking_status: Optional[str] = None
+    currency: Optional[str] = None
 
 
 class PaymentCreate(BaseModel):

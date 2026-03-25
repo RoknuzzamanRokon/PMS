@@ -83,6 +83,7 @@ export function PropertiesPage() {
   const [propertyRooms, setPropertyRooms] = useState([]);
   const [loadingPropertyRooms, setLoadingPropertyRooms] = useState(false);
   const [propertyRoomsError, setPropertyRoomsError] = useState("");
+  const [showRatePlansSummaryModal, setShowRatePlansSummaryModal] = useState(false);
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -179,6 +180,7 @@ export function PropertiesPage() {
     setPropertyDetailError("");
     setLoadingPropertyDetail(false);
     closeRoomsSummaryModal();
+    closeRatePlansSummaryModal();
   }
 
   async function openRoomsSummaryModal() {
@@ -209,6 +211,18 @@ export function PropertiesPage() {
     setLoadingPropertyRooms(false);
   }
 
+  function openRatePlansSummaryModal() {
+    if (!selectedPropertyDetail?.property_id) {
+      return;
+    }
+
+    setShowRatePlansSummaryModal(true);
+  }
+
+  function closeRatePlansSummaryModal() {
+    setShowRatePlansSummaryModal(false);
+  }
+
   const roomStatusSummary = useMemo(
     () =>
       propertyRooms.reduce((summary, room) => {
@@ -227,6 +241,39 @@ export function PropertiesPage() {
     const total = propertyRooms.reduce((sum, room) => sum + Number(room.base_rate || 0), 0);
     return total / propertyRooms.length;
   }, [propertyRooms]);
+
+  const propertyRatePlans = useMemo(
+    () =>
+      (selectedPropertyDetail?.rooms || []).flatMap((room) =>
+        (room.rate_plans || []).map((plan) => ({
+          ...plan,
+          room_id: room.room_id,
+          room_name: room.room_name,
+          room_name_lang: room.room_name_lang,
+        })),
+      ),
+    [selectedPropertyDetail],
+  );
+
+  const propertyRatePlanSummary = useMemo(() => {
+    const activeCount = propertyRatePlans.filter((plan) => Boolean(plan.status)).length;
+    const inactiveCount = propertyRatePlans.length - activeCount;
+    const supplierCount = new Set(
+      propertyRatePlans.map((plan) => plan.supplier_name).filter(Boolean),
+    ).size;
+    const averageCurrentRate = propertyRatePlans.length
+      ? propertyRatePlans.reduce((sum, plan) => sum + Number(plan.current_rate || 0), 0) /
+        propertyRatePlans.length
+      : 0;
+
+    return {
+      total: propertyRatePlans.length,
+      activeCount,
+      inactiveCount,
+      supplierCount,
+      averageCurrentRate,
+    };
+  }, [propertyRatePlans]);
 
   return (
     <PmsShell
@@ -629,22 +676,32 @@ export function PropertiesPage() {
                   ].map(([label, value]) => (
                     <article
                       key={label}
-                      role={label === "Total Rooms" ? "button" : undefined}
-                      tabIndex={label === "Total Rooms" ? 0 : undefined}
-                      onClick={label === "Total Rooms" ? openRoomsSummaryModal : undefined}
-                      onKeyDown={
+                      role={label === "Total Rooms" || label === "Rate Plans" ? "button" : undefined}
+                      tabIndex={label === "Total Rooms" || label === "Rate Plans" ? 0 : undefined}
+                      onClick={
                         label === "Total Rooms"
+                          ? openRoomsSummaryModal
+                          : label === "Rate Plans"
+                            ? openRatePlansSummaryModal
+                            : undefined
+                      }
+                      onKeyDown={
+                        label === "Total Rooms" || label === "Rate Plans"
                           ? (event) => {
                               if (event.key === "Enter" || event.key === " ") {
                                 event.preventDefault();
-                                openRoomsSummaryModal();
+                                if (label === "Total Rooms") {
+                                  openRoomsSummaryModal();
+                                } else {
+                                  openRatePlansSummaryModal();
+                                }
                               }
                             }
                           : undefined
                       }
                       className={[
                         "rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70",
-                        label === "Total Rooms"
+                        label === "Total Rooms" || label === "Rate Plans"
                           ? "cursor-pointer transition hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/20"
                           : "",
                       ]
@@ -655,7 +712,7 @@ export function PropertiesPage() {
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                           {label}
                         </p>
-                        {label === "Total Rooms" ? (
+                        {label === "Total Rooms" || label === "Rate Plans" ? (
                           <span className="material-symbols-outlined text-base text-primary">
                             open_in_new
                           </span>
@@ -664,9 +721,11 @@ export function PropertiesPage() {
                       <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
                         {value}
                       </p>
-                      {label === "Total Rooms" ? (
+                      {label === "Total Rooms" || label === "Rate Plans" ? (
                         <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                          Click to open room-only summary.
+                          {label === "Total Rooms"
+                            ? "Click to open room-only summary."
+                            : "Click to open rate-plan summary."}
                         </p>
                       ) : null}
                     </article>
@@ -1013,6 +1072,155 @@ export function PropertiesPage() {
                 </section>
               </div>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {showRatePlansSummaryModal ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  Rate Plan Summary
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {selectedPropertyDetail?.name || "Selected Property"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {selectedPropertyDetail?.property_id || "Property not selected"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/daily-rates?property_id=${selectedPropertyDetail?.property_id || ""}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+                >
+                  <span className="material-symbols-outlined text-base">add</span>
+                  Create Rate Plan
+                </Link>
+                <button
+                  type="button"
+                  onClick={closeRatePlansSummaryModal}
+                  className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {[
+                  ["Total Rate Plans", formatNumericValue(propertyRatePlanSummary.total)],
+                  ["Active Plans", formatNumericValue(propertyRatePlanSummary.activeCount)],
+                  ["Suppliers", formatNumericValue(propertyRatePlanSummary.supplierCount)],
+                  ["Average Current Rate", formatCurrencyValue(propertyRatePlanSummary.averageCurrentRate)],
+                ].map(([label, value]) => (
+                  <article
+                    key={label}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                  >
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      {label}
+                    </p>
+                    <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {value}
+                    </p>
+                  </article>
+                ))}
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      Plan Status
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Combined summary for all room rate plans in this property.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      active: {propertyRatePlanSummary.activeCount}
+                    </span>
+                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      inactive: {propertyRatePlanSummary.inactiveCount}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      Rate Plan List
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      All rate plans from every room in this property.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    {propertyRatePlanSummary.total} rate plans
+                  </div>
+                </div>
+
+                {propertyRatePlans.length ? (
+                  <div className="mt-5 space-y-3">
+                    {propertyRatePlans.map((plan) => (
+                      <article
+                        key={plan.rate_id}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h5 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                              {plan.title}
+                            </h5>
+                            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                              {[plan.rate_id, plan.room_name, plan.supplier_name || "No supplier"]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            </p>
+                          </div>
+                          <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                            {plan.status ? "active" : "inactive"}
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          {[
+                            ["Current Rate", formatCurrencyValue(plan.current_rate, plan.currency || "USD")],
+                            ["Base Rate", formatCurrencyValue(plan.base_rate, plan.currency || "USD")],
+                            ["Inventory", `${formatNumericValue(plan.available_inventory)} / ${formatNumericValue(plan.total_inventory)}`],
+                            ["Sold", formatNumericValue(plan.sold_inventory)],
+                          ].map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                            >
+                              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                {label}
+                              </p>
+                              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {value}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                    No rate plans found for this property yet. Use the create button to add one.
+                  </p>
+                )}
+              </section>
+            </div>
           </div>
         </div>
       ) : null}

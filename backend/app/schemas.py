@@ -314,6 +314,13 @@ class AvailabilityStatusRead(APIModel):
     description: Optional[str] = None
 
 
+class MealPlanRead(APIModel):
+    id: int
+    code: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+
+
 class GuestCreate(BaseModel):
     guest_id: Optional[str] = None
     first_name: str

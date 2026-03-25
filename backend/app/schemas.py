@@ -358,6 +358,38 @@ class ReservationCreate(BaseModel):
     rooms: list[ReservationRoomPayload] = Field(default_factory=list)
 
 
+class ReservationAvailabilityRequest(BaseModel):
+    property_id: str
+    guest_id: Optional[str] = None
+    check_in_date: date
+    check_out_date: date
+    currency: str = "USD"
+
+
+class AvailableReservationRoom(BaseModel):
+    room_id: str
+    room_name: str
+    room_name_lang: Optional[str] = None
+    room_status: str
+    rate_id: str
+    rate_title: str
+    meal_plan: str
+    currency: str
+    base_rate: Decimal
+    tax_and_service_fee: Decimal
+    total_nights: int
+    total_price: Decimal
+
+
+class ReservationAvailabilityResponse(BaseModel):
+    property_id: str
+    guest_id: Optional[str] = None
+    check_in_date: date
+    check_out_date: date
+    currency: str
+    available_rooms: list[AvailableReservationRoom]
+
+
 class ReservationPriceBreakdown(BaseModel):
     base_price: Decimal
     tax_price: Decimal

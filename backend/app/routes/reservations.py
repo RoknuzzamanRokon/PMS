@@ -2,14 +2,17 @@ from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Payment, RatePlan, Reservation, ReservationRoom, Room
 from ..schemas import (
+    AvailableReservationRoom,
     PaymentCreate,
     PaymentRead,
+    ReservationAvailabilityRequest,
+    ReservationAvailabilityResponse,
     ReservationCreate,
     ReservationRead,
     ReservationStatusUpdate,
@@ -18,6 +21,100 @@ from ..schemas import (
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
+
+
+def validate_reservation_dates(check_in_date: date, check_out_date: date) -> None:
+    today = date.today()
+    if check_in_date < today:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Check-in date cannot be in the past. Please use {today.isoformat()} or a later date.",
+        )
+    if check_out_date <= check_in_date:
+        raise HTTPException(
+            status_code=422,
+            detail="Check-out date must be later than check-in date.",
+        )
+
+
+def get_available_room_options(
+    db: Session,
+    property_id: str,
+    check_in_date: date,
+    check_out_date: date,
+    currency: str,
+) -> list[dict]:
+    rooms = (
+        db.execute(select(Room).where(Room.property_id == property_id).order_by(Room.room_name.asc()))
+        .scalars()
+        .all()
+    )
+    room_ids = [room.room_id for room in rooms]
+    if not room_ids:
+        return []
+
+    rate_plans = (
+        db.execute(
+            select(RatePlan)
+            .where(RatePlan.room_id.in_(room_ids))
+            .order_by(RatePlan.room_id.asc(), RatePlan.status.desc(), RatePlan.base_rate.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+    overlapping_reservations = (
+        db.execute(
+            select(ReservationRoom.room_id)
+            .join(Reservation, Reservation.booking_id == ReservationRoom.booking_id)
+            .where(
+                ReservationRoom.room_id.in_(room_ids),
+                Reservation.booking_status != "CANCELLED",
+                and_(
+                    Reservation.check_in_date < check_out_date,
+                    Reservation.check_out_date > check_in_date,
+                ),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    occupied_room_ids = set(overlapping_reservations)
+    rate_plan_by_room = {}
+    for rate_plan in rate_plans:
+        if rate_plan.room_id not in occupied_room_ids and rate_plan.room_id not in rate_plan_by_room:
+            rate_plan_by_room[rate_plan.room_id] = rate_plan
+
+    total_nights = (check_out_date - check_in_date).days
+    available_rooms = []
+    for room in rooms:
+        if room.room_id in occupied_room_ids:
+            continue
+
+        rate_plan = rate_plan_by_room.get(room.room_id)
+        if not rate_plan:
+            continue
+
+        nightly_total = Decimal(rate_plan.base_rate) + Decimal(rate_plan.tax_and_service_fee)
+        total_price = nightly_total * Decimal(total_nights)
+        available_rooms.append(
+            {
+                "room_id": room.room_id,
+                "room_name": room.room_name,
+                "room_name_lang": room.room_name_lang,
+                "room_status": room.room_status,
+                "rate_id": rate_plan.rate_id,
+                "rate_title": rate_plan.title,
+                "meal_plan": rate_plan.meal_plan,
+                "currency": currency or rate_plan.currency,
+                "base_rate": rate_plan.base_rate,
+                "tax_and_service_fee": rate_plan.tax_and_service_fee,
+                "total_nights": total_nights,
+                "total_price": total_price,
+            }
+        )
+
+    return available_rooms
 
 
 def serialize_reservation(reservation: Reservation, db: Session):
@@ -69,24 +166,28 @@ def recalculate_reservation_total(reservation: Reservation, db: Session) -> Deci
 
 @router.post("", response_model=ReservationRead)
 def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)):
-    today = date.today()
-    if payload.check_in_date < today:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Check-in date cannot be in the past. Please use {today.isoformat()} or a later date.",
-        )
-    if payload.check_out_date <= payload.check_in_date:
-        raise HTTPException(
-            status_code=422,
-            detail="Check-out date must be later than check-in date.",
-        )
+    validate_reservation_dates(payload.check_in_date, payload.check_out_date)
 
     booking_id = payload.booking_id or next_code(db, Reservation, "booking_id", "BOOK")
     night_count = (payload.check_out_date - payload.check_in_date).days
     total_price = Decimal("0")
+    available_room_options = get_available_room_options(
+        db,
+        payload.property_id,
+        payload.check_in_date,
+        payload.check_out_date,
+        payload.currency,
+    )
+    available_room_ids = {item["room_id"] for item in available_room_options}
+    available_rate_ids = {item["rate_id"] for item in available_room_options}
 
     room_payloads = payload.rooms or []
     for item in room_payloads:
+        if item.room_id not in available_room_ids or item.rate_id not in available_rate_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
+            )
         rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == item.rate_id))
         if not rate_plan:
             raise HTTPException(status_code=404, detail=f"Rate plan not found: {item.rate_id}")
@@ -126,6 +227,30 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
     return serialize_reservation(reservation, db)
 
 
+@router.post("/available-rooms", response_model=ReservationAvailabilityResponse)
+def list_available_rooms_for_reservation(
+    payload: ReservationAvailabilityRequest,
+    db: Session = Depends(get_db),
+):
+    validate_reservation_dates(payload.check_in_date, payload.check_out_date)
+    available_rooms = get_available_room_options(
+        db,
+        payload.property_id,
+        payload.check_in_date,
+        payload.check_out_date,
+        payload.currency,
+    )
+
+    return {
+        "property_id": payload.property_id,
+        "guest_id": payload.guest_id,
+        "check_in_date": payload.check_in_date,
+        "check_out_date": payload.check_out_date,
+        "currency": payload.currency,
+        "available_rooms": available_rooms,
+    }
+
+
 @router.get("/{booking_id}", response_model=ReservationRead)
 def get_reservation(booking_id: str, db: Session = Depends(get_db)):
     reservation = db.scalar(select(Reservation).where(Reservation.booking_id == booking_id))
@@ -146,18 +271,7 @@ def update_reservation(
 
     next_check_in_date = payload.check_in_date or reservation.check_in_date
     next_check_out_date = payload.check_out_date or reservation.check_out_date
-    today = date.today()
-
-    if next_check_in_date < today:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Check-in date cannot be in the past. Please use {today.isoformat()} or a later date.",
-        )
-    if next_check_out_date <= next_check_in_date:
-        raise HTTPException(
-            status_code=422,
-            detail="Check-out date must be later than check-in date.",
-        )
+    validate_reservation_dates(next_check_in_date, next_check_out_date)
 
     reservation.check_in_date = next_check_in_date
     reservation.check_out_date = next_check_out_date

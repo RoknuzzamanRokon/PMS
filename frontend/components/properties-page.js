@@ -79,6 +79,10 @@ export function PropertiesPage() {
   const [selectedPropertyDetail, setSelectedPropertyDetail] = useState(null);
   const [loadingPropertyDetail, setLoadingPropertyDetail] = useState(false);
   const [propertyDetailError, setPropertyDetailError] = useState("");
+  const [showRoomsSummaryModal, setShowRoomsSummaryModal] = useState(false);
+  const [propertyRooms, setPropertyRooms] = useState([]);
+  const [loadingPropertyRooms, setLoadingPropertyRooms] = useState(false);
+  const [propertyRoomsError, setPropertyRoomsError] = useState("");
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -174,7 +178,55 @@ export function PropertiesPage() {
     setSelectedPropertyDetail(null);
     setPropertyDetailError("");
     setLoadingPropertyDetail(false);
+    closeRoomsSummaryModal();
   }
+
+  async function openRoomsSummaryModal() {
+    const propertyId = selectedPropertyDetail?.property_id;
+    if (!propertyId) {
+      return;
+    }
+
+    setShowRoomsSummaryModal(true);
+    setLoadingPropertyRooms(true);
+    setPropertyRoomsError("");
+    setPropertyRooms([]);
+
+    try {
+      const rooms = await fetchJson(`/rooms?property_id=${encodeURIComponent(propertyId)}`);
+      setPropertyRooms(Array.isArray(rooms) ? rooms : []);
+    } catch (error) {
+      setPropertyRoomsError(error.message || "Could not load room summary.");
+    } finally {
+      setLoadingPropertyRooms(false);
+    }
+  }
+
+  function closeRoomsSummaryModal() {
+    setShowRoomsSummaryModal(false);
+    setPropertyRooms([]);
+    setPropertyRoomsError("");
+    setLoadingPropertyRooms(false);
+  }
+
+  const roomStatusSummary = useMemo(
+    () =>
+      propertyRooms.reduce((summary, room) => {
+        const status = (room.room_status || "PROCESSING").toUpperCase();
+        summary[status] = (summary[status] || 0) + 1;
+        return summary;
+      }, {}),
+    [propertyRooms],
+  );
+
+  const averageRoomBaseRate = useMemo(() => {
+    if (!propertyRooms.length) {
+      return 0;
+    }
+
+    const total = propertyRooms.reduce((sum, room) => sum + Number(room.base_rate || 0), 0);
+    return total / propertyRooms.length;
+  }, [propertyRooms]);
 
   return (
     <PmsShell
@@ -577,14 +629,46 @@ export function PropertiesPage() {
                   ].map(([label, value]) => (
                     <article
                       key={label}
-                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                      role={label === "Total Rooms" ? "button" : undefined}
+                      tabIndex={label === "Total Rooms" ? 0 : undefined}
+                      onClick={label === "Total Rooms" ? openRoomsSummaryModal : undefined}
+                      onKeyDown={
+                        label === "Total Rooms"
+                          ? (event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openRoomsSummaryModal();
+                              }
+                            }
+                          : undefined
+                      }
+                      className={[
+                        "rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70",
+                        label === "Total Rooms"
+                          ? "cursor-pointer transition hover:border-primary hover:bg-primary/5 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
                     >
-                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        {label}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          {label}
+                        </p>
+                        {label === "Total Rooms" ? (
+                          <span className="material-symbols-outlined text-base text-primary">
+                            open_in_new
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
                         {value}
                       </p>
+                      {label === "Total Rooms" ? (
+                        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                          Click to open room-only summary.
+                        </p>
+                      ) : null}
                     </article>
                   ))}
                 </section>
@@ -757,6 +841,178 @@ export function PropertiesPage() {
                 </section>
               </div>
             ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {showRoomsSummaryModal ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  Room Summary
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {selectedPropertyDetail?.name || "Selected Property"}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  {selectedPropertyDetail?.property_id || "Property not selected"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href={`/rooms-management?property_id=${selectedPropertyDetail?.property_id || ""}`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+                >
+                  <span className="material-symbols-outlined text-base">add</span>
+                  Create New Rooms
+                </Link>
+                <button
+                  type="button"
+                  onClick={closeRoomsSummaryModal}
+                  className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            {loadingPropertyRooms ? (
+              <div className="mt-6 space-y-4">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-24 animate-pulse rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/70"
+                  />
+                ))}
+              </div>
+            ) : propertyRoomsError ? (
+              <p className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                {propertyRoomsError}
+              </p>
+            ) : (
+              <div className="mt-6 space-y-6">
+                <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    ["Total Rooms", formatNumericValue(propertyRooms.length)],
+                    ["Average Base Rate", formatCurrencyValue(averageRoomBaseRate)],
+                    ["Latest Room Added", propertyRooms[0]?.room_id || "N/A"],
+                    ["Property", selectedPropertyDetail?.property_id || "N/A"],
+                  ].map(([label, value]) => (
+                    <article
+                      key={label}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {label}
+                      </p>
+                      <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                        {value}
+                      </p>
+                    </article>
+                  ))}
+                </section>
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        Status Breakdown
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Live summary from `/api/v1/rooms?property_id={selectedPropertyDetail?.property_id}`.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(roomStatusSummary).length ? (
+                        Object.entries(roomStatusSummary).map(([status, count]) => (
+                          <span
+                            key={status}
+                            className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                          >
+                            {status.toLowerCase().replaceAll("_", " ")}: {count}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="inline-flex rounded-full border border-dashed border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                          No rooms found
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                        Room List
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Room details fetched only for this property.
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      {propertyRooms.length} rooms
+                    </div>
+                  </div>
+
+                  {propertyRooms.length ? (
+                    <div className="mt-5 space-y-3">
+                      {propertyRooms.map((room) => (
+                        <article
+                          key={room.room_id}
+                          className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <h5 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                                {room.room_name}
+                              </h5>
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                {[room.room_id, room.room_name_lang || room.room_name, room.property_id]
+                                  .filter(Boolean)
+                                  .join(" • ")}
+                              </p>
+                            </div>
+                            <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                              {(room.room_status || "PROCESSING").toLowerCase().replaceAll("_", " ")}
+                            </div>
+                          </div>
+
+                          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            {[
+                              ["Base Rate", formatCurrencyValue(room.base_rate)],
+                              ["Tax & Service", formatCurrencyValue(room.tax_and_service_fee)],
+                              ["Surcharges", formatCurrencyValue(room.surcharges)],
+                              ["Mandatory Tax", formatCurrencyValue(room.mandatory_tax)],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/80"
+                              >
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                                  {label}
+                                </p>
+                                <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                  {value}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                      No rooms found for this property yet. Use the create button to add one.
+                    </p>
+                  )}
+                </section>
+              </div>
+            )}
           </div>
         </div>
       ) : null}

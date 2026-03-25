@@ -94,6 +94,13 @@ function buildRoomPayload(roomForm, propertyId) {
 
 function buildPreviewRows(roomForm, propertyId) {
   const payload = buildRoomPayload(roomForm, propertyId);
+  const totalPrice =
+    payload.base_rate +
+    payload.tax_and_service_fee +
+    payload.surcharges +
+    payload.mandatory_fee +
+    payload.resort_fee +
+    payload.mandatory_tax;
 
   return [
     ["Property ID", payload.property_id],
@@ -105,6 +112,7 @@ function buildPreviewRows(roomForm, propertyId) {
     ["Mandatory Fee", payload.mandatory_fee],
     ["Resort Fee", payload.resort_fee],
     ["Mandatory Tax", payload.mandatory_tax],
+    ["Total Price", totalPrice],
   ];
 }
 

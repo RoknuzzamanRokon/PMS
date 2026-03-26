@@ -6,6 +6,7 @@ import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
+const visibleMatrixDays = 7;
 
 const fallbackRows = [
   {
@@ -1220,15 +1221,11 @@ export function DailyRatesPage({ propertyId }) {
 
         <div className="custom-scrollbar overflow-x-auto overflow-y-hidden">
           <div
-            className={[
-              "w-full",
-              range === 7 && "min-w-[820px]",
-              range === 15 && "min-w-[1320px]",
-              range === 30 && "min-w-[2460px]",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            style={{ "--rate-days": String(range) }}
+            className="min-w-[820px]"
+            style={{
+              "--rate-days": String(range),
+              width: `${Math.max(range / visibleMatrixDays, 1) * 100}%`,
+            }}
           >
             <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
               <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">

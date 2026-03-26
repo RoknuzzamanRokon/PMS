@@ -42,7 +42,7 @@ def inventory_calendar(
         .all()
     )
 
-    booking_by_room = {}
+    bookings_by_room = {}
     for reservation, reservation_room, guest in reservations:
         left_days = max(0, (reservation.check_in_date - start).days)
         duration_days = max(1, (reservation.check_out_date - reservation.check_in_date).days)
@@ -51,26 +51,39 @@ def inventory_calendar(
             "CHECKED_IN": "green",
             "PENDING": "amber",
         }.get(booking_status, "blue")
-        booking_by_room[reservation_room.room_id] = {
+        bookings_by_room.setdefault(reservation_room.room_id, []).append({
             "left_days": left_days,
             "duration_days": duration_days,
             "tone": tone,
-            "guest_name": f"{guest.first_name} {guest.last_name}",
+            "guest_name": reservation_room.occupant_name or f"{guest.first_name} {guest.last_name}",
             "meta": f"{reservation.booking_id} • {reservation.booking_status}",
             "booking_id": reservation.booking_id,
             "booking_status": reservation.booking_status,
             "check_in_date": reservation.check_in_date.isoformat(),
             "check_out_date": reservation.check_out_date.isoformat(),
-        }
+        })
 
-    rows = [
-        {
-            "room_id": room.room_id,
-            "room_name": room.room_name,
-            "booking": booking_by_room.get(room.room_id),
-        }
-        for room in rooms
-    ]
+    rows = []
+    for room in rooms:
+        room_bookings = bookings_by_room.get(room.room_id, [])
+        if not room_bookings:
+            rows.append(
+                {
+                    "room_id": room.room_id,
+                    "room_name": room.room_name,
+                    "booking": None,
+                }
+            )
+            continue
+
+        for booking in room_bookings:
+            rows.append(
+                {
+                    "room_id": room.room_id,
+                    "room_name": room.room_name,
+                    "booking": booking,
+                }
+            )
 
     return {
         "property": {

@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from .available_rooms import router as available_rooms_router
 from .auth import router as auth_router
 from .dashboard import router as dashboard_router
 from .guests import router as guests_router
@@ -13,6 +14,7 @@ from .search import router as search_router
 
 api_router = APIRouter()
 api_router.include_router(auth_router)
+api_router.include_router(available_rooms_router)
 api_router.include_router(properties_router)
 api_router.include_router(meal_plans_router)
 api_router.include_router(rooms_router)

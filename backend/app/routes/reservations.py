@@ -43,6 +43,7 @@ def get_available_room_options(
     check_in_date: date,
     check_out_date: date,
     currency: str,
+    exclude_booking_id: str | None = None,
 ) -> list[dict]:
     rooms = (
         db.execute(select(Room).where(Room.property_id == property_id).order_by(Room.room_name.asc()))
@@ -63,34 +64,47 @@ def get_available_room_options(
         .all()
     )
 
-    overlapping_reservations = (
-        db.execute(
-            select(ReservationRoom.room_id)
-            .join(Reservation, Reservation.booking_id == ReservationRoom.booking_id)
-            .where(
-                ReservationRoom.room_id.in_(room_ids),
-                Reservation.booking_status != "CANCELLED",
-                and_(
-                    Reservation.check_in_date < check_out_date,
-                    Reservation.check_out_date > check_in_date,
-                ),
-            )
+    overlapping_reservations_query = (
+        select(ReservationRoom.room_id)
+        .join(Reservation, Reservation.booking_id == ReservationRoom.booking_id)
+        .where(
+            ReservationRoom.room_id.in_(room_ids),
+            Reservation.booking_status.not_in(["CANCELLED", "Cancelled", "cancelled"]),
+            and_(
+                Reservation.check_in_date < check_out_date,
+                Reservation.check_out_date > check_in_date,
+            ),
         )
-        .scalars()
-        .all()
     )
-    occupied_room_ids = set(overlapping_reservations)
-    rate_plan_by_room = {}
-    for rate_plan in rate_plans:
-        if rate_plan.room_id not in occupied_room_ids and rate_plan.room_id not in rate_plan_by_room:
-            rate_plan_by_room[rate_plan.room_id] = rate_plan
+    if exclude_booking_id:
+        overlapping_reservations_query = overlapping_reservations_query.where(
+            Reservation.booking_id != exclude_booking_id
+        )
 
+    occupied_room_ids = set(
+        db.execute(overlapping_reservations_query).scalars().all()
+    )
+    rate_plan_by_room = {}
     total_nights = (check_out_date - check_in_date).days
-    available_rooms = []
-    for room in rooms:
-        if room.room_id in occupied_room_ids:
+
+    for rate_plan in rate_plans:
+        if rate_plan.room_id in rate_plan_by_room:
+            continue
+        if rate_plan.room_id in occupied_room_ids:
+            continue
+        if not rate_plan.status:
+            continue
+        if rate_plan.stop_sell or rate_plan.closed_to_arrival or rate_plan.closed_to_departure:
+            continue
+        if total_nights < rate_plan.min_stay or total_nights > rate_plan.max_stay:
+            continue
+        if rate_plan.available_inventory <= 0:
             continue
 
+        rate_plan_by_room[rate_plan.room_id] = rate_plan
+
+    available_rooms = []
+    for room in rooms:
         rate_plan = rate_plan_by_room.get(room.room_id)
         if not rate_plan:
             continue
@@ -178,12 +192,18 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
         payload.check_out_date,
         payload.currency,
     )
-    available_room_ids = {item["room_id"] for item in available_room_options}
-    available_rate_ids = {item["rate_id"] for item in available_room_options}
+    available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
 
     room_payloads = payload.rooms or []
+    selected_room_ids = set()
     for item in room_payloads:
-        if item.room_id not in available_room_ids or item.rate_id not in available_rate_ids:
+        if item.room_id in selected_room_ids:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Room {item.room_id} cannot be booked more than once in the same reservation.",
+            )
+        selected_room_ids.add(item.room_id)
+        if (item.room_id, item.rate_id) not in available_room_rate_pairs:
             raise HTTPException(
                 status_code=422,
                 detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
@@ -272,6 +292,29 @@ def update_reservation(
     next_check_in_date = payload.check_in_date or reservation.check_in_date
     next_check_out_date = payload.check_out_date or reservation.check_out_date
     validate_reservation_dates(next_check_in_date, next_check_out_date)
+
+    reservation_rooms = (
+        db.execute(select(ReservationRoom).where(ReservationRoom.booking_id == reservation.booking_id))
+        .scalars()
+        .all()
+    )
+
+    if reservation_rooms and (payload.booking_status or reservation.booking_status).upper() != "CANCELLED":
+        available_room_options = get_available_room_options(
+            db,
+            reservation.property_id,
+            next_check_in_date,
+            next_check_out_date,
+            payload.currency or reservation.currency,
+            exclude_booking_id=reservation.booking_id,
+        )
+        available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
+        for item in reservation_rooms:
+            if (item.room_id, item.rate_id) not in available_room_rate_pairs:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
+                )
 
     reservation.check_in_date = next_check_in_date
     reservation.check_out_date = next_check_out_date

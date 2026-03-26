@@ -6,6 +6,7 @@ import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
 const dayColumnWidth = 100;
+const inventoryViewOptions = [7, 15, 30];
 
 const bookingToneClasses = {
   blue: {
@@ -63,7 +64,7 @@ function addDaysToIsoDate(startDate, offsetDays) {
 const fallbackCalendar = {
   property: { property_id: "", name: "Selected Property" },
   start_date: new Date().toISOString().slice(0, 10),
-  days: 14,
+  days: 15,
   rows: [],
 };
 
@@ -71,6 +72,7 @@ export function InventoryPage({ propertyId }) {
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
+  const [selectedDays, setSelectedDays] = useState(15);
   const [apiConnected, setApiConnected] = useState(false);
   const [savingBookingId, setSavingBookingId] = useState("");
   const [calendarError, setCalendarError] = useState("");
@@ -94,7 +96,7 @@ export function InventoryPage({ propertyId }) {
 
     try {
       const data = await fetchJson(
-        `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=14`,
+        `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=${selectedDays}`,
       );
       setCalendar(data);
       setApiConnected(true);
@@ -117,7 +119,7 @@ export function InventoryPage({ propertyId }) {
 
       try {
         const data = await fetchJson(
-          `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=14`,
+          `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=${selectedDays}`,
         );
         if (!ignore) {
           setCalendar(data);
@@ -134,7 +136,7 @@ export function InventoryPage({ propertyId }) {
     return () => {
       ignore = true;
     };
-  }, [selectedPropertyId]);
+  }, [selectedDays, selectedPropertyId]);
 
   useEffect(() => {
     if (!dragState) {
@@ -312,6 +314,23 @@ export function InventoryPage({ propertyId }) {
                   <span className="material-symbols-outlined text-base">pin_drop</span>
                   Viewing {calendar.property.name}
                 </div>
+                <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/70">
+                  {inventoryViewOptions.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSelectedDays(option)}
+                      className={[
+                        "px-3 py-2 text-sm font-bold transition-colors",
+                        selectedDays === option
+                          ? "bg-primary text-white"
+                          : "text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white",
+                      ].join(" ")}
+                    >
+                      {option} Days
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
             <div
@@ -333,8 +352,9 @@ export function InventoryPage({ propertyId }) {
             {[
               ["filter_alt", "Property:", calendar.property.property_id],
               ["calendar_month", "Start:", calendar.start_date],
+              ["date_range", "View:", `${calendar.days} days`],
               ["hotel", "Rows:", `${calendar.rows.length}`],
-              ["link", "Endpoint:", `/inventory/calendar?property_id=${selectedPropertyId}&days=14`],
+              ["link", "Endpoint:", `/inventory/calendar?property_id=${selectedPropertyId}&days=${selectedDays}`],
             ].map(([icon, label, value]) => (
               <div
                 key={label}
@@ -377,7 +397,10 @@ export function InventoryPage({ propertyId }) {
 
         <div className="custom-scrollbar flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/40">
           <div className="min-w-max">
-            <div className="calendar-grid sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/95">
+            <div
+              className="calendar-grid sticky top-0 z-30 border-b border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900/95"
+              style={{ "--inventory-days": calendar.days }}
+            >
               <div className="flex items-center justify-between border-r border-slate-200 p-4 dark:border-slate-700">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Rooms
@@ -418,15 +441,26 @@ export function InventoryPage({ propertyId }) {
             </div>
 
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
-              {calendar.rows.map((row) => (
-                <div key={row.room_id} className="calendar-grid h-16">
+              {calendar.rows.map((row, index) => (
+                <div
+                  key={row.booking?.booking_id ? `${row.room_id}-${row.booking.booking_id}` : `${row.room_id}-empty-${index}`}
+                  className="calendar-grid h-16"
+                  style={{ "--inventory-days": calendar.days }}
+                >
                   <div className="flex flex-col justify-center border-r border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900/80">
                     <span className="text-sm font-bold leading-none">{row.room_id}</span>
                     <span className="mt-1 text-[10px] font-medium uppercase text-slate-500 dark:text-slate-400">
                       {row.room_name}
                     </span>
                   </div>
-                  <div className="relative col-span-14 grid h-full grid-cols-14 border-r border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900/70">
+                  <div
+                    className="relative h-full border-r border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900/70"
+                    style={{
+                      gridColumn: "2 / -1",
+                      display: "grid",
+                      gridTemplateColumns: `repeat(${calendar.days}, minmax(${dayColumnWidth}px, 1fr))`,
+                    }}
+                  >
                     <div className="pointer-events-none absolute left-[0px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5 dark:border-primary/20 dark:bg-primary/10" />
                     {row.booking ? (
                       <div

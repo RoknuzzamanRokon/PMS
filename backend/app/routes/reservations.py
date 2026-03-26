@@ -346,6 +346,19 @@ def update_reservation_status(
     return serialize_reservation(reservation, db)
 
 
+@router.post("/{booking_id}/cancel", response_model=ReservationRead)
+def cancel_reservation(booking_id: str, db: Session = Depends(get_db)):
+    reservation = db.scalar(select(Reservation).where(Reservation.booking_id == booking_id))
+    if not reservation:
+        raise HTTPException(status_code=404, detail="Reservation not found")
+
+    reservation.booking_status = "CANCELLED"
+    recalculate_reservation_total(reservation, db)
+    db.commit()
+    db.refresh(reservation)
+    return serialize_reservation(reservation, db)
+
+
 @router.post("/{booking_id}/payments", response_model=PaymentRead)
 def create_payment(booking_id: str, payload: PaymentCreate, db: Session = Depends(get_db)):
     reservation = db.scalar(select(Reservation).where(Reservation.booking_id == booking_id))

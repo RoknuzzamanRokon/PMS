@@ -34,6 +34,7 @@ def inventory_calendar(
             .join(Guest, Guest.guest_id == Reservation.guest_id)
             .where(
                 Reservation.property_id == property_id,
+                Reservation.booking_status.not_in(["CANCELLED", "Cancelled", "cancelled"]),
                 Reservation.check_out_date > start,
                 Reservation.check_in_date < end,
             )

@@ -7,6 +7,7 @@ import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
 const visibleMatrixDays = 7;
+const unavailableStatuses = ["BOOKED", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
 
 const fallbackRows = [
   {
@@ -116,6 +117,22 @@ function getTone(item, index) {
   return Number(item.base_rate) >= 220 ? "emerald" : "default";
 }
 
+function isUnavailableAvailability(value) {
+  return !value || unavailableStatuses.includes(String(value || "").toUpperCase());
+}
+
+function getAvailabilityDisplayLabel(value) {
+  return isUnavailableAvailability(value) ? "UNAVAILABLE" : "AVAILABLE";
+}
+
+function getAvailabilitySelectValue(value) {
+  return isUnavailableAvailability(value) ? "UNAVAILABLE" : "AVAILABLE";
+}
+
+function normalizeAvailabilityInput(value) {
+  return value === "UNAVAILABLE" ? "" : value;
+}
+
 function toIsoDateFromParts(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -189,7 +206,7 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) 
         currentDate.getDate(),
       );
       const item = calendarMap.get(stayDate);
-      const availability = item?.availability || "AVAILABLE";
+      const availability = item?.availability || "";
       const baseRate = formatRateValue(item?.base_rate ?? ratePlan.base_rate ?? 0);
       const tax = formatRateValue(item?.tax ?? 0);
       return {
@@ -201,7 +218,7 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) 
         original_base_rate: baseRate,
         original_availability: availability,
         changed: false,
-        note: ["BOOKED", "CTA", "CTD"].includes(availability) ? "Review" : index === 0 ? "Today" : availability,
+        note: !availability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(availability) ? "Review" : index === 0 ? "Today" : availability,
         tone: getTone({ availability, base_rate: Number(baseRate) }, index),
       };
     });
@@ -275,6 +292,7 @@ export function DailyRatesPage({ propertyId }) {
   const [ratePlanModalSuccess, setRatePlanModalSuccess] = useState("");
   const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
+  const [availableDates, setAvailableDates] = useState([]);
   const [bulkForm, setBulkForm] = useState({
     rate_id: "",
     start_date: new Date().toISOString().slice(0, 10),
@@ -331,9 +349,14 @@ export function DailyRatesPage({ propertyId }) {
           setSelectedProperty(resolvedPropertyId);
         }
 
-        const data = await fetchJson(
-          `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
-        );
+        const [data, availableDatesData] = await Promise.all([
+          fetchJson(
+            `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
+          ),
+          fetchJson(
+            `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          ).catch(() => ({ available_dates: [] })),
+        ]);
 
         if (ignore) {
           return;
@@ -346,6 +369,7 @@ export function DailyRatesPage({ propertyId }) {
         setPropertyName(data.property?.name || resolvedPropertyId);
         setRooms(data.rooms || []);
         setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
+        setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
         setApiConnected(true);
         setPublishError("");
       } catch {
@@ -353,6 +377,7 @@ export function DailyRatesPage({ propertyId }) {
           setApiConnected(false);
           setRows([]);
           setRooms([]);
+          setAvailableDates([]);
           setPropertyName("Selected Property");
           setAvailabilityStatuses([]);
           setMealPlans([]);
@@ -368,7 +393,7 @@ export function DailyRatesPage({ propertyId }) {
     return () => {
       ignore = true;
     };
-  }, [propertyId, calendarStartDate]);
+  }, [propertyId, calendarStartDate, range]);
 
   useEffect(() => {
     setBulkForm((current) => {
@@ -387,11 +412,24 @@ export function DailyRatesPage({ propertyId }) {
     () => rows.reduce((count, row) => count + row.cells.filter((cell) => cell.changed).length, 0),
     [rows],
   );
+  const availableRateIds = useMemo(
+    () => new Set(availableDates.flatMap((item) => item.rate_ids || [])),
+    [availableDates],
+  );
+  const availableRoomIds = useMemo(
+    () => new Set(availableDates.flatMap((item) => item.room_ids || [])),
+    [availableDates],
+  );
+  const availableRows = useMemo(
+    () => rows.filter((row) => availableRateIds.has(row.code) && availableRoomIds.has(row.roomId)),
+    [availableRateIds, availableRoomIds, rows],
+  );
   const roomList = useMemo(() => {
     return rooms
+      .filter((room) => availableRoomIds.has(room.room_id))
       .filter((room) => String(room.room_status || "").toUpperCase() === "LIVE")
       .map((room) => {
-      const linkedRatePlans = rows.filter((row) => row.roomId === room.room_id);
+      const linkedRatePlans = availableRows.filter((row) => row.roomId === room.room_id);
       return {
         ...room,
         linked_rate_plan_count: linkedRatePlans.length,
@@ -399,7 +437,7 @@ export function DailyRatesPage({ propertyId }) {
         preview_rate_plan: linkedRatePlans[0] || null,
       };
       });
-  }, [rooms, rows]);
+  }, [availableRoomIds, availableRows, rooms]);
   const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
   const selectedStayDate = selectedDay?.isoDate || "";
   const selectedDateSummary = useMemo(() => {
@@ -407,7 +445,7 @@ export function DailyRatesPage({ propertyId }) {
       return { queued: 0, booked: 0, blocked: 0 };
     }
 
-    return rows.reduce(
+    return availableRows.reduce(
       (summary, row) => {
         const cell = row.cells.find((item) => item.stay_date === selectedStayDate);
         if (!cell) {
@@ -427,7 +465,7 @@ export function DailyRatesPage({ propertyId }) {
       },
       { queued: 0, booked: 0, blocked: 0 },
     );
-  }, [rows, selectedStayDate]);
+  }, [availableRows, selectedStayDate]);
 
   function handleSelectedDateChange(value) {
     if (!value) {
@@ -457,15 +495,21 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
-    const data = await fetchJson(
-      `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
-    );
+    const [data, availableDatesData] = await Promise.all([
+      fetchJson(
+        `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
+      ),
+      fetchJson(
+        `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+      ).catch(() => ({ available_dates: [] })),
+    ]);
     const calendarByRateId = Object.fromEntries(
       (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
     );
     setPropertyName(data.property?.name || resolvedPropertyId);
     setRooms(data.rooms || []);
     setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
+    setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
     setApiConnected(true);
   }
 
@@ -592,7 +636,7 @@ export function DailyRatesPage({ propertyId }) {
               ...updates,
             };
             const nextBaseRate = formatRateValue(nextCell.base_rate);
-            const nextAvailability = nextCell.availability || "AVAILABLE";
+            const nextAvailability = nextCell.availability || "";
 
             return {
               ...nextCell,
@@ -601,7 +645,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(nextCell.original_base_rate) ||
                 nextAvailability !== nextCell.original_availability,
-              note: ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: !nextAvailability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -666,7 +710,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(cell.original_base_rate) ||
                 nextAvailability !== cell.original_availability,
-              note: ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: !nextAvailability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -729,7 +773,7 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   const summaryStats = useMemo(() => {
-    const visibleRows = rows.length ? rows : fallbackRows;
+    const visibleRows = availableRows.length ? availableRows : apiConnected ? [] : fallbackRows;
     const allCells = visibleRows.flatMap((row) => row.cells.slice(0, range));
     const numericRates = allCells
       .map((cell) => Number(cell.base_rate ?? String(cell.value).replace(/[^0-9.]/g, "")))
@@ -768,18 +812,18 @@ export function DailyRatesPage({ propertyId }) {
         tone: "blue",
       },
     ];
-  }, [apiConnected, pendingChanges, range, rows]);
+  }, [apiConnected, availableRows, pendingChanges, range]);
 
   const insightCards = useMemo(
     () => [
-      {
-        title: "API Connection",
-        items: [
-          apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
-          `Loaded ${properties.length || 1} properties and ${rooms.length || rows.length} room records.`,
-          apiConnected ? "Single-day and bulk calendar edits publish through `/rate-plans/{rate_id}/calendar/bulk-upsert`." : "Start the backend to hydrate this matrix with live data.",
-        ],
-      },
+          {
+            title: "API Connection",
+            items: [
+              apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
+              `Loaded ${properties.length || 1} properties and ${rooms.length || availableRows.length} room records.`,
+              apiConnected ? "Single-day and bulk calendar edits publish through `/rate-plans/{rate_id}/calendar/bulk-upsert`." : "Start the backend to hydrate this matrix with live data.",
+            ],
+          },
       {
         title: "Active Property",
         items: [
@@ -789,27 +833,13 @@ export function DailyRatesPage({ propertyId }) {
         ],
       },
     ],
-    [apiConnected, calendarStartDate, properties.length, rooms.length, rows.length, selectedProperty],
+    [apiConnected, availableRows.length, calendarStartDate, properties.length, rooms.length, selectedProperty],
   );
 
   const availabilityOptions = useMemo(() => {
-    if (availabilityStatuses.length) {
-      return availabilityStatuses.map((status) => ({
-        value: status.title,
-        label: status.title,
-        description: status.description,
-      }));
-    }
-
     return [
       { value: "AVAILABLE", label: "AVAILABLE", description: "" },
-      { value: "BOOKED", label: "BOOKED", description: "" },
-      { value: "STOP_SELL", label: "STOP_SELL", description: "" },
-      { value: "CTA", label: "CTA", description: "" },
-      { value: "CTD", label: "CTD", description: "" },
-      { value: "OUT_OF_ORDER", label: "OUT_OF_ORDER", description: "" },
-      { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE", description: "" },
-      { value: "OVERBOOKED", label: "OVERBOOKED", description: "" },
+      { value: "UNAVAILABLE", label: "UNAVAILABLE", description: "" },
     ];
   }, [availabilityStatuses]);
 
@@ -834,8 +864,8 @@ export function DailyRatesPage({ propertyId }) {
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
       sidebarMetricLabel="Rate Plans Loaded"
-      sidebarMetricValue={`${rows.length}`}
-      sidebarMetricProgress={Math.max(20, Math.min(100, rows.length * 20))}
+      sidebarMetricValue={`${availableRows.length}`}
+      sidebarMetricProgress={Math.max(20, Math.min(100, availableRows.length * 20))}
     >
       {!hasSelectedProperty ? (
         <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -936,7 +966,7 @@ export function DailyRatesPage({ propertyId }) {
               <span className="font-bold text-slate-900">{rooms.length || rows.length}</span>
             </div>
             <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              Rate Plans: <span className="font-bold text-slate-900">{rows.length}</span>
+              Rate Plans: <span className="font-bold text-slate-900">{availableRows.length}</span>
             </div>
             <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
               <span className="mr-2">Start:</span>
@@ -1057,7 +1087,7 @@ export function DailyRatesPage({ propertyId }) {
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                 >
                   <option value="">Select rate plan</option>
-                  {rows.map((row) => (
+                  {availableRows.map((row) => (
                     <option key={row.code} value={row.code}>
                       {row.code} - {row.title}
                     </option>
@@ -1115,7 +1145,7 @@ export function DailyRatesPage({ propertyId }) {
               </div>
               <button
                 type="submit"
-                disabled={!apiConnected || !rows.length}
+                disabled={!apiConnected || !availableRows.length}
                 className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
               >
                 <span className="material-symbols-outlined text-base">calendar_edit</span>
@@ -1265,15 +1295,15 @@ export function DailyRatesPage({ propertyId }) {
               })}
             </div>
 
-            {!rows.length ? (
+            {!availableRows.length ? (
               <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
                 {apiConnected
-                  ? `No rate plans found for ${selectedProperty || "this property"} in this calendar window.`
+                  ? `No available rate plans found for ${selectedProperty || "this property"} in this calendar window.`
                   : "Backend offline. Start the API to load editable daily rates."}
               </div>
             ) : null}
 
-            {rows.map((row) => (
+            {availableRows.map((row) => (
               <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
                 <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                   <div className="flex items-start justify-between gap-3">
@@ -1323,7 +1353,10 @@ export function DailyRatesPage({ propertyId }) {
                 {row.cells.slice(0, range).map((cell, index) => {
                   const styles = toneClasses[cell.tone] || toneClasses.default;
                   const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
-                  const cellAvailability = cell.availability || "AVAILABLE";
+                  const cellAvailability = cell.availability || "";
+                  const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
+                  const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
+                  const availabilityIsUnavailable = isUnavailableAvailability(cellAvailability);
                   return (
                     <div
                       key={`${row.code}-${index}`}
@@ -1349,15 +1382,30 @@ export function DailyRatesPage({ propertyId }) {
                             setPublishSuccess("");
                           }}
                         />
+                        <div
+                          className={[
+                            "mt-2 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+                            availabilityIsUnavailable
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-emerald-100 text-emerald-700",
+                          ].join(" ")}
+                        >
+                          {availabilityLabel}
+                        </div>
                         <select
-                          value={cellAvailability}
+                          value={cellSelectValue}
                           disabled={!apiConnected || !cell.stay_date}
                           onChange={(event) => {
-                            updateCell(row.code, cell.stay_date, { availability: event.target.value });
+                            updateCell(row.code, cell.stay_date, { availability: normalizeAvailabilityInput(event.target.value) });
                             setPublishError("");
                             setPublishSuccess("");
                           }}
-                          className="mt-2 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500 outline-none"
+                          className={[
+                            "mt-2 w-full rounded-md border bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider outline-none",
+                            availabilityIsUnavailable
+                              ? "border-rose-200 text-rose-700"
+                              : "border-emerald-200 text-emerald-700",
+                          ].join(" ")}
                         >
                           {availabilityOptions.map((status) => (
                             <option key={status.value} value={status.value}>

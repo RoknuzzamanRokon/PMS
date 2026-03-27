@@ -1,12 +1,12 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Payment, RatePlan, Reservation, ReservationRoom, Room
+from ..models import Payment, RateCalendar, RatePlan, Reservation, ReservationRoom, Room
 from ..schemas import (
     AvailableReservationRoom,
     PaymentCreate,
@@ -21,6 +21,7 @@ from ..schemas import (
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
+UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 
 
 def validate_reservation_dates(check_in_date: date, check_out_date: date) -> None:
@@ -64,33 +65,11 @@ def get_available_room_options(
         .all()
     )
 
-    overlapping_reservations_query = (
-        select(ReservationRoom.room_id)
-        .join(Reservation, Reservation.booking_id == ReservationRoom.booking_id)
-        .where(
-            ReservationRoom.room_id.in_(room_ids),
-            Reservation.booking_status.not_in(["CANCELLED", "Cancelled", "cancelled"]),
-            and_(
-                Reservation.check_in_date < check_out_date,
-                Reservation.check_out_date > check_in_date,
-            ),
-        )
-    )
-    if exclude_booking_id:
-        overlapping_reservations_query = overlapping_reservations_query.where(
-            Reservation.booking_id != exclude_booking_id
-        )
-
-    occupied_room_ids = set(
-        db.execute(overlapping_reservations_query).scalars().all()
-    )
     rate_plan_by_room = {}
     total_nights = (check_out_date - check_in_date).days
 
     for rate_plan in rate_plans:
         if rate_plan.room_id in rate_plan_by_room:
-            continue
-        if rate_plan.room_id in occupied_room_ids:
             continue
         if not rate_plan.status:
             continue
@@ -104,13 +83,35 @@ def get_available_room_options(
         rate_plan_by_room[rate_plan.room_id] = rate_plan
 
     available_rooms = []
+    expected_dates = {check_in_date + timedelta(days=offset) for offset in range(total_nights)}
     for room in rooms:
         rate_plan = rate_plan_by_room.get(room.room_id)
         if not rate_plan:
             continue
 
-        nightly_total = Decimal(rate_plan.base_rate) + Decimal(rate_plan.tax_and_service_fee)
-        total_price = nightly_total * Decimal(total_nights)
+        calendars = (
+            db.execute(
+                select(RateCalendar).where(
+                    RateCalendar.rate_id == rate_plan.rate_id,
+                    RateCalendar.stay_date >= check_in_date,
+                    RateCalendar.stay_date < check_out_date,
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if len(calendars) != total_nights:
+            continue
+        if {item.stay_date for item in calendars} != expected_dates:
+            continue
+        if any(item.availability in UNAVAILABLE_CALENDAR_STATUSES for item in calendars):
+            continue
+
+        nightly_base_total = sum(Decimal(item.base_rate) for item in calendars)
+        nightly_tax_total = sum(Decimal(item.tax) for item in calendars)
+        total_price = nightly_base_total + nightly_tax_total
+        average_base_rate = nightly_base_total / Decimal(total_nights)
+        average_tax_rate = nightly_tax_total / Decimal(total_nights)
         available_rooms.append(
             {
                 "room_id": room.room_id,
@@ -121,8 +122,8 @@ def get_available_room_options(
                 "rate_title": rate_plan.title,
                 "meal_plan": rate_plan.meal_plan,
                 "currency": currency or rate_plan.currency,
-                "base_rate": rate_plan.base_rate,
-                "tax_and_service_fee": rate_plan.tax_and_service_fee,
+                "base_rate": average_base_rate,
+                "tax_and_service_fee": average_tax_rate,
                 "total_nights": total_nights,
                 "total_price": total_price,
             }
@@ -193,6 +194,9 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
         payload.currency,
     )
     available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
+    available_room_options_by_pair = {
+        (item["room_id"], item["rate_id"]): item for item in available_room_options
+    }
 
     room_payloads = payload.rooms or []
     selected_room_ids = set()
@@ -211,8 +215,8 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
         rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == item.rate_id))
         if not rate_plan:
             raise HTTPException(status_code=404, detail=f"Rate plan not found: {item.rate_id}")
-        nightly_total = Decimal(rate_plan.base_rate) + Decimal(rate_plan.tax_and_service_fee)
-        total_price += nightly_total * Decimal(night_count)
+        available_option = available_room_options_by_pair[(item.room_id, item.rate_id)]
+        total_price += Decimal(available_option["total_price"])
 
     reservation = Reservation(
         booking_id=booking_id,
@@ -229,6 +233,7 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
     for item in room_payloads:
         room = db.scalar(select(Room).where(Room.room_id == item.room_id))
         rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == item.rate_id))
+        available_option = available_room_options_by_pair[(item.room_id, item.rate_id)]
         db.add(
             ReservationRoom(
                 booking_id=booking_id,
@@ -236,8 +241,8 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
                 rate_id=item.rate_id,
                 room_name=room.room_name if room else item.room_id,
                 room_name_lang=room.room_name_lang if room else None,
-                room_rate_snapshot=rate_plan.base_rate if rate_plan else 0,
-                tax_snapshot=rate_plan.tax_and_service_fee if rate_plan else 0,
+                room_rate_snapshot=available_option["base_rate"] if rate_plan else 0,
+                tax_snapshot=available_option["tax_and_service_fee"] if rate_plan else 0,
                 occupant_name=item.occupant_name,
             )
         )

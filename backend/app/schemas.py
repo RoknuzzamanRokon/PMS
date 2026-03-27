@@ -450,6 +450,21 @@ class AvailabilitySearchResponse(BaseModel):
     available_rate_plans: list[dict]
 
 
+class AvailableDateItem(BaseModel):
+    stay_date: date
+    available_room_count: int
+    available_rate_plan_count: int
+    room_ids: list[str]
+    rate_ids: list[str]
+
+
+class AvailabilityDatesResponse(BaseModel):
+    property_id: str
+    start_date: date
+    end_date: date
+    available_dates: list[AvailableDateItem]
+
+
 class DashboardSummaryResponse(BaseModel):
     properties: int
     rooms: int

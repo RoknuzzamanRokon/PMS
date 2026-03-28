@@ -1176,7 +1176,7 @@ export function PropertiesPage() {
                                   .join(" • ")}
                               </p>
                             </div>
-                            <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                            <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-800 shadow-sm dark:bg-green-900 dark:text-green-200">
                               {(room.room_status || "PROCESSING")
                                 .toLowerCase()
                                 .replaceAll("_", " ")}

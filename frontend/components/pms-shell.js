@@ -40,19 +40,20 @@ export function PmsShell({
 }) {
   const pathname = usePathname();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const normalizedPathname = pathname?.replace(/\/+$/, "") || "/";
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
       <header className="theme-panel fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-center gap-8">
-          <div className="flex items-center gap-3 text-primary">
+          <Link href="/dashboard/" className="flex items-center gap-3 text-primary">
             <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
               <span className="material-symbols-outlined">domain</span>
             </div>
             <h2 className="text-lg font-bold leading-tight tracking-tight">
               Hotel PMS
             </h2>
-          </div>
+          </Link>
         </div>
         <div className="flex items-center gap-4">
           <div className="relative hidden sm:block">
@@ -125,7 +126,7 @@ export function PmsShell({
                 <NavLink
                   key={item.href}
                   item={item}
-                  active={pathname === item.href}
+                  active={normalizedPathname === (item.href.replace(/\/+$/, "") || "/")}
                   collapsed={sidebarCollapsed}
                 />
               ))}

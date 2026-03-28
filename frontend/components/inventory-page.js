@@ -61,6 +61,26 @@ function addDaysToIsoDate(startDate, offsetDays) {
   return toIsoDate(date);
 }
 
+function formatCurrency(value, currency = "USD") {
+  const numeric = Number(value || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(numeric) ? numeric : 0);
+}
+
+function getNightCount(checkInDate, checkOutDate) {
+  if (!checkInDate || !checkOutDate) {
+    return 0;
+  }
+  const start = new Date(checkInDate);
+  const end = new Date(checkOutDate);
+  const milliseconds = end.getTime() - start.getTime();
+  return Math.max(0, Math.round(milliseconds / (1000 * 60 * 60 * 24)));
+}
+
 const fallbackCalendar = {
   property: { property_id: "", name: "Selected Property" },
   start_date: new Date().toISOString().slice(0, 10),
@@ -86,6 +106,9 @@ export function InventoryPage({ propertyId }) {
     booking_status: "CONFIRMED",
   });
   const [savingEdit, setSavingEdit] = useState(false);
+  const [bookingDetails, setBookingDetails] = useState(null);
+  const [bookingPayments, setBookingPayments] = useState([]);
+  const [loadingBookingDetails, setLoadingBookingDetails] = useState(false);
 
   async function loadCalendar() {
     if (!selectedPropertyId) {
@@ -216,22 +239,46 @@ export function InventoryPage({ propertyId }) {
     [calendar.days, calendar.start_date],
   );
 
-  function openBookingEditor(booking) {
+  async function openBookingEditor(booking, row) {
     if (!booking) {
       return;
     }
-    setSelectedBooking(booking);
+    const nextSelectedBooking = {
+      ...booking,
+      room_id: row?.room_id || "",
+      room_name: row?.room_name || "",
+    };
+    setSelectedBooking(nextSelectedBooking);
     setEditForm({
       check_in_date: booking.check_in_date,
       check_out_date: booking.check_out_date,
       booking_status: booking.booking_status || "CONFIRMED",
     });
+    setBookingDetails(null);
+    setBookingPayments([]);
+    setLoadingBookingDetails(true);
     setCalendarError("");
     setCalendarSuccess("");
+
+    try {
+      const [reservation, payments] = await Promise.all([
+        fetchJson(`/reservations/${encodeURIComponent(booking.booking_id)}`),
+        fetchJson(`/reservations/${encodeURIComponent(booking.booking_id)}/payments`).catch(() => []),
+      ]);
+      setBookingDetails(reservation);
+      setBookingPayments(Array.isArray(payments) ? payments : []);
+    } catch (error) {
+      setCalendarError(error.message || `Could not load ${booking.booking_id} details.`);
+    } finally {
+      setLoadingBookingDetails(false);
+    }
   }
 
   function closeBookingEditor() {
     setSelectedBooking(null);
+    setBookingDetails(null);
+    setBookingPayments([]);
+    setLoadingBookingDetails(false);
     setSavingEdit(false);
   }
 
@@ -262,6 +309,15 @@ export function InventoryPage({ propertyId }) {
       setSavingEdit(false);
     }
   }
+
+  const bookingPaidTotal = useMemo(
+    () => bookingPayments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+    [bookingPayments],
+  );
+  const bookingTotalPrice = Number(bookingDetails?.total_price || 0);
+  const bookingCurrency = bookingDetails?.currency || "USD";
+  const bookingDueTotal = Math.max(bookingTotalPrice - bookingPaidTotal, 0);
+  const bookingNightCount = getNightCount(editForm.check_in_date, editForm.check_out_date);
 
   return (
     <PmsShell
@@ -503,7 +559,7 @@ export function InventoryPage({ propertyId }) {
                             if (ignoreNextClickBookingId === row.booking.booking_id) {
                               return;
                             }
-                            openBookingEditor(row.booking);
+                            openBookingEditor(row.booking, row);
                           }}
                           className={[
                             "flex h-full cursor-grab flex-col justify-center overflow-hidden rounded-lg border-l-4 p-2 transition-all active:cursor-grabbing",
@@ -559,7 +615,7 @@ export function InventoryPage({ propertyId }) {
                   {selectedBooking.booking_id}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Update stay dates or reservation status.
+                  Review guest, stay, and payment details, then update reservation dates or status.
                 </p>
               </div>
               <button
@@ -572,6 +628,37 @@ export function InventoryPage({ propertyId }) {
             </div>
 
             <form onSubmit={handleSaveBookingEditor} className="mt-6 space-y-4">
+              {loadingBookingDetails ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                  Loading booking details...
+                </div>
+              ) : null}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ["Customer Name", selectedBooking.guest_name || "N/A"],
+                  ["Room", [selectedBooking.room_name, selectedBooking.room_id].filter(Boolean).join(" • ") || "N/A"],
+                  ["Stay Start", editForm.check_in_date || "N/A"],
+                  ["Stay Nights", bookingNightCount ? `${bookingNightCount} night${bookingNightCount > 1 ? "s" : ""}` : "0 nights"],
+                  ["Total Amount", formatCurrency(bookingTotalPrice, bookingCurrency)],
+                  ["Paid Amount", formatCurrency(bookingPaidTotal, bookingCurrency)],
+                  ["Due Amount", formatCurrency(bookingDueTotal, bookingCurrency)],
+                  ["Created", bookingDetails?.created_at ? new Date(bookingDetails.created_at).toLocaleString("en-US") : "N/A"],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {label}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -639,7 +726,7 @@ export function InventoryPage({ propertyId }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingEdit}
+                  disabled={savingEdit || loadingBookingDetails}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {savingEdit ? "Saving..." : "Save Changes"}

@@ -154,6 +154,7 @@ function parseIntegerValue(value) {
 
 function createRatePlanForm(room) {
   return {
+    rate_id: "",
     room_id: room?.room_id || "",
     title: room?.room_name ? `${room.room_name} Flexible` : "",
     description: "Best flexible rate",
@@ -179,6 +180,68 @@ function createRatePlanForm(room) {
     stop_sell: false,
     extra_adult_rate: "25.00",
     extra_child_rate: "15.00",
+  };
+}
+
+function createRatePlanPayload(form) {
+  return {
+    room_id: form.room_id,
+    title: form.title.trim(),
+    description: form.description.trim(),
+    meal_plan: form.meal_plan.trim(),
+    is_refundable: Boolean(form.is_refundable),
+    bed_type: form.bed_type.trim(),
+    cancellation_policy: form.cancellation_policy.trim(),
+    status: Boolean(form.status),
+    min_stay: parseIntegerValue(form.min_stay),
+    max_stay: parseIntegerValue(form.max_stay),
+    currency: form.currency.trim(),
+    base_rate: Number(form.base_rate),
+    tax_and_service_fee: Number(form.tax_and_service_fee),
+    surcharges: Number(form.surcharges),
+    mandatory_fee: Number(form.mandatory_fee),
+    resort_fee: Number(form.resort_fee),
+    mandatory_tax: Number(form.mandatory_tax),
+    total_inventory: parseIntegerValue(form.total_inventory),
+    available_inventory: parseIntegerValue(form.available_inventory),
+    sold_inventory: parseIntegerValue(form.sold_inventory),
+    closed_to_arrival: Boolean(form.closed_to_arrival),
+    closed_to_departure: Boolean(form.closed_to_departure),
+    stop_sell: Boolean(form.stop_sell),
+    extra_adult_rate: Number(form.extra_adult_rate),
+    extra_child_rate: Number(form.extra_child_rate),
+  };
+}
+
+function createRatePlanFormFromDetails(room, ratePlan) {
+  return {
+    ...createRatePlanForm(room),
+    rate_id: ratePlan?.rate_id || "",
+    room_id: ratePlan?.room_id || room?.room_id || "",
+    title: ratePlan?.title || "",
+    description: ratePlan?.description || "",
+    meal_plan: ratePlan?.meal_plan || "BB",
+    is_refundable: Boolean(ratePlan?.is_refundable),
+    bed_type: ratePlan?.bed_type || "",
+    cancellation_policy: ratePlan?.cancellation_policy || "",
+    status: Boolean(ratePlan?.status),
+    min_stay: String(ratePlan?.min_stay ?? 1),
+    max_stay: String(ratePlan?.max_stay ?? 30),
+    currency: ratePlan?.currency || "USD",
+    base_rate: formatRateValue(ratePlan?.base_rate ?? 0),
+    tax_and_service_fee: formatRateValue(ratePlan?.tax_and_service_fee ?? 0),
+    surcharges: formatRateValue(ratePlan?.surcharges ?? 0),
+    mandatory_fee: formatRateValue(ratePlan?.mandatory_fee ?? 0),
+    resort_fee: formatRateValue(ratePlan?.resort_fee ?? 0),
+    mandatory_tax: formatRateValue(ratePlan?.mandatory_tax ?? 0),
+    total_inventory: String(ratePlan?.total_inventory ?? 0),
+    available_inventory: String(ratePlan?.available_inventory ?? 0),
+    sold_inventory: String(ratePlan?.sold_inventory ?? 0),
+    closed_to_arrival: Boolean(ratePlan?.closed_to_arrival),
+    closed_to_departure: Boolean(ratePlan?.closed_to_departure),
+    stop_sell: Boolean(ratePlan?.stop_sell),
+    extra_adult_rate: formatRateValue(ratePlan?.extra_adult_rate ?? 0),
+    extra_child_rate: formatRateValue(ratePlan?.extra_child_rate ?? 0),
   };
 }
 
@@ -356,9 +419,12 @@ export function DailyRatesPage({ propertyId }) {
   const [mealPlans, setMealPlans] = useState([]);
   const [showRatePlanModal, setShowRatePlanModal] = useState(false);
   const [selectedRoomForRatePlan, setSelectedRoomForRatePlan] = useState(null);
+  const [ratePlanModalMode, setRatePlanModalMode] = useState("create");
+  const [editingRatePlanId, setEditingRatePlanId] = useState("");
   const [ratePlanModalError, setRatePlanModalError] = useState("");
   const [ratePlanModalSuccess, setRatePlanModalSuccess] = useState("");
   const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
+  const [loadingRatePlanDetails, setLoadingRatePlanDetails] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
   const [availableDates, setAvailableDates] = useState([]);
@@ -675,6 +741,8 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
     setSelectedRoomForRatePlan(room);
+    setRatePlanModalMode("create");
+    setEditingRatePlanId("");
     setNewRatePlanForm(createRatePlanForm(room));
     setRatePlanModalError("");
     setRatePlanModalSuccess("");
@@ -682,11 +750,23 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   function closeRatePlanModal() {
+    const roomPlansContext =
+      ratePlanModalMode === "edit" && selectedRoomForRatePlan?.room_id
+        ? selectedRoomForRatePlan
+        : null;
+
     setShowRatePlanModal(false);
     setSelectedRoomForRatePlan(null);
+    setRatePlanModalMode("create");
+    setEditingRatePlanId("");
     setRatePlanModalError("");
     setRatePlanModalSuccess("");
+    setLoadingRatePlanDetails(false);
     setNewRatePlanForm(createRatePlanForm(null));
+
+    if (roomPlansContext) {
+      setActiveRoomPlansModal(roomPlansContext);
+    }
   }
 
   function openActiveRoomPlansModal(room) {
@@ -697,7 +777,31 @@ export function DailyRatesPage({ propertyId }) {
     setActiveRoomPlansModal(null);
   }
 
-  async function handleCreateRatePlan(event) {
+  async function openEditRatePlanModal(room, plan) {
+    if (!plan?.code) {
+      return;
+    }
+
+    setSelectedRoomForRatePlan(room);
+    setRatePlanModalMode("edit");
+    setEditingRatePlanId(plan.code);
+    setRatePlanModalError("");
+    setRatePlanModalSuccess("");
+    setLoadingRatePlanDetails(true);
+    setShowRatePlanModal(true);
+    closeActiveRoomPlansModal();
+
+    try {
+      const ratePlan = await fetchJson(`/rate-plans/${encodeURIComponent(plan.code)}`);
+      setNewRatePlanForm(createRatePlanFormFromDetails(room, ratePlan));
+    } catch (error) {
+      setRatePlanModalError(error.message || `Could not load rate plan ${plan.code}.`);
+    } finally {
+      setLoadingRatePlanDetails(false);
+    }
+  }
+
+  async function handleSubmitRatePlan(event) {
     event.preventDefault();
 
     if (!newRatePlanForm.room_id) {
@@ -715,42 +819,23 @@ export function DailyRatesPage({ propertyId }) {
     setRatePlanModalSuccess("");
 
     try {
-      await fetchJson("/rate-plans", {
-        method: "POST",
-        body: JSON.stringify({
-          room_id: newRatePlanForm.room_id,
-          title: newRatePlanForm.title.trim(),
-          description: newRatePlanForm.description.trim(),
-          meal_plan: newRatePlanForm.meal_plan.trim(),
-          is_refundable: Boolean(newRatePlanForm.is_refundable),
-          bed_type: newRatePlanForm.bed_type.trim(),
-          cancellation_policy: newRatePlanForm.cancellation_policy.trim(),
-          status: Boolean(newRatePlanForm.status),
-          min_stay: parseIntegerValue(newRatePlanForm.min_stay),
-          max_stay: parseIntegerValue(newRatePlanForm.max_stay),
-          currency: newRatePlanForm.currency.trim(),
-          base_rate: Number(newRatePlanForm.base_rate),
-          tax_and_service_fee: Number(newRatePlanForm.tax_and_service_fee),
-          surcharges: Number(newRatePlanForm.surcharges),
-          mandatory_fee: Number(newRatePlanForm.mandatory_fee),
-          resort_fee: Number(newRatePlanForm.resort_fee),
-          mandatory_tax: Number(newRatePlanForm.mandatory_tax),
-          total_inventory: parseIntegerValue(newRatePlanForm.total_inventory),
-          available_inventory: parseIntegerValue(newRatePlanForm.available_inventory),
-          sold_inventory: parseIntegerValue(newRatePlanForm.sold_inventory),
-          closed_to_arrival: Boolean(newRatePlanForm.closed_to_arrival),
-          closed_to_departure: Boolean(newRatePlanForm.closed_to_departure),
-          stop_sell: Boolean(newRatePlanForm.stop_sell),
-          extra_adult_rate: Number(newRatePlanForm.extra_adult_rate),
-          extra_child_rate: Number(newRatePlanForm.extra_child_rate),
-        }),
+      const isEditMode = ratePlanModalMode === "edit" && editingRatePlanId;
+      await fetchJson(isEditMode ? `/rate-plans/${encodeURIComponent(editingRatePlanId)}` : "/rate-plans", {
+        method: isEditMode ? "PATCH" : "POST",
+        body: JSON.stringify(createRatePlanPayload(newRatePlanForm)),
       });
 
       await refreshDailyRates(newRatePlanForm.room_id ? selectedProperty : undefined);
-      setRoomListMessage(`Added a new rate plan for ${newRatePlanForm.room_id}.`);
+      setRoomListMessage(
+        isEditMode
+          ? `Updated rate plan ${editingRatePlanId}.`
+          : `Added a new rate plan for ${newRatePlanForm.room_id}.`,
+      );
       closeRatePlanModal();
     } catch (error) {
-      setRatePlanModalError(error.message || "Could not create the rate plan.");
+      setRatePlanModalError(
+        error.message || (ratePlanModalMode === "edit" ? "Could not update the rate plan." : "Could not create the rate plan."),
+      );
     } finally {
       setSavingNewRatePlan(false);
     }
@@ -1671,10 +1756,13 @@ export function DailyRatesPage({ propertyId }) {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plan</p>
                 <h3 className="mt-2 text-2xl font-bold text-slate-900">
-                  Add Rate Plan for {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id}
+                  {ratePlanModalMode === "edit" ? "Edit Rate Plan for" : "Add Rate Plan for"}{" "}
+                  {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Create a new rate plan directly from the daily-rates workspace.
+                  {ratePlanModalMode === "edit"
+                    ? "Update the full rate plan details directly from the daily-rates workspace."
+                    : "Create a new rate plan directly from the daily-rates workspace."}
                 </p>
               </div>
               <button
@@ -1685,7 +1773,7 @@ export function DailyRatesPage({ propertyId }) {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <form onSubmit={handleCreateRatePlan} className="mt-6 space-y-4">
+            <form onSubmit={handleSubmitRatePlan} className="mt-6 space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Room ID</span>
@@ -1695,6 +1783,21 @@ export function DailyRatesPage({ propertyId }) {
                     className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                   />
                 </label>
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate ID</span>
+                  <input
+                    value={newRatePlanForm.rate_id || (ratePlanModalMode === "edit" ? editingRatePlanId : "Auto-generated")}
+                    readOnly
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                  />
+                </label>
+              </div>
+              {loadingRatePlanDetails ? (
+                <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                  Loading full rate plan details...
+                </p>
+              ) : null}
+              <div className="grid gap-4 md:grid-cols-1">
                 <label className="block">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</span>
                   <input
@@ -1829,10 +1932,10 @@ export function DailyRatesPage({ propertyId }) {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingNewRatePlan}
+                  disabled={savingNewRatePlan || loadingRatePlanDetails}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {savingNewRatePlan ? "Saving..." : "Create Rate Plan"}
+                  {savingNewRatePlan ? "Saving..." : ratePlanModalMode === "edit" ? "Save Rate Plan" : "Create Rate Plan"}
                 </button>
               </div>
             </form>
@@ -1863,7 +1966,12 @@ export function DailyRatesPage({ propertyId }) {
 
             <div className="mt-6 space-y-4">
               {(activeRoomPlansModal.linked_rate_plans || []).map((plan) => (
-                <article key={plan.code} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <button
+                  type="button"
+                  key={plan.code}
+                  onClick={() => openEditRatePlanModal(activeRoomPlansModal, plan)}
+                  className="block w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h4 className="text-base font-bold text-slate-900">{plan.title}</h4>
@@ -1898,7 +2006,14 @@ export function DailyRatesPage({ propertyId }) {
                       </p>
                     </div>
                   </div>
-                </article>
+                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 text-xs font-semibold text-slate-500">
+                    <span>Click this rate plan to edit all fields.</span>
+                    <span className="inline-flex items-center gap-1 text-slate-900">
+                      <span className="material-symbols-outlined text-sm">edit_square</span>
+                      Edit full plan
+                    </span>
+                  </div>
+                </button>
               ))}
 
               {!activeRoomPlansModal.linked_rate_plans?.length ? (

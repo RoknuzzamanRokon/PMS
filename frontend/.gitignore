@@ -1,14 +1,14 @@
 # Node dependencies
-frontend/node_modules/
+node_modules/
 
 # Next.js build output
-frontend/.next/
+.next/
 out/
 
 # Custom Next/cache folders
-frontend/.next_cache_after_layout_fix/
-frontend/.next_cache_after_sidebar_cleanup/
-frontend/.next_cache_before_rebuild/
+.next_cache_after_layout_fix/
+.next_cache_after_sidebar_cleanup/
+.next_cache_before_rebuild/
 
 # General caches
 cache/

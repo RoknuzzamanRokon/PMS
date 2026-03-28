@@ -1176,7 +1176,16 @@ export function PropertiesPage() {
                                   .join(" • ")}
                               </p>
                             </div>
-                            <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-800 shadow-sm dark:bg-green-900 dark:text-green-200">
+                            <div
+                              className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-900 shadow-sm"
+                              style={
+                                String(room.room_status || "PROCESSING").toUpperCase() === "LIVE"
+                                  ? { backgroundColor: "#3adb12" }
+                                  : String(room.room_status || "PROCESSING").toUpperCase() === "PROCESSING"
+                                    ? { backgroundColor: "#e8e22a" }
+                                    : { backgroundColor: "#e2e8f0" }
+                              }
+                            >
                               {(room.room_status || "PROCESSING")
                                 .toLowerCase()
                                 .replaceAll("_", " ")}

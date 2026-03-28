@@ -32,6 +32,13 @@ def _exists(db: Session, model, field_name: str, value: str) -> bool:
 def seed_database(db: Session) -> None:
     today = date.today()
 
+    # Clean up a legacy seed typo from older runs.
+    legacy_property = db.scalar(select(Property).where(Property.property_id == "PROP00"))
+    if legacy_property and not _exists(db, Property, "property_id", "PROP001"):
+        legacy_property.property_id = "PROP001"
+    elif legacy_property:
+        db.delete(legacy_property)
+
     property_type_records = [
         (1, "HOTEL", "Hotel", "Standard hotel accommodation with services and amenities"),
         (2, "RESORT", "Resort", "Full-service vacation lodging facility with recreational activities"),
@@ -132,7 +139,7 @@ def seed_database(db: Session) -> None:
     if not _exists(db, Property, "property_id", "PROP001"):
         db.add(
             Property(
-                property_id="PROP00",
+                property_id="PROP001",
                 name="Grand Plaza Hotel",
                 name_lang="Grand Plaza Hotel",
                 property_type="HOTEL",

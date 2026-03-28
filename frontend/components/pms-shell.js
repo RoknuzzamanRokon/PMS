@@ -161,17 +161,26 @@ export function PmsShell({
             sidebarCollapsed ? "w-20 px-3" : "w-64",
           ].join(" ")}
         >
-          <div className="rounded-2xl bg-primary p-4 text-white shadow-panel">
+          <div
+            className={[
+              "bg-primary text-white shadow-panel",
+              sidebarCollapsed
+                ? "mx-auto flex size-14 items-center justify-center rounded-full"
+                : "rounded-2xl p-4",
+            ].join(" ")}
+          >
             {!sidebarCollapsed ? <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p> : null}
-            <p className={sidebarCollapsed ? "text-center text-lg font-bold" : "text-xl font-bold"}>
+            <p className={sidebarCollapsed ? "text-center text-base font-bold" : "text-xl font-bold"}>
               {sidebarMetricValue}
             </p>
-            <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-white"
-                style={{ width: `${sidebarMetricProgress}%` }}
-              />
-            </div>
+            {!sidebarCollapsed ? (
+              <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
+                <div
+                  className="h-full rounded-full bg-white"
+                  style={{ width: `${sidebarMetricProgress}%` }}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
 

@@ -289,6 +289,20 @@ def property_inventory_summary_for_dates(
     start_date: date,
     end_date: date,
 ) -> list[dict]:
+    live_rooms = (
+        db.execute(
+            select(Room)
+            .where(
+                Room.property_id == property_id,
+                func.upper(func.coalesce(Room.room_status, "")) == LIVE_ROOM_STATUS,
+            )
+            .order_by(Room.room_id.asc())
+        )
+        .scalars()
+        .all()
+    )
+    live_room_ids = [room.room_id for room in live_rooms]
+
     inventory_rows = (
         db.execute(
             select(RoomInventoryCalendar)
@@ -302,37 +316,61 @@ def property_inventory_summary_for_dates(
         .scalars()
         .all()
     )
+    inventory_by_room_date = {(row.room_id, row.stay_date): row for row in inventory_rows}
 
     rates = (
         db.execute(
-            select(RatePlan, RateCalendar, RoomInventoryCalendar)
-            .join(RoomInventoryCalendar, RoomInventoryCalendar.room_id == RatePlan.room_id)
+            select(RatePlan, RateCalendar)
+            .join(Room, Room.room_id == RatePlan.room_id)
             .join(
                 RateCalendar,
-                (RateCalendar.rate_id == RatePlan.rate_id)
-                & (RateCalendar.stay_date == RoomInventoryCalendar.stay_date),
+                RateCalendar.rate_id == RatePlan.rate_id,
             )
             .where(
-                RoomInventoryCalendar.property_id == property_id,
-                RoomInventoryCalendar.stay_date >= start_date,
-                RoomInventoryCalendar.stay_date <= end_date,
-                RoomInventoryCalendar.is_live == 1,
+                Room.property_id == property_id,
+                func.upper(func.coalesce(Room.room_status, "")) == LIVE_ROOM_STATUS,
                 RatePlan.status == 1,
+                RateCalendar.stay_date >= start_date,
+                RateCalendar.stay_date <= end_date,
             )
-            .order_by(RoomInventoryCalendar.stay_date.asc(), RatePlan.rate_id.asc())
+            .order_by(RateCalendar.stay_date.asc(), RatePlan.rate_id.asc())
         )
         .all()
     )
 
     rate_ids_by_date: dict[date, set[str]] = defaultdict(set)
-    for rate_plan, rate_calendar, inventory_row in rates:
+    for rate_plan, rate_calendar in rates:
         if rate_plan.stop_sell or rate_plan.closed_to_arrival or rate_plan.closed_to_departure:
             continue
         if rate_calendar.availability in UNAVAILABLE_CALENDAR_STATUSES:
             continue
-        if inventory_row.available_inventory <= 0 and inventory_row.booked_inventory <= 0:
+        inventory_row = inventory_by_room_date.get((rate_plan.room_id, rate_calendar.stay_date))
+        if inventory_row and not inventory_row.is_live:
             continue
-        rate_ids_by_date[inventory_row.stay_date].add(rate_plan.rate_id)
+        rate_ids_by_date[rate_calendar.stay_date].add(rate_plan.rate_id)
+
+    booked_room_ids_by_date: dict[date, set[str]] = defaultdict(set)
+    if live_room_ids:
+        reservations = (
+            db.execute(
+                select(ReservationRoom.room_id, Reservation.check_in_date, Reservation.check_out_date)
+                .join(Reservation, Reservation.booking_id == ReservationRoom.booking_id)
+                .where(
+                    Reservation.property_id == property_id,
+                    ReservationRoom.room_id.in_(live_room_ids),
+                    Reservation.booking_status.not_in(["CANCELLED", "Cancelled", "cancelled"]),
+                    Reservation.check_out_date > start_date,
+                    Reservation.check_in_date <= end_date,
+                )
+            )
+            .all()
+        )
+        for room_id, check_in_date, check_out_date in reservations:
+            current = max(check_in_date, start_date)
+            stay_end = min(check_out_date, end_date + timedelta(days=1))
+            while current < stay_end:
+                booked_room_ids_by_date[current].add(room_id)
+                current += timedelta(days=1)
 
     rooms_by_date: dict[date, list[RoomInventoryCalendar]] = defaultdict(list)
     for row in inventory_rows:
@@ -341,20 +379,41 @@ def property_inventory_summary_for_dates(
     summaries: list[dict] = []
     current_date = start_date
     while current_date <= end_date:
-        rows = rooms_by_date.get(current_date, [])
-        active_rows = [row for row in rows if row.is_live]
-        booked_room = sum(1 for row in active_rows if row.booked_inventory > 0)
-        available_room = sum(1 for row in active_rows if row.available_inventory > 0)
-        room_ids = [row.room_id for row in active_rows]
+        active_room = 0
+        booked_room = 0
+        available_room = 0
+        room_ids: list[str] = []
+        booked_room_ids = booked_room_ids_by_date.get(current_date, set())
+
+        for room in live_rooms:
+            inventory_row = inventory_by_room_date.get((room.room_id, current_date))
+            if inventory_row:
+                if not inventory_row.is_live:
+                    continue
+                active_room += 1
+                room_ids.append(room.room_id)
+                if inventory_row.booked_inventory > 0:
+                    booked_room += 1
+                if inventory_row.available_inventory > 0:
+                    available_room += 1
+                continue
+
+            active_room += 1
+            room_ids.append(room.room_id)
+            if room.room_id in booked_room_ids:
+                booked_room += 1
+            else:
+                available_room += 1
+
         rate_ids = sorted(rate_ids_by_date.get(current_date, set()))
         summaries.append(
             {
                 "stay_date": current_date,
-                "total_active_room": len(active_rows),
+                "total_active_room": active_room,
                 "total_active_rate": len(rate_ids),
                 "booked_room": booked_room,
                 "available_room": available_room,
-                "unavailable_room": max(len(active_rows) - available_room, 0),
+                "unavailable_room": max(active_room - available_room, 0),
                 "room_ids": room_ids,
                 "rate_ids": rate_ids,
             }

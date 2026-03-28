@@ -182,16 +182,18 @@ function createRatePlanForm(room) {
   };
 }
 
-function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) {
+function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, inventoryRows = []) {
   if (!ratePlans.length) {
     return [];
   }
 
   const roomMap = new Map(rooms.map((room) => [room.room_id, room]));
+  const bookingByRoomId = new Map((inventoryRows || []).map((row) => [row.room_id, row.booking || null]));
   const start = startDate ? new Date(startDate) : new Date();
 
   return ratePlans.map((ratePlan) => {
     const room = roomMap.get(ratePlan.room_id);
+    const booking = bookingByRoomId.get(ratePlan.room_id);
     const calendar = calendarByRateId[ratePlan.rate_id] || [];
     const calendarMap = new Map(calendar.map((item) => [item.stay_date, item]));
     const occupancyPercent = ratePlan.total_inventory
@@ -206,7 +208,12 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) 
         currentDate.getDate(),
       );
       const item = calendarMap.get(stayDate);
-      const availability = item?.availability || "";
+      const isBooked =
+        booking?.check_in_date &&
+        booking?.check_out_date &&
+        stayDate >= booking.check_in_date &&
+        stayDate < booking.check_out_date;
+      const availability = isBooked ? "BOOKED" : item?.availability || "";
       const baseRate = formatRateValue(item?.base_rate ?? ratePlan.base_rate ?? 0);
       const tax = formatRateValue(item?.tax ?? 0);
       return {
@@ -218,7 +225,15 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) 
         original_base_rate: baseRate,
         original_availability: availability,
         changed: false,
-        note: !availability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(availability) ? "Review" : index === 0 ? "Today" : availability,
+        note: isBooked
+          ? "Booked"
+          : !availability
+            ? "No data"
+            : ["BOOKED", "CTA", "CTD"].includes(availability)
+              ? "Review"
+              : index === 0
+                ? "Today"
+                : availability,
         tone: getTone({ availability, base_rate: Number(baseRate) }, index),
       };
     });
@@ -235,6 +250,58 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total) 
       cta: Boolean(ratePlan.closed_to_arrival),
       ctd: Boolean(ratePlan.closed_to_departure),
       cells,
+    };
+  });
+}
+
+function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventoryRows = []) {
+  const liveRooms = (rooms || []).filter((room) => String(room.room_status || "").toUpperCase() === "LIVE");
+  const liveRoomIds = new Set(liveRooms.map((room) => room.room_id));
+  const rowsByRoomId = new Map((inventoryRows || []).map((row) => [row.room_id, row]));
+  const days = createDays(startDate, total);
+
+  return days.map((day) => {
+    const bookedRoomIds = new Set();
+
+    for (const room of liveRooms) {
+      const booking = rowsByRoomId.get(room.room_id)?.booking;
+      if (!booking?.check_in_date || !booking?.check_out_date) {
+        continue;
+      }
+      if (day.isoDate >= booking.check_in_date && day.isoDate < booking.check_out_date) {
+        bookedRoomIds.add(room.room_id);
+      }
+    }
+
+    const rateIds = (ratePlans || [])
+      .filter((ratePlan) => {
+        if (!liveRoomIds.has(ratePlan.room_id)) {
+          return false;
+        }
+        if (ratePlan.status === false || ratePlan.status === 0) {
+          return false;
+        }
+        if (ratePlan.stop_sell || ratePlan.closed_to_arrival || ratePlan.closed_to_departure) {
+          return false;
+        }
+        const calendarItem = (ratePlan.calendar || []).find((item) => item.stay_date === day.isoDate);
+        return calendarItem && !isUnavailableAvailability(calendarItem.availability);
+      })
+      .map((ratePlan) => ratePlan.rate_id);
+
+    const totalActiveRoom = liveRooms.length;
+    const bookedRoom = bookedRoomIds.size;
+    const availableRoom = Math.max(totalActiveRoom - bookedRoom, 0);
+
+    return {
+      stay_date: day.isoDate,
+      total_active_room: totalActiveRoom,
+      total_active_rate: rateIds.length,
+      booked_room: bookedRoom,
+      available_room: availableRoom,
+      unavailable_room: totalActiveRoom - availableRoom,
+      room_ids: liveRooms.map((room) => room.room_id),
+      rate_ids: rateIds,
     };
   });
 }
@@ -354,13 +421,16 @@ export function DailyRatesPage({ propertyId }) {
         }
 
         const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
-        const [data, inventoryData, availableDatesData] = await Promise.all([
+        const [data, inventoryData, inventoryBoardData, availableDatesData] = await Promise.all([
           fetchJson(
             `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
           ),
           fetchJson(
             `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
           ).catch(() => ({ dates: [] })),
+          fetchJson(
+            `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          ).catch(() => ({ rows: [] })),
           fetchJson(
             `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
           ).catch(() => ({ available_dates: [] })),
@@ -376,8 +446,26 @@ export function DailyRatesPage({ propertyId }) {
 
         setPropertyName(data.property?.name || resolvedPropertyId);
         setRooms(data.rooms || []);
-        setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
-        setInventoryDates(Array.isArray(inventoryData?.dates) ? inventoryData.dates : []);
+        setRows(
+          buildRowsFromApi(
+            data.rooms || [],
+            data.rate_plans || [],
+            calendarByRateId,
+            calendarStartDate,
+            totalDays,
+            inventoryBoardData?.rows || [],
+          ),
+        );
+        const nextInventoryDates = Array.isArray(inventoryData?.dates) && inventoryData.dates.length
+          ? inventoryData.dates
+          : buildHotelSummaryFallback(
+              data.rooms || [],
+              data.rate_plans || [],
+              calendarStartDate,
+              range,
+              inventoryBoardData?.rows || [],
+            );
+        setInventoryDates(nextInventoryDates);
         setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
         setApiConnected(true);
         setPublishError("");
@@ -536,13 +624,16 @@ export function DailyRatesPage({ propertyId }) {
     }
 
     const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
-    const [data, inventoryData, availableDatesData] = await Promise.all([
+    const [data, inventoryData, inventoryBoardData, availableDatesData] = await Promise.all([
       fetchJson(
         `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
       ),
       fetchJson(
         `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
       ).catch(() => ({ dates: [] })),
+      fetchJson(
+        `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+      ).catch(() => ({ rows: [] })),
       fetchJson(
         `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
       ).catch(() => ({ available_dates: [] })),
@@ -552,8 +643,26 @@ export function DailyRatesPage({ propertyId }) {
     );
     setPropertyName(data.property?.name || resolvedPropertyId);
     setRooms(data.rooms || []);
-    setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
-    setInventoryDates(Array.isArray(inventoryData?.dates) ? inventoryData.dates : []);
+    setRows(
+      buildRowsFromApi(
+        data.rooms || [],
+        data.rate_plans || [],
+        calendarByRateId,
+        calendarStartDate,
+        totalDays,
+        inventoryBoardData?.rows || [],
+      ),
+    );
+    const nextInventoryDates = Array.isArray(inventoryData?.dates) && inventoryData.dates.length
+      ? inventoryData.dates
+      : buildHotelSummaryFallback(
+          data.rooms || [],
+          data.rate_plans || [],
+          calendarStartDate,
+          range,
+          inventoryBoardData?.rows || [],
+        );
+    setInventoryDates(nextInventoryDates);
     setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
     setApiConnected(true);
   }
@@ -1460,6 +1569,7 @@ export function DailyRatesPage({ propertyId }) {
                   const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
                   const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
                   const availabilityIsUnavailable = isUnavailableAvailability(cellAvailability);
+                  const isBookedStatus = String(cellAvailability || "").toUpperCase() === "BOOKED";
                   return (
                     <div
                       key={`${row.code}-${index}`}
@@ -1471,7 +1581,17 @@ export function DailyRatesPage({ propertyId }) {
                         .join(" ")}
                     >
                       <div className={`${styles.box} min-h-[122px] transition-shadow hover:shadow-md`}>
-                        <span className={styles.note}>{cell.note}</span>
+                        <span
+                          className={[
+                            styles.note,
+                            cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                          style={cell.note === "Booked" ? { backgroundColor: "#4df714" } : undefined}
+                        >
+                          {cell.note}
+                        </span>
                         <input
                           type="number"
                           min="0"
@@ -1487,10 +1607,10 @@ export function DailyRatesPage({ propertyId }) {
                         />
                         <div
                           className={[
-                            "mt-2 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+                            "mt-2 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
                             availabilityIsUnavailable
-                              ? "bg-rose-100 text-rose-700"
-                              : "bg-emerald-100 text-emerald-700",
+                              ? "border-rose-200 text-rose-700"
+                              : "border-emerald-200 text-emerald-700",
                           ].join(" ")}
                         >
                           {availabilityLabel}

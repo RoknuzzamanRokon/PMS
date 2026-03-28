@@ -426,18 +426,17 @@ export function DailyRatesPage({ propertyId }) {
   );
   const roomList = useMemo(() => {
     return rooms
-      .filter((room) => availableRoomIds.has(room.room_id))
       .filter((room) => String(room.room_status || "").toUpperCase() === "LIVE")
       .map((room) => {
-      const linkedRatePlans = availableRows.filter((row) => row.roomId === room.room_id);
-      return {
-        ...room,
-        linked_rate_plan_count: linkedRatePlans.length,
-        active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell).length,
-        preview_rate_plan: linkedRatePlans[0] || null,
-      };
+        const linkedRatePlans = rows.filter((row) => row.roomId === room.room_id);
+        return {
+          ...room,
+          linked_rate_plan_count: linkedRatePlans.length,
+          active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell).length,
+          preview_rate_plan: linkedRatePlans[0] || null,
+        };
       });
-  }, [availableRoomIds, availableRows, rooms]);
+  }, [rooms, rows]);
   const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
   const selectedStayDate = selectedDay?.isoDate || "";
   const selectedDateSummary = useMemo(() => {

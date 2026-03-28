@@ -280,18 +280,25 @@ export function PropertiesPage() {
       searchPlaceholder="Search properties, rooms, rates..."
       sidebarMetricLabel="Properties"
       sidebarMetricValue={`${properties.length}`}
-      sidebarMetricProgress={Math.max(20, Math.min(100, properties.length * 12))}
+      sidebarMetricProgress={Math.max(
+        20,
+        Math.min(100, properties.length * 12),
+      )}
     >
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="mb-1 inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-            <span className="material-symbols-outlined text-base">apartment</span>
+            <span className="material-symbols-outlined text-base">
+              apartment
+            </span>
             Property Workspace
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">Property Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Property Management
+          </h2>
           <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-            Manage the property list and jump into property actions for rooms, inventory,
-            and daily rates from one place.
+            Manage the property list and jump into property actions for rooms,
+            inventory, and daily rates from one place.
           </p>
         </div>
         <div
@@ -329,7 +336,9 @@ export function PropertiesPage() {
             "Latest Added",
             "schedule",
             latestProperty ? latestProperty.property_id : "N/A",
-            latestProperty ? latestProperty.name : "No property records available.",
+            latestProperty
+              ? latestProperty.name
+              : "No property records available.",
             "emerald",
           ],
           [
@@ -347,7 +356,8 @@ export function PropertiesPage() {
               tone === "emerald" && "border border-emerald-200",
               tone === "blue" && "border border-blue-200",
               tone === "amber" && "border border-amber-200",
-              tone === "primary" && "border border-slate-200 dark:border-slate-700",
+              tone === "primary" &&
+                "border border-slate-200 dark:border-slate-700",
             ]
               .filter(Boolean)
               .join(" ")}
@@ -371,7 +381,9 @@ export function PropertiesPage() {
               </span>
             </div>
             <p className="text-3xl font-bold">{value}</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{note}</p>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              {note}
+            </p>
           </article>
         ))}
       </section>
@@ -381,7 +393,8 @@ export function PropertiesPage() {
           <div>
             <h3 className="text-xl font-bold">Property Actions</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Create a new property, refresh the feed, or jump to operational modules.
+              Create a new property, refresh the feed, or jump to operational
+              modules.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -390,7 +403,9 @@ export function PropertiesPage() {
               onClick={() => setShowCreateForm((current) => !current)}
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
             >
-              <span className="material-symbols-outlined text-base">add_business</span>
+              <span className="material-symbols-outlined text-base">
+                add_business
+              </span>
               {showCreateForm ? "Close Form" : "Create Property"}
             </button>
             <button
@@ -419,7 +434,10 @@ export function PropertiesPage() {
                   required
                   value={form.name}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, name: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
                   }
                   className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   placeholder="City View Hotel"
@@ -432,7 +450,10 @@ export function PropertiesPage() {
                   type="text"
                   value={form.name_lang}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, name_lang: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      name_lang: event.target.value,
+                    }))
                   }
                   className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                   placeholder="City View Hotel"
@@ -444,7 +465,10 @@ export function PropertiesPage() {
                 <select
                   value={form.property_type}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, property_type: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      property_type: event.target.value,
+                    }))
                   }
                   className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                 >
@@ -480,7 +504,9 @@ export function PropertiesPage() {
                 disabled={submitting}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
               >
-                <span className="material-symbols-outlined text-base">save</span>
+                <span className="material-symbols-outlined text-base">
+                  save
+                </span>
                 {submitting ? "Creating..." : "Save Property"}
               </button>
             </div>
@@ -546,14 +572,20 @@ export function PropertiesPage() {
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Property ID
                     </p>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{property.property_id}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">
+                      {property.property_id}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Name
                     </p>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">{property.name}</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{property.name_lang || property.name}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">
+                      {property.name}
+                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      {property.name_lang || property.name}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
@@ -581,32 +613,49 @@ export function PropertiesPage() {
                         onClick={() => handleViewProperty(property.property_id)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
-                        <span className="material-symbols-outlined text-base">visibility</span>
+                        <span className="material-symbols-outlined text-base">
+                          visibility
+                        </span>
                         Views
                       </button>
-                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
+                      <span
+                        className="h-6 w-px bg-slate-300 dark:bg-slate-600"
+                        aria-hidden="true"
+                      />
                       <Link
                         href={`/rooms-management?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
-                        <span className="material-symbols-outlined text-base">bed</span>
+                        <span className="material-symbols-outlined text-base">
+                          bed
+                        </span>
                         Rooms
                       </Link>
-                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
-                      <Link
-                        href={`/inventory?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
-                      >
-                        <span className="material-symbols-outlined text-base">calendar_month</span>
-                        Inventory
-                      </Link>
-                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
+                      <span
+                        className="h-6 w-px bg-slate-300 dark:bg-slate-600"
+                        aria-hidden="true"
+                      />
                       <Link
                         href={`/daily-rates?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                       >
-                        <span className="material-symbols-outlined text-base">sell</span>
+                        <span className="material-symbols-outlined text-base">
+                          sell
+                        </span>
                         Rates
+                      </Link>
+                      <span
+                        className="h-6 w-px bg-slate-300 dark:bg-slate-600"
+                        aria-hidden="true"
+                      />
+                      <Link
+                        href={`/inventory?property_id=${property.property_id}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                      >
+                        <span className="material-symbols-outlined text-base">
+                          calendar_month
+                        </span>
+                        Inventory
                       </Link>
                     </div>
                   </div>
@@ -620,7 +669,9 @@ export function PropertiesPage() {
               holiday_village
             </span>
             <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">
-              {properties.length ? "No matching properties" : "No properties found"}
+              {properties.length
+                ? "No matching properties"
+                : "No properties found"}
             </p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {properties.length
@@ -643,7 +694,8 @@ export function PropertiesPage() {
                   {selectedPropertyDetail?.name || "Loading property"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {selectedPropertyDetail?.property_id || "Fetching full property data from the API."}
+                  {selectedPropertyDetail?.property_id ||
+                    "Fetching full property data from the API."}
                 </p>
               </div>
               <button
@@ -672,15 +724,39 @@ export function PropertiesPage() {
               <div className="mt-6 space-y-6">
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   {[
-                    ["Property Type", formatPropertyType(selectedPropertyDetail.property_type)],
-                    ["Total Rooms", formatNumericValue(selectedPropertyDetail.summary?.total_rooms)],
-                    ["Rate Plans", formatNumericValue(selectedPropertyDetail.summary?.total_rate_plans)],
-                    ["Inventory", `${formatNumericValue(selectedPropertyDetail.summary?.available_inventory)} available / ${formatNumericValue(selectedPropertyDetail.summary?.total_inventory)} total`],
+                    [
+                      "Property Type",
+                      formatPropertyType(selectedPropertyDetail.property_type),
+                    ],
+                    [
+                      "Total Rooms",
+                      formatNumericValue(
+                        selectedPropertyDetail.summary?.total_rooms,
+                      ),
+                    ],
+                    [
+                      "Rate Plans",
+                      formatNumericValue(
+                        selectedPropertyDetail.summary?.total_rate_plans,
+                      ),
+                    ],
+                    [
+                      "Inventory",
+                      `${formatNumericValue(selectedPropertyDetail.summary?.available_inventory)} available / ${formatNumericValue(selectedPropertyDetail.summary?.total_inventory)} total`,
+                    ],
                   ].map(([label, value]) => (
                     <article
                       key={label}
-                      role={label === "Total Rooms" || label === "Rate Plans" ? "button" : undefined}
-                      tabIndex={label === "Total Rooms" || label === "Rate Plans" ? 0 : undefined}
+                      role={
+                        label === "Total Rooms" || label === "Rate Plans"
+                          ? "button"
+                          : undefined
+                      }
+                      tabIndex={
+                        label === "Total Rooms" || label === "Rate Plans"
+                          ? 0
+                          : undefined
+                      }
                       onClick={
                         label === "Total Rooms"
                           ? openRoomsSummaryModal
@@ -742,10 +818,31 @@ export function PropertiesPage() {
                     </h4>
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
                       {[
-                        ["Average Base Rate", formatCurrencyValue(selectedPropertyDetail.summary?.average_base_rate)],
-                        ["Average Current Rate", formatCurrencyValue(selectedPropertyDetail.summary?.average_current_rate)],
-                        ["Sold Inventory", formatNumericValue(selectedPropertyDetail.summary?.sold_inventory)],
-                        ["Blocked Inventory", formatNumericValue(selectedPropertyDetail.summary?.blocked_inventory)],
+                        [
+                          "Average Base Rate",
+                          formatCurrencyValue(
+                            selectedPropertyDetail.summary?.average_base_rate,
+                          ),
+                        ],
+                        [
+                          "Average Current Rate",
+                          formatCurrencyValue(
+                            selectedPropertyDetail.summary
+                              ?.average_current_rate,
+                          ),
+                        ],
+                        [
+                          "Sold Inventory",
+                          formatNumericValue(
+                            selectedPropertyDetail.summary?.sold_inventory,
+                          ),
+                        ],
+                        [
+                          "Blocked Inventory",
+                          formatNumericValue(
+                            selectedPropertyDetail.summary?.blocked_inventory,
+                          ),
+                        ],
                       ].map(([label, value]) => (
                         <div
                           key={label}
@@ -768,7 +865,10 @@ export function PropertiesPage() {
                     </h4>
                     <div className="mt-4 space-y-3">
                       {[
-                        ["Base Image", selectedPropertyDetail.property_base_image],
+                        [
+                          "Base Image",
+                          selectedPropertyDetail.property_base_image,
+                        ],
                         ["Amenities", selectedPropertyDetail.amenities],
                         ["Facilities", selectedPropertyDetail.facilities],
                       ].map(([label, info]) => (
@@ -780,7 +880,9 @@ export function PropertiesPage() {
                             {label}
                           </p>
                           <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {info?.available ? "Available" : info?.message || "Coming soon"}
+                            {info?.available
+                              ? "Available"
+                              : info?.message || "Coming soon"}
                           </p>
                           {info?.url ? (
                             <p className="mt-1 break-all text-xs text-slate-500 dark:text-slate-400">
@@ -820,7 +922,11 @@ export function PropertiesPage() {
                               {room.room_name}
                             </h5>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                              {[room.room_id, room.room_name_lang || room.room_name, room.status]
+                              {[
+                                room.room_id,
+                                room.room_name_lang || room.room_name,
+                                room.status,
+                              ]
                                 .filter(Boolean)
                                 .join(" • ")}
                             </p>
@@ -833,8 +939,14 @@ export function PropertiesPage() {
                         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                           {[
                             ["Base Rate", formatCurrencyValue(room.base_rate)],
-                            ["Current Rate", formatCurrencyValue(room.current_rate)],
-                            ["Inventory", `${formatNumericValue(room.available_inventory)} / ${formatNumericValue(room.total_inventory)}`],
+                            [
+                              "Current Rate",
+                              formatCurrencyValue(room.current_rate),
+                            ],
+                            [
+                              "Inventory",
+                              `${formatNumericValue(room.available_inventory)} / ${formatNumericValue(room.total_inventory)}`,
+                            ],
                             ["Sold", formatNumericValue(room.sold_inventory)],
                           ].map(([label, value]) => (
                             <div
@@ -868,17 +980,28 @@ export function PropertiesPage() {
                                         {plan.title}
                                       </p>
                                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                        {[plan.rate_id, plan.supplier_name || "No supplier", plan.currency]
+                                        {[
+                                          plan.rate_id,
+                                          plan.supplier_name || "No supplier",
+                                          plan.currency,
+                                        ]
                                           .filter(Boolean)
                                           .join(" • ")}
                                       </p>
                                     </div>
                                     <div className="text-right">
                                       <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                                        {formatCurrencyValue(plan.current_rate, plan.currency || "USD")}
+                                        {formatCurrencyValue(
+                                          plan.current_rate,
+                                          plan.currency || "USD",
+                                        )}
                                       </p>
                                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                                        Base {formatCurrencyValue(plan.base_rate, plan.currency || "USD")}
+                                        Base{" "}
+                                        {formatCurrencyValue(
+                                          plan.base_rate,
+                                          plan.currency || "USD",
+                                        )}
                                       </p>
                                     </div>
                                   </div>
@@ -919,7 +1042,8 @@ export function PropertiesPage() {
                   {selectedPropertyDetail?.name || "Selected Property"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {selectedPropertyDetail?.property_id || "Property not selected"}
+                  {selectedPropertyDetail?.property_id ||
+                    "Property not selected"}
                 </p>
               </div>
 
@@ -928,7 +1052,9 @@ export function PropertiesPage() {
                   href={`/rooms-management?property_id=${selectedPropertyDetail?.property_id || ""}`}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
                 >
-                  <span className="material-symbols-outlined text-base">add</span>
+                  <span className="material-symbols-outlined text-base">
+                    add
+                  </span>
                   Create New Rooms
                 </Link>
                 <button
@@ -959,7 +1085,10 @@ export function PropertiesPage() {
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   {[
                     ["Total Rooms", formatNumericValue(propertyRooms.length)],
-                    ["Average Base Rate", formatCurrencyValue(averageRoomBaseRate)],
+                    [
+                      "Average Base Rate",
+                      formatCurrencyValue(averageRoomBaseRate),
+                    ],
                     ["Latest Room Added", propertyRooms[0]?.room_id || "N/A"],
                     ["Property", selectedPropertyDetail?.property_id || "N/A"],
                   ].map(([label, value]) => (
@@ -984,19 +1113,23 @@ export function PropertiesPage() {
                         Status Breakdown
                       </h4>
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Live summary from `/api/v1/rooms?property_id={selectedPropertyDetail?.property_id}`.
+                        Live summary from `/api/v1/rooms?property_id=
+                        {selectedPropertyDetail?.property_id}`.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(roomStatusSummary).length ? (
-                        Object.entries(roomStatusSummary).map(([status, count]) => (
-                          <span
-                            key={status}
-                            className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                          >
-                            {status.toLowerCase().replaceAll("_", " ")}: {count}
-                          </span>
-                        ))
+                        Object.entries(roomStatusSummary).map(
+                          ([status, count]) => (
+                            <span
+                              key={status}
+                              className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            >
+                              {status.toLowerCase().replaceAll("_", " ")}:{" "}
+                              {count}
+                            </span>
+                          ),
+                        )
                       ) : (
                         <span className="inline-flex rounded-full border border-dashed border-slate-300 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
                           No rooms found
@@ -1034,22 +1167,40 @@ export function PropertiesPage() {
                                 {room.room_name}
                               </h5>
                               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                                {[room.room_id, room.room_name_lang || room.room_name, room.property_id]
+                                {[
+                                  room.room_id,
+                                  room.room_name_lang || room.room_name,
+                                  room.property_id,
+                                ]
                                   .filter(Boolean)
                                   .join(" • ")}
                               </p>
                             </div>
                             <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
-                              {(room.room_status || "PROCESSING").toLowerCase().replaceAll("_", " ")}
+                              {(room.room_status || "PROCESSING")
+                                .toLowerCase()
+                                .replaceAll("_", " ")}
                             </div>
                           </div>
 
                           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                             {[
-                              ["Base Rate", formatCurrencyValue(room.base_rate)],
-                              ["Tax & Service", formatCurrencyValue(room.tax_and_service_fee)],
-                              ["Surcharges", formatCurrencyValue(room.surcharges)],
-                              ["Mandatory Tax", formatCurrencyValue(room.mandatory_tax)],
+                              [
+                                "Base Rate",
+                                formatCurrencyValue(room.base_rate),
+                              ],
+                              [
+                                "Tax & Service",
+                                formatCurrencyValue(room.tax_and_service_fee),
+                              ],
+                              [
+                                "Surcharges",
+                                formatCurrencyValue(room.surcharges),
+                              ],
+                              [
+                                "Mandatory Tax",
+                                formatCurrencyValue(room.mandatory_tax),
+                              ],
                             ].map(([label, value]) => (
                               <div
                                 key={label}
@@ -1069,7 +1220,8 @@ export function PropertiesPage() {
                     </div>
                   ) : (
                     <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
-                      No rooms found for this property yet. Use the create button to add one.
+                      No rooms found for this property yet. Use the create
+                      button to add one.
                     </p>
                   )}
                 </section>
@@ -1091,7 +1243,8 @@ export function PropertiesPage() {
                   {selectedPropertyDetail?.name || "Selected Property"}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {selectedPropertyDetail?.property_id || "Property not selected"}
+                  {selectedPropertyDetail?.property_id ||
+                    "Property not selected"}
                 </p>
               </div>
 
@@ -1100,7 +1253,9 @@ export function PropertiesPage() {
                   href={`/daily-rates?property_id=${selectedPropertyDetail?.property_id || ""}`}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
                 >
-                  <span className="material-symbols-outlined text-base">add</span>
+                  <span className="material-symbols-outlined text-base">
+                    add
+                  </span>
                   Create Rate Plan
                 </Link>
                 <button
@@ -1116,10 +1271,24 @@ export function PropertiesPage() {
             <div className="mt-6 space-y-6">
               <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {[
-                  ["Total Rate Plans", formatNumericValue(propertyRatePlanSummary.total)],
-                  ["Active Plans", formatNumericValue(propertyRatePlanSummary.activeCount)],
-                  ["Suppliers", formatNumericValue(propertyRatePlanSummary.supplierCount)],
-                  ["Average Current Rate", formatCurrencyValue(propertyRatePlanSummary.averageCurrentRate)],
+                  [
+                    "Total Rate Plans",
+                    formatNumericValue(propertyRatePlanSummary.total),
+                  ],
+                  [
+                    "Active Plans",
+                    formatNumericValue(propertyRatePlanSummary.activeCount),
+                  ],
+                  [
+                    "Suppliers",
+                    formatNumericValue(propertyRatePlanSummary.supplierCount),
+                  ],
+                  [
+                    "Average Current Rate",
+                    formatCurrencyValue(
+                      propertyRatePlanSummary.averageCurrentRate,
+                    ),
+                  ],
                 ].map(([label, value]) => (
                   <article
                     key={label}
@@ -1184,7 +1353,11 @@ export function PropertiesPage() {
                               {plan.title}
                             </h5>
                             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                              {[plan.rate_id, plan.room_name, plan.supplier_name || "No supplier"]
+                              {[
+                                plan.rate_id,
+                                plan.room_name,
+                                plan.supplier_name || "No supplier",
+                              ]
                                 .filter(Boolean)
                                 .join(" • ")}
                             </p>
@@ -1203,9 +1376,24 @@ export function PropertiesPage() {
 
                         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                           {[
-                            ["Current Rate", formatCurrencyValue(plan.current_rate, plan.currency || "USD")],
-                            ["Base Rate", formatCurrencyValue(plan.base_rate, plan.currency || "USD")],
-                            ["Inventory", `${formatNumericValue(plan.available_inventory)} / ${formatNumericValue(plan.total_inventory)}`],
+                            [
+                              "Current Rate",
+                              formatCurrencyValue(
+                                plan.current_rate,
+                                plan.currency || "USD",
+                              ),
+                            ],
+                            [
+                              "Base Rate",
+                              formatCurrencyValue(
+                                plan.base_rate,
+                                plan.currency || "USD",
+                              ),
+                            ],
+                            [
+                              "Inventory",
+                              `${formatNumericValue(plan.available_inventory)} / ${formatNumericValue(plan.total_inventory)}`,
+                            ],
                             ["Sold", formatNumericValue(plan.sold_inventory)],
                           ].map(([label, value]) => (
                             <div
@@ -1226,7 +1414,8 @@ export function PropertiesPage() {
                   </div>
                 ) : (
                   <p className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
-                    No rate plans found for this property yet. Use the create button to add one.
+                    No rate plans found for this property yet. Use the create
+                    button to add one.
                   </p>
                 )}
               </section>

@@ -825,7 +825,7 @@ export function PropertiesPage() {
                                 .join(" • ")}
                             </p>
                           </div>
-                          <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                          <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700 shadow-sm dark:bg-emerald-500/15 dark:text-emerald-300">
                             {room.active_rate_plan_count} active plans
                           </div>
                         </div>
@@ -1146,7 +1146,7 @@ export function PropertiesPage() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
                       active: {propertyRatePlanSummary.activeCount}
                     </span>
                     <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
@@ -1189,7 +1189,14 @@ export function PropertiesPage() {
                                 .join(" • ")}
                             </p>
                           </div>
-                          <div className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                          <div
+                            className={[
+                              "rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider shadow-sm",
+                              plan.status
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
+                                : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
+                            ].join(" ")}
+                          >
                             {plan.status ? "active" : "inactive"}
                           </div>
                         </div>

@@ -3,19 +3,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { navItems, profileImage } from "./data";
 import { ThemeToggle } from "./theme-toggle";
 
-function NavLink({ item, active }) {
+function NavLink({ item, active, collapsed }) {
   return (
     <Link
       href={item.href}
       className={[
-        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+        "group flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors",
+        collapsed ? "justify-center" : "gap-3",
         active
           ? "bg-primary/10 font-bold text-primary dark:bg-primary/15"
           : "font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/80",
       ].join(" ")}
+      title={collapsed ? item.label : undefined}
     >
       <span
         className="material-symbols-outlined text-xl group-hover:text-primary"
@@ -23,7 +26,7 @@ function NavLink({ item, active }) {
       >
         {item.icon}
       </span>
-      <span>{item.label}</span>
+      {!collapsed ? <span>{item.label}</span> : null}
     </Link>
   );
 }
@@ -36,6 +39,7 @@ export function PmsShell({
   children,
 }) {
   const pathname = usePathname();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
@@ -86,44 +90,82 @@ export function PmsShell({
       </header>
 
       <div className="flex grow overflow-hidden pt-[73px]">
-        <aside className="theme-panel relative hidden w-64 shrink-0 flex-col border-r lg:flex">
-          <div className="flex-1 overflow-y-auto p-6 pb-36">
-            <div className="mb-8 flex flex-col">
-              <h1 className="text-base font-bold">Property Workspace</h1>
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                Select a property to view live details
-              </p>
-            </div>
+        <aside
+          className={[
+            "theme-panel fixed left-0 top-[73px] z-30 hidden h-[calc(100vh-73px)] shrink-0 flex-col border-r lg:flex",
+            sidebarCollapsed ? "w-20" : "w-64",
+          ].join(" ")}
+        >
+          <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+            {!sidebarCollapsed ? (
+              <div className="min-w-0">
+                <h1 className="text-base font-bold">Property Workspace</h1>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  Select a property to view live details
+                </p>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((current) => !current)}
+              className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              <span className="material-symbols-outlined text-xl">
+                {sidebarCollapsed ? "keyboard_tab_rtl" : "keyboard_tab"}
+              </span>
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 pb-36">
+            {!sidebarCollapsed ? (
+              <div className="mb-4" />
+            ) : null}
             <nav className="space-y-1">
               {navItems.map((item) => (
                 <NavLink
                   key={item.href}
                   item={item}
                   active={pathname === item.href}
+                  collapsed={sidebarCollapsed}
                 />
               ))}
               <div className="pb-2 pt-4">
-                <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  System
-                </p>
+                {!sidebarCollapsed ? (
+                  <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    System
+                  </p>
+                ) : (
+                  <div className="mx-auto h-px w-8 bg-slate-300 dark:bg-slate-600" />
+                )}
               </div>
               <a
-                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/80"
+                className={[
+                  "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/80",
+                  sidebarCollapsed ? "justify-center" : "gap-3",
+                ].join(" ")}
                 href="#"
+                title={sidebarCollapsed ? "Settings" : undefined}
               >
                 <span className="material-symbols-outlined text-xl group-hover:text-primary">
                   settings
                 </span>
-                <span>Settings</span>
+                {!sidebarCollapsed ? <span>Settings</span> : null}
               </a>
             </nav>
           </div>
         </aside>
 
-        <div className="theme-panel fixed bottom-6 left-6 z-40 hidden w-[208px] rounded-2xl border p-6 lg:block">
+        <div
+          className={[
+            "fixed bottom-0 left-0 z-40 hidden px-6 pb-6 lg:block",
+            sidebarCollapsed ? "w-20 px-3" : "w-64",
+          ].join(" ")}
+        >
           <div className="rounded-2xl bg-primary p-4 text-white shadow-panel">
-            <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p>
-            <p className="text-xl font-bold">{sidebarMetricValue}</p>
+            {!sidebarCollapsed ? <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p> : null}
+            <p className={sidebarCollapsed ? "text-center text-lg font-bold" : "text-xl font-bold"}>
+              {sidebarMetricValue}
+            </p>
             <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
               <div
                 className="h-full rounded-full bg-white"
@@ -133,7 +175,14 @@ export function PmsShell({
           </div>
         </div>
 
-        <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
+        <main
+          className={[
+            "flex-1 overflow-y-auto p-6 lg:p-8",
+            sidebarCollapsed ? "lg:ml-20" : "lg:ml-64",
+          ].join(" ")}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

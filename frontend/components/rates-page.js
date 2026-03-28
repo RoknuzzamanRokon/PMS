@@ -1058,7 +1058,7 @@ export function DailyRatesPage({ propertyId }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 shadow-sm">
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm dark:bg-emerald-500/15 dark:text-emerald-300">
                       Active {room.active_rate_plan_count}
                     </span>
                     <button

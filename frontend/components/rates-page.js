@@ -360,6 +360,7 @@ export function DailyRatesPage({ propertyId }) {
   const [ratePlanModalSuccess, setRatePlanModalSuccess] = useState("");
   const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
+  const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
   const [rateMatrixSearch, setRateMatrixSearch] = useState("");
@@ -545,6 +546,7 @@ export function DailyRatesPage({ propertyId }) {
           linked_rate_plan_count: linkedRatePlans.length,
           active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell).length,
           preview_rate_plan: linkedRatePlans[0] || null,
+          linked_rate_plans: linkedRatePlans,
         };
       });
   }, [rooms, rows, liveRoomStatus]);
@@ -685,6 +687,14 @@ export function DailyRatesPage({ propertyId }) {
     setRatePlanModalError("");
     setRatePlanModalSuccess("");
     setNewRatePlanForm(createRatePlanForm(null));
+  }
+
+  function openActiveRoomPlansModal(room) {
+    setActiveRoomPlansModal(room);
+  }
+
+  function closeActiveRoomPlansModal() {
+    setActiveRoomPlansModal(null);
   }
 
   async function handleCreateRatePlan(event) {
@@ -1211,9 +1221,13 @@ export function DailyRatesPage({ propertyId }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm dark:bg-emerald-500/15 dark:text-emerald-300">
+                    <button
+                      type="button"
+                      onClick={() => openActiveRoomPlansModal(room)}
+                      className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm transition-opacity hover:opacity-85 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    >
                       Active {room.active_rate_plan_count}
-                    </span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => openRatePlanModal(room)}
@@ -1822,6 +1836,77 @@ export function DailyRatesPage({ propertyId }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+      {activeRoomPlansModal ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plans</p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900">
+                  {activeRoomPlansModal.room_name} · {activeRoomPlansModal.room_id}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  All linked rate plans for this live room.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeActiveRoomPlansModal}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {(activeRoomPlansModal.linked_rate_plans || []).map((plan) => (
+                <article key={plan.code} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-base font-bold text-slate-900">{plan.title}</h4>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[plan.code, plan.roomLabel, plan.strategy].filter(Boolean).join(" • ")}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                      {plan.stopSell ? "Stopped" : "Active"}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-xl bg-white px-3 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate ID</p>
+                      <p className="mt-1 text-sm font-bold text-slate-900">{plan.code}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base Rate</p>
+                      <p className="mt-1 text-sm font-bold text-slate-900">
+                        {plan.cells?.[0]?.currency || "USD"} {plan.cells?.[0]?.base_rate || "0.00"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy</p>
+                      <p className="mt-1 text-sm font-bold text-slate-900">{plan.occupancy}</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-3 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Flags</p>
+                      <p className="mt-1 text-sm font-bold text-slate-900">
+                        {[plan.stopSell && "Stop Sell", plan.cta && "CTA", plan.ctd && "CTD"].filter(Boolean).join(", ") || "None"}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              ))}
+
+              {!activeRoomPlansModal.linked_rate_plans?.length ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                  No rate plans linked to this room yet.
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

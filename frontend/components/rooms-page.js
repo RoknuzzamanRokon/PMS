@@ -2039,11 +2039,19 @@ export function RoomsManagementPage({ propertyId }) {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {data.rooms.map((row) => (
                 <tr key={row.room_id}>
-                  {[row.room_id, row.property_id, `$${Number(row.base_rate).toFixed(2)}`, row.status, row.housekeeping_status, row.note].map(
+                  <td className="py-4 pr-4 text-slate-600 dark:text-slate-300">
+                    <div>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{row.room_id}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {row.room_name || "Unnamed room"}
+                      </p>
+                    </div>
+                  </td>
+                  {[row.property_id, `$${Number(row.base_rate).toFixed(2)}`, row.status, row.housekeeping_status, row.note].map(
                     (cell, index) => (
                       <td
                         key={`${row.room_id}-${index}`}
-                        className="py-4 pr-4 text-slate-600 first:font-bold first:text-slate-900 dark:text-slate-300 dark:first:text-slate-100"
+                        className="py-4 pr-4 text-slate-600 dark:text-slate-300"
                       >
                         {cell}
                       </td>
@@ -2068,29 +2076,15 @@ export function RoomsManagementPage({ propertyId }) {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setActiveManagementSection("add-room");
-                          setRoomForm({
-                            property_id: row.property_id,
-                            room_name: row.room_name || "",
-                            room_name_lang: row.room_name || "",
-                            base_rate: String(row.base_rate ?? "0"),
-                            tax_and_service_fee: "0",
-                            surcharges: "0",
-                            mandatory_fee: "0",
-                            resort_fee: "0",
-                            mandatory_tax: "0",
-                          });
-                          setRoomSubmitSuccess(
-                            `Loaded ${row.room_id} into the Add Room form for quick editing.`,
-                          );
-                          setRoomSubmitError("");
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
+                        onClick={() =>
+                          router.push(
+                            `/daily-rates?property_id=${encodeURIComponent(row.property_id)}`,
+                          )
+                        }
                         className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
                       >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        Edit
+                        <span className="material-symbols-outlined text-sm">sell</span>
+                        Add Rate
                       </button>
                       <button
                         type="button"

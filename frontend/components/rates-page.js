@@ -268,6 +268,7 @@ function StatCard({ stat }) {
 export function DailyRatesPage({ propertyId }) {
   const router = useRouter();
   const hasSelectedProperty = Boolean(propertyId);
+  const liveRoomStatus = "LIVE";
   const [range, setRange] = useState(7);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [properties, setProperties] = useState([]);
@@ -412,21 +413,22 @@ export function DailyRatesPage({ propertyId }) {
     () => rows.reduce((count, row) => count + row.cells.filter((cell) => cell.changed).length, 0),
     [rows],
   );
-  const availableRateIds = useMemo(
-    () => new Set(availableDates.flatMap((item) => item.rate_ids || [])),
-    [availableDates],
-  );
-  const availableRoomIds = useMemo(
-    () => new Set(availableDates.flatMap((item) => item.room_ids || [])),
-    [availableDates],
+  const liveRoomIds = useMemo(
+    () =>
+      new Set(
+        rooms
+          .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
+          .map((room) => room.room_id),
+      ),
+    [rooms, liveRoomStatus],
   );
   const availableRows = useMemo(
-    () => rows.filter((row) => availableRateIds.has(row.code) && availableRoomIds.has(row.roomId)),
-    [availableRateIds, availableRoomIds, rows],
+    () => rows.filter((row) => liveRoomIds.has(row.roomId)),
+    [liveRoomIds, rows],
   );
   const roomList = useMemo(() => {
     return rooms
-      .filter((room) => String(room.room_status || "").toUpperCase() === "LIVE")
+      .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
       .map((room) => {
         const linkedRatePlans = rows.filter((row) => row.roomId === room.room_id);
         return {
@@ -436,7 +438,7 @@ export function DailyRatesPage({ propertyId }) {
           preview_rate_plan: linkedRatePlans[0] || null,
         };
       });
-  }, [rooms, rows]);
+  }, [rooms, rows, liveRoomStatus]);
   const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
   const selectedStayDate = selectedDay?.isoDate || "";
   const selectedDateSummary = useMemo(() => {
@@ -513,6 +515,10 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   function openRatePlanModal(room) {
+    if (String(room?.room_status || "").toUpperCase() !== liveRoomStatus) {
+      setRoomListMessage("Rate plans can be created only for live rooms.");
+      return;
+    }
     setSelectedRoomForRatePlan(room);
     setNewRatePlanForm(createRatePlanForm(room));
     setRatePlanModalError("");
@@ -533,6 +539,11 @@ export function DailyRatesPage({ propertyId }) {
 
     if (!newRatePlanForm.room_id) {
       setRatePlanModalError("Select a room first.");
+      return;
+    }
+
+    if (String(selectedRoomForRatePlan?.room_status || "").toUpperCase() !== liveRoomStatus) {
+      setRatePlanModalError("Rate plans can be created only for live rooms.");
       return;
     }
 
@@ -1022,7 +1033,7 @@ export function DailyRatesPage({ propertyId }) {
               <div>
                 <h3 className="text-base font-bold text-slate-900">Active Room List</h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  Rooms from the daily-rates API with quick add-rate-plan actions.
+                  Only live rooms are shown here and only live rooms can receive rate plans.
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
@@ -1063,7 +1074,7 @@ export function DailyRatesPage({ propertyId }) {
               ))}
               {!roomList.length ? (
                 <div className="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
-                  No rooms found for this property.
+                  No live rooms found for this property.
                 </div>
               ) : null}
             </div>
@@ -1176,9 +1187,9 @@ export function DailyRatesPage({ propertyId }) {
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
           <div className="flex min-w-0 flex-col">
             <h3 className="text-lg font-bold text-slate-900">Rate Matrix</h3>
-            <p className="text-sm text-slate-500">
-              Edit a single day directly in the grid, or queue bulk changes from the editor.
-            </p>
+                <p className="text-sm text-slate-500">
+              Edit live-room rates day by day, or queue bulk changes from the editor.
+                </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
@@ -1297,7 +1308,7 @@ export function DailyRatesPage({ propertyId }) {
             {!availableRows.length ? (
               <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
                 {apiConnected
-                  ? `No available rate plans found for ${selectedProperty || "this property"} in this calendar window.`
+                  ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
                   : "Backend offline. Start the API to load editable daily rates."}
               </div>
             ) : null}

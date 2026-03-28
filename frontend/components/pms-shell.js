@@ -118,19 +118,20 @@ export function PmsShell({
               </a>
             </nav>
           </div>
-          <div className="absolute inset-x-0 bottom-0 p-6">
-            <div className="rounded-2xl bg-primary p-4 text-white shadow-panel">
-              <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p>
-              <p className="text-xl font-bold">{sidebarMetricValue}</p>
-              <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
-                <div
-                  className="h-full rounded-full bg-white"
-                  style={{ width: `${sidebarMetricProgress}%` }}
-                />
-              </div>
+        </aside>
+
+        <div className="theme-panel fixed bottom-6 left-6 z-40 hidden w-[208px] rounded-2xl border p-6 lg:block">
+          <div className="rounded-2xl bg-primary p-4 text-white shadow-panel">
+            <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p>
+            <p className="text-xl font-bold">{sidebarMetricValue}</p>
+            <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-white"
+                style={{ width: `${sidebarMetricProgress}%` }}
+              />
             </div>
           </div>
-        </aside>
+        </div>
 
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">{children}</main>
       </div>

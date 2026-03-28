@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -25,6 +25,27 @@ from ..schemas import (
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/rate-plans", tags=["rate-plans"])
+LIVE_ROOM_STATUS = "LIVE"
+
+
+def _get_live_room_or_409(db: Session, room_id: str) -> Room:
+    room = db.scalar(select(Room).where(Room.room_id == room_id))
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if str(room.room_status or "").upper() != LIVE_ROOM_STATUS:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Room {room_id} is not linked to a live room. Rate plans and calendars are allowed only for live rooms.",
+        )
+    return room
+
+
+def _get_live_rate_plan_or_409(db: Session, rate_id: str) -> RatePlan:
+    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
+    if not rate_plan:
+        raise HTTPException(status_code=404, detail="Rate plan not found")
+    _get_live_room_or_409(db, rate_plan.room_id)
+    return rate_plan
 
 
 @router.get("/availability-statuses", response_model=list[AvailabilityStatusRead])
@@ -45,7 +66,14 @@ def daily_rates_matrix(
     property_obj = db.scalar(select(Property).where(Property.property_id == property_id))
 
     rooms = (
-        db.execute(select(Room).where(Room.property_id == property_id).order_by(Room.room_name.asc()))
+        db.execute(
+            select(Room)
+            .where(
+                Room.property_id == property_id,
+                func.upper(func.coalesce(Room.room_status, "")) == LIVE_ROOM_STATUS,
+            )
+            .order_by(Room.room_name.asc())
+        )
         .scalars()
         .all()
     )
@@ -144,6 +172,7 @@ def list_rate_plans(room_id: str | None = None, db: Session = Depends(get_db)):
 
 @router.post("", response_model=RatePlanRead)
 def create_rate_plan(payload: RatePlanCreate, db: Session = Depends(get_db)):
+    _get_live_room_or_409(db, payload.room_id)
     rate_id = payload.rate_id or next_code(db, RatePlan, "rate_id", "RATE")
     rate_plan = RatePlan(
         rate_id=rate_id,
@@ -171,20 +200,17 @@ def create_rate_plan(payload: RatePlanCreate, db: Session = Depends(get_db)):
 
 @router.get("/{rate_id}", response_model=RatePlanRead)
 def get_rate_plan(rate_id: str, db: Session = Depends(get_db)):
-    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
-    if not rate_plan:
-        raise HTTPException(status_code=404, detail="Rate plan not found")
-    return rate_plan
+    return _get_live_rate_plan_or_409(db, rate_id)
 
 
 @router.patch("/{rate_id}", response_model=RatePlanRead)
 def update_rate_plan(rate_id: str, payload: RatePlanUpdate, db: Session = Depends(get_db)):
-    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
-    if not rate_plan:
-        raise HTTPException(status_code=404, detail="Rate plan not found")
+    rate_plan = _get_live_rate_plan_or_409(db, rate_id)
 
     updates = payload.model_dump(exclude_unset=True)
     bool_fields = {"is_refundable", "status", "closed_to_arrival", "closed_to_departure", "stop_sell"}
+    target_room_id = updates.get("room_id") or rate_plan.room_id
+    _get_live_room_or_409(db, target_room_id)
 
     for field, value in updates.items():
         if field in bool_fields and value is not None:
@@ -199,9 +225,7 @@ def update_rate_plan(rate_id: str, payload: RatePlanUpdate, db: Session = Depend
 
 @router.delete("/{rate_id}")
 def delete_rate_plan(rate_id: str, db: Session = Depends(get_db)):
-    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
-    if not rate_plan:
-        raise HTTPException(status_code=404, detail="Rate plan not found")
+    rate_plan = _get_live_rate_plan_or_409(db, rate_id)
 
     linked_reservation = db.scalar(select(ReservationRoom.id).where(ReservationRoom.rate_id == rate_id).limit(1))
     if linked_reservation:
@@ -234,9 +258,7 @@ def bulk_upsert_rate_calendar(
     payload: CalendarBulkUpsertRequest,
     db: Session = Depends(get_db),
 ):
-    rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == rate_id))
-    if not rate_plan:
-        raise HTTPException(status_code=404, detail="Rate plan not found")
+    _get_live_rate_plan_or_409(db, rate_id)
 
     updated = 0
     created = 0
@@ -268,6 +290,7 @@ def get_rate_calendar(
     end_date: date | None = None,
     db: Session = Depends(get_db),
 ):
+    _get_live_rate_plan_or_409(db, rate_id)
     stmt = select(RateCalendar).where(RateCalendar.rate_id == rate_id).order_by(RateCalendar.stay_date.asc())
     if start_date:
         stmt = stmt.where(RateCalendar.stay_date >= start_date)

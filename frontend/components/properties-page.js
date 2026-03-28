@@ -575,7 +575,7 @@ export function PropertiesPage() {
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Actions
                     </p>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleViewProperty(property.property_id)}
@@ -584,6 +584,7 @@ export function PropertiesPage() {
                         <span className="material-symbols-outlined text-base">visibility</span>
                         Views
                       </button>
+                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
                       <Link
                         href={`/rooms-management?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
@@ -591,6 +592,7 @@ export function PropertiesPage() {
                         <span className="material-symbols-outlined text-base">bed</span>
                         Rooms
                       </Link>
+                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
                       <Link
                         href={`/inventory?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
@@ -598,6 +600,7 @@ export function PropertiesPage() {
                         <span className="material-symbols-outlined text-base">calendar_month</span>
                         Inventory
                       </Link>
+                      <span className="h-6 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
                       <Link
                         href={`/daily-rates?property_id=${property.property_id}`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"

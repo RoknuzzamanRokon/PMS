@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,9 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Payment, RateCalendar, RatePlan, Reservation, ReservationRoom, Room
+from ..models import Payment, RatePlan, Reservation, ReservationRoom, Room
 from ..schemas import (
-    AvailableReservationRoom,
     PaymentCreate,
     PaymentRead,
     ReservationAvailabilityRequest,
@@ -18,10 +17,10 @@ from ..schemas import (
     ReservationStatusUpdate,
     ReservationUpdate,
 )
+from ..services.inventory import adjust_reservation_inventory, get_sellable_rate_options
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
-UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 
 
 def validate_reservation_dates(check_in_date: date, check_out_date: date) -> None:
@@ -46,89 +45,15 @@ def get_available_room_options(
     currency: str,
     exclude_booking_id: str | None = None,
 ) -> list[dict]:
-    rooms = (
-        db.execute(select(Room).where(Room.property_id == property_id).order_by(Room.room_name.asc()))
-        .scalars()
-        .all()
+    available_rooms = get_sellable_rate_options(
+        db,
+        property_id,
+        check_in_date,
+        check_out_date,
+        exclude_booking_id=exclude_booking_id,
     )
-    room_ids = [room.room_id for room in rooms]
-    if not room_ids:
-        return []
-
-    rate_plans = (
-        db.execute(
-            select(RatePlan)
-            .where(RatePlan.room_id.in_(room_ids))
-            .order_by(RatePlan.room_id.asc(), RatePlan.status.desc(), RatePlan.base_rate.asc())
-        )
-        .scalars()
-        .all()
-    )
-
-    rate_plan_by_room = {}
-    total_nights = (check_out_date - check_in_date).days
-
-    for rate_plan in rate_plans:
-        if rate_plan.room_id in rate_plan_by_room:
-            continue
-        if not rate_plan.status:
-            continue
-        if rate_plan.stop_sell or rate_plan.closed_to_arrival or rate_plan.closed_to_departure:
-            continue
-        if total_nights < rate_plan.min_stay or total_nights > rate_plan.max_stay:
-            continue
-        if rate_plan.available_inventory <= 0:
-            continue
-
-        rate_plan_by_room[rate_plan.room_id] = rate_plan
-
-    available_rooms = []
-    expected_dates = {check_in_date + timedelta(days=offset) for offset in range(total_nights)}
-    for room in rooms:
-        rate_plan = rate_plan_by_room.get(room.room_id)
-        if not rate_plan:
-            continue
-
-        calendars = (
-            db.execute(
-                select(RateCalendar).where(
-                    RateCalendar.rate_id == rate_plan.rate_id,
-                    RateCalendar.stay_date >= check_in_date,
-                    RateCalendar.stay_date < check_out_date,
-                )
-            )
-            .scalars()
-            .all()
-        )
-        if len(calendars) != total_nights:
-            continue
-        if {item.stay_date for item in calendars} != expected_dates:
-            continue
-        if any(item.availability in UNAVAILABLE_CALENDAR_STATUSES for item in calendars):
-            continue
-
-        nightly_base_total = sum(Decimal(item.base_rate) for item in calendars)
-        nightly_tax_total = sum(Decimal(item.tax) for item in calendars)
-        total_price = nightly_base_total + nightly_tax_total
-        average_base_rate = nightly_base_total / Decimal(total_nights)
-        average_tax_rate = nightly_tax_total / Decimal(total_nights)
-        available_rooms.append(
-            {
-                "room_id": room.room_id,
-                "room_name": room.room_name,
-                "room_name_lang": room.room_name_lang,
-                "room_status": room.room_status,
-                "rate_id": rate_plan.rate_id,
-                "rate_title": rate_plan.title,
-                "meal_plan": rate_plan.meal_plan,
-                "currency": currency or rate_plan.currency,
-                "base_rate": average_base_rate,
-                "tax_and_service_fee": average_tax_rate,
-                "total_nights": total_nights,
-                "total_price": total_price,
-            }
-        )
-
+    for item in available_rooms:
+        item["currency"] = currency or item["currency"]
     return available_rooms
 
 
@@ -231,9 +156,9 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
     db.add(reservation)
 
     for item in room_payloads:
-        room = db.scalar(select(Room).where(Room.room_id == item.room_id))
         rate_plan = db.scalar(select(RatePlan).where(RatePlan.rate_id == item.rate_id))
         available_option = available_room_options_by_pair[(item.room_id, item.rate_id)]
+        room = db.scalar(select(Room).where(Room.room_id == item.room_id))
         db.add(
             ReservationRoom(
                 booking_id=booking_id,
@@ -247,6 +172,8 @@ def create_reservation(payload: ReservationCreate, db: Session = Depends(get_db)
             )
         )
 
+    db.flush()
+    adjust_reservation_inventory(db, reservation, delta=1)
     db.commit()
     db.refresh(reservation)
     return serialize_reservation(reservation, db)
@@ -321,6 +248,14 @@ def update_reservation(
                     detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
                 )
 
+    previous_check_in_date = reservation.check_in_date
+    previous_check_out_date = reservation.check_out_date
+    previous_booking_status = reservation.booking_status
+    reservation.check_in_date = previous_check_in_date
+    reservation.check_out_date = previous_check_out_date
+    reservation.booking_status = previous_booking_status
+    adjust_reservation_inventory(db, reservation, delta=-1)
+
     reservation.check_in_date = next_check_in_date
     reservation.check_out_date = next_check_out_date
 
@@ -329,6 +264,7 @@ def update_reservation(
     if payload.currency is not None:
         reservation.currency = payload.currency
 
+    adjust_reservation_inventory(db, reservation, delta=1)
     recalculate_reservation_total(reservation, db)
     db.commit()
     db.refresh(reservation)
@@ -344,6 +280,30 @@ def update_reservation_status(
     reservation = db.scalar(select(Reservation).where(Reservation.booking_id == booking_id))
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
+    if (reservation.booking_status or "").upper() != "CANCELLED" and payload.booking_status.upper() == "CANCELLED":
+        adjust_reservation_inventory(db, reservation, delta=-1)
+    elif (reservation.booking_status or "").upper() == "CANCELLED" and payload.booking_status.upper() != "CANCELLED":
+        available_room_options = get_available_room_options(
+            db,
+            reservation.property_id,
+            reservation.check_in_date,
+            reservation.check_out_date,
+            reservation.currency,
+            exclude_booking_id=reservation.booking_id,
+        )
+        available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
+        reservation_rooms = (
+            db.execute(select(ReservationRoom).where(ReservationRoom.booking_id == reservation.booking_id))
+            .scalars()
+            .all()
+        )
+        for item in reservation_rooms:
+            if (item.room_id, item.rate_id) not in available_room_rate_pairs:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
+                )
+        adjust_reservation_inventory(db, reservation, delta=1)
     reservation.booking_status = payload.booking_status
     recalculate_reservation_total(reservation, db)
     db.commit()
@@ -357,6 +317,7 @@ def cancel_reservation(booking_id: str, db: Session = Depends(get_db)):
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
 
+    adjust_reservation_inventory(db, reservation, delta=-1)
     reservation.booking_status = "CANCELLED"
     recalculate_reservation_total(reservation, db)
     db.commit()

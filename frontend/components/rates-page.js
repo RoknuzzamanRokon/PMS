@@ -294,6 +294,8 @@ export function DailyRatesPage({ propertyId }) {
   const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
+  const [inventoryDates, setInventoryDates] = useState([]);
+  const [rateMatrixSearch, setRateMatrixSearch] = useState("");
   const [bulkForm, setBulkForm] = useState({
     rate_id: "",
     start_date: new Date().toISOString().slice(0, 10),
@@ -337,6 +339,7 @@ export function DailyRatesPage({ propertyId }) {
             setSelectedProperty("");
             setRows([]);
             setRooms([]);
+            setInventoryDates([]);
             setPropertyName("Selected Property");
             setApiConnected(false);
             setLoadingRates(false);
@@ -350,10 +353,14 @@ export function DailyRatesPage({ propertyId }) {
           setSelectedProperty(resolvedPropertyId);
         }
 
-        const [data, availableDatesData] = await Promise.all([
+        const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+        const [data, inventoryData, availableDatesData] = await Promise.all([
           fetchJson(
             `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
           ),
+          fetchJson(
+            `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
+          ).catch(() => ({ dates: [] })),
           fetchJson(
             `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
           ).catch(() => ({ available_dates: [] })),
@@ -370,6 +377,7 @@ export function DailyRatesPage({ propertyId }) {
         setPropertyName(data.property?.name || resolvedPropertyId);
         setRooms(data.rooms || []);
         setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
+        setInventoryDates(Array.isArray(inventoryData?.dates) ? inventoryData.dates : []);
         setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
         setApiConnected(true);
         setPublishError("");
@@ -378,6 +386,7 @@ export function DailyRatesPage({ propertyId }) {
           setApiConnected(false);
           setRows([]);
           setRooms([]);
+          setInventoryDates([]);
           setAvailableDates([]);
           setPropertyName("Selected Property");
           setAvailabilityStatuses([]);
@@ -426,6 +435,18 @@ export function DailyRatesPage({ propertyId }) {
     () => rows.filter((row) => liveRoomIds.has(row.roomId)),
     [liveRoomIds, rows],
   );
+  const filteredAvailableRows = useMemo(() => {
+    const query = rateMatrixSearch.trim().toLowerCase();
+    if (!query) {
+      return availableRows;
+    }
+
+    return availableRows.filter((row) =>
+      [row.title, row.roomLabel, row.code, row.roomId]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [availableRows, rateMatrixSearch]);
   const roomList = useMemo(() => {
     return rooms
       .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
@@ -446,7 +467,7 @@ export function DailyRatesPage({ propertyId }) {
       return { queued: 0, booked: 0, blocked: 0 };
     }
 
-    return availableRows.reduce(
+    return filteredAvailableRows.reduce(
       (summary, row) => {
         const cell = row.cells.find((item) => item.stay_date === selectedStayDate);
         if (!cell) {
@@ -466,7 +487,24 @@ export function DailyRatesPage({ propertyId }) {
       },
       { queued: 0, booked: 0, blocked: 0 },
     );
-  }, [availableRows, selectedStayDate]);
+  }, [filteredAvailableRows, selectedStayDate]);
+  const inventorySummaryByDate = useMemo(
+    () => new Map(inventoryDates.map((item) => [item.stay_date, item])),
+    [inventoryDates],
+  );
+  const visibleInventorySummary = useMemo(
+    () =>
+      visibleDays.map((day) => ({
+        stay_date: day.isoDate,
+        total_active_room: 0,
+        total_active_rate: 0,
+        booked_room: 0,
+        available_room: 0,
+        unavailable_room: 0,
+        ...(inventorySummaryByDate.get(day.isoDate) || {}),
+      })),
+    [inventorySummaryByDate, visibleDays],
+  );
 
   function handleSelectedDateChange(value) {
     if (!value) {
@@ -491,15 +529,20 @@ export function DailyRatesPage({ propertyId }) {
     if (!resolvedPropertyId) {
       setRows([]);
       setRooms([]);
+      setInventoryDates([]);
       setPropertyName("Selected Property");
       setApiConnected(false);
       return;
     }
 
-    const [data, availableDatesData] = await Promise.all([
+    const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+    const [data, inventoryData, availableDatesData] = await Promise.all([
       fetchJson(
         `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
       ),
+      fetchJson(
+        `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
+      ).catch(() => ({ dates: [] })),
       fetchJson(
         `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
       ).catch(() => ({ available_dates: [] })),
@@ -510,6 +553,7 @@ export function DailyRatesPage({ propertyId }) {
     setPropertyName(data.property?.name || resolvedPropertyId);
     setRooms(data.rooms || []);
     setRows(buildRowsFromApi(data.rooms || [], data.rate_plans || [], calendarByRateId, calendarStartDate, totalDays));
+    setInventoryDates(Array.isArray(inventoryData?.dates) ? inventoryData.dates : []);
     setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
     setApiConnected(true);
   }
@@ -1183,7 +1227,7 @@ export function DailyRatesPage({ propertyId }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
           <div className="flex min-w-0 flex-col">
             <h3 className="text-lg font-bold text-slate-900">Rate Matrix</h3>
@@ -1221,17 +1265,16 @@ export function DailyRatesPage({ propertyId }) {
                 className="bg-transparent text-slate-900 outline-none"
               />
             </label>
-            <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-wider">
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-700">
-              High rate
-              </span>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-700">
-              Low inventory
-              </span>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-              Today
-              </span>
-            </div>
+            <label className="flex min-w-[280px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
+              <span className="material-symbols-outlined text-base text-slate-400">search</span>
+              <input
+                type="text"
+                value={rateMatrixSearch}
+                onChange={(event) => setRateMatrixSearch(event.target.value)}
+                placeholder="Search room name, room ID, or rate ID"
+                className="w-full bg-transparent text-slate-900 outline-none"
+              />
+            </label>
           </div>
         </div>
         {publishError ? (
@@ -1259,15 +1302,16 @@ export function DailyRatesPage({ propertyId }) {
           </div>
         </div>
 
-        <div className="custom-scrollbar overflow-x-auto overflow-y-hidden">
-          <div
-            className="min-w-[820px]"
-            style={{
-              "--rate-days": String(range),
-              width: `${Math.max(range / visibleMatrixDays, 1) * 100}%`,
-            }}
-          >
-            <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="custom-scrollbar overflow-x-auto overflow-y-visible">
+            <div
+              className="min-w-[820px]"
+              style={{
+                "--rate-days": String(range),
+                width: `${Math.max(range / visibleMatrixDays, 1) * 100}%`,
+              }}
+            >
+              <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
               <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Room Type
@@ -1303,19 +1347,68 @@ export function DailyRatesPage({ propertyId }) {
                   </button>
                 );
               })}
-            </div>
-
-            {!availableRows.length ? (
-              <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
-                {apiConnected
-                  ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
-                  : "Backend offline. Start the API to load editable daily rates."}
               </div>
-            ) : null}
+              <div className="rates-grid sticky top-[73px] z-[19] mb-3 border-b border-slate-200 bg-slate-50/95 backdrop-blur">
+              <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-5 py-5 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Hotel Summary
+                </p>
+                <p className="mt-1 text-sm font-bold text-slate-900">{propertyName}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Current live-room availability by date
+                </p>
+              </div>
+              {visibleInventorySummary.map((summary, index) => {
+                const isSelected = index === selectedDateIndex;
+                return (
+                  <div
+                    key={summary.stay_date}
+                    className={[
+                      "border-r border-slate-200 px-4 py-4",
+                      isSelected ? "bg-primary/[0.06]" : "bg-white/80",
+                    ].join(" ")}
+                  >
+                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                      <div className="grid grid-cols-2 gap-2.5 text-[10px] font-bold uppercase tracking-wider">
+                        <div className="rounded-lg bg-emerald-50 px-2.5 py-2 text-emerald-700">
+                          <p className="text-[9px] text-emerald-600">Active Rooms</p>
+                          <p className="mt-1 text-sm text-emerald-800">{summary.total_active_room}</p>
+                        </div>
+                        <div className="rounded-lg bg-blue-50 px-2.5 py-2 text-blue-700">
+                          <p className="text-[9px] text-blue-600">Active Rates</p>
+                          <p className="mt-1 text-sm text-blue-800">{summary.total_active_rate}</p>
+                        </div>
+                        <div className="rounded-lg bg-amber-50 px-2.5 py-2 text-amber-700">
+                          <p className="text-[9px] text-amber-600">Booked</p>
+                          <p className="mt-1 text-sm text-amber-800">{summary.booked_room}</p>
+                        </div>
+                        <div className="rounded-lg bg-rose-50 px-2.5 py-2 text-rose-700">
+                          <p className="text-[9px] text-rose-600">Unavailable</p>
+                          <p className="mt-1 text-sm text-rose-800">{summary.unavailable_room}</p>
+                        </div>
+                      </div>
+                      <div className="mt-2.5 rounded-lg bg-slate-100 px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
+                        Available Rooms: <span className="text-slate-900">{summary.available_room}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
 
-            {availableRows.map((row) => (
-              <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
-                <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+              {!filteredAvailableRows.length ? (
+                <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
+                  {rateMatrixSearch.trim()
+                    ? "No rate plans matched that search."
+                    : apiConnected
+                    ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
+                    : "Backend offline. Start the API to load editable daily rates."}
+                </div>
+              ) : null}
+
+              {filteredAvailableRows.map((row) => (
+                <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
+                  <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-slate-900">{row.title}</p>
@@ -1358,9 +1451,9 @@ export function DailyRatesPage({ propertyId }) {
                       {deletingRateId === row.code ? "Removing..." : "Remove Plan"}
                     </button>
                   </div>
-                </div>
+                  </div>
 
-                {row.cells.slice(0, range).map((cell, index) => {
+                  {row.cells.slice(0, range).map((cell, index) => {
                   const styles = toneClasses[cell.tone] || toneClasses.default;
                   const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
                   const cellAvailability = cell.availability || "";
@@ -1430,9 +1523,10 @@ export function DailyRatesPage({ propertyId }) {
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            ))}
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

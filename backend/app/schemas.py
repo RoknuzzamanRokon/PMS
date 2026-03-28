@@ -307,6 +307,65 @@ class CalendarItemRead(APIModel):
     updated_at: datetime
 
 
+class RoomInventoryBulkUpsertRequest(BaseModel):
+    start_date: date
+    end_date: date
+    is_live: bool = True
+    total_inventory: int = Field(default=1, ge=0)
+    blocked_inventory: int = Field(default=0, ge=0)
+
+
+class RoomInventoryCalendarRead(APIModel):
+    property_id: str
+    room_id: str
+    stay_date: date
+    is_live: int
+    total_inventory: int
+    booked_inventory: int
+    blocked_inventory: int
+    available_inventory: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class RoomInventoryBulkUpsertResponse(BaseModel):
+    room_id: str
+    property_id: str
+    created: int
+    updated: int
+    start_date: date
+    end_date: date
+
+
+class PropertyInventoryDateSummary(BaseModel):
+    stay_date: date
+    total_active_room: int
+    total_active_rate: int
+    booked_room: int
+    available_room: int
+    unavailable_room: int
+    room_ids: list[str]
+    rate_ids: list[str]
+
+
+class PropertyInventoryCalendarResponse(BaseModel):
+    property_id: str
+    start_date: date
+    end_date: date
+    dates: list[PropertyInventoryDateSummary]
+
+
+class PropertyInventoryDayDetail(BaseModel):
+    stay_date: date
+    total_active_room: int
+    total_active_rate: int
+    booked_room: int
+    available_room: int
+    unavailable_room: int
+    rooms: list[RoomInventoryCalendarRead]
+    rate_ids: list[str]
+
+
 class AvailabilityStatusRead(APIModel):
     id: int
     code: str

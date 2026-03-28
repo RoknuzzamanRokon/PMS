@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .database import Base
@@ -117,6 +117,21 @@ class RateCalendar(TimestampMixin, Base):
     base_rate: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     tax: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     availability: Mapped[str] = mapped_column(String(32), default="AVAILABLE")
+
+
+class RoomInventoryCalendar(TimestampMixin, Base):
+    __tablename__ = "room_inventory_calendar"
+    __table_args__ = (UniqueConstraint("room_id", "stay_date", name="uq_room_inventory_room_date"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_id: Mapped[str] = mapped_column(String(32), ForeignKey("properties.property_id"), index=True)
+    room_id: Mapped[str] = mapped_column(String(32), ForeignKey("rooms.room_id"), index=True)
+    stay_date: Mapped[date] = mapped_column(Date, index=True)
+    is_live: Mapped[int] = mapped_column(Integer, default=1)
+    total_inventory: Mapped[int] = mapped_column(Integer, default=1)
+    booked_inventory: Mapped[int] = mapped_column(Integer, default=0)
+    blocked_inventory: Mapped[int] = mapped_column(Integer, default=0)
+    available_inventory: Mapped[int] = mapped_column(Integer, default=1)
 
 
 class RateCancellationPolicy(TimestampMixin, Base):

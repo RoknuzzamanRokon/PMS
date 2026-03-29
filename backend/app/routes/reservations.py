@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Payment, RatePlan, Reservation, ReservationRoom, Room
+from ..models import Payment, RateCalendar, RatePlan, Reservation, ReservationRoom, Room
 from ..schemas import (
     PaymentCreate,
     PaymentRead,
@@ -21,6 +21,62 @@ from ..services.inventory import adjust_reservation_inventory, get_sellable_rate
 from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/reservations", tags=["reservations"])
+
+
+def calculate_reservation_price_breakdown(
+    reservation: Reservation,
+    reservation_rooms: list[ReservationRoom],
+    db: Session,
+) -> dict[str, Decimal]:
+    night_count = max(1, (reservation.check_out_date - reservation.check_in_date).days)
+    stay_dates = [
+        reservation.check_in_date + timedelta(days=offset)
+        for offset in range(night_count)
+    ]
+    reservation_room_rate_ids = [item.rate_id for item in reservation_rooms]
+    calendar_rows = (
+        db.execute(
+            select(RateCalendar).where(
+                RateCalendar.rate_id.in_(reservation_room_rate_ids),
+                RateCalendar.stay_date.in_(stay_dates),
+            )
+        )
+        .scalars()
+        .all()
+        if reservation_room_rate_ids
+        else []
+    )
+    calendar_by_rate_and_date = {
+        (item.rate_id, item.stay_date): item
+        for item in calendar_rows
+    }
+
+    base_price = Decimal("0")
+    tax_price = Decimal("0")
+    for reservation_room in reservation_rooms:
+        fallback_base_rate = Decimal(reservation_room.room_rate_snapshot or 0)
+        fallback_tax = Decimal(reservation_room.tax_snapshot or 0)
+        for stay_date in stay_dates:
+            calendar_item = calendar_by_rate_and_date.get((reservation_room.rate_id, stay_date))
+            base_price += (
+                Decimal(calendar_item.base_rate)
+                if calendar_item is not None
+                else fallback_base_rate
+            )
+            tax_price += (
+                Decimal(calendar_item.tax)
+                if calendar_item is not None
+                else fallback_tax
+            )
+
+    total_price = base_price + tax_price
+    per_night_price = total_price / Decimal(night_count) if night_count else Decimal("0")
+    return {
+        "base_price": base_price,
+        "tax_price": tax_price,
+        "per_night_price": per_night_price,
+        "total_price": total_price,
+    }
 
 
 def validate_reservation_dates(check_in_date: date, check_out_date: date) -> None:
@@ -63,10 +119,7 @@ def serialize_reservation(reservation: Reservation, db: Session):
         .scalars()
         .all()
     )
-    night_count = max(1, (reservation.check_out_date - reservation.check_in_date).days)
-    base_price = sum(Decimal(item.room_rate_snapshot or 0) for item in reservation_rooms) * Decimal(night_count)
-    tax_price = sum(Decimal(item.tax_snapshot or 0) for item in reservation_rooms) * Decimal(night_count)
-    per_night_price = Decimal(reservation.total_price) / Decimal(night_count)
+    price_breakdown = calculate_reservation_price_breakdown(reservation, reservation_rooms, db)
 
     return {
         "booking_id": reservation.booking_id,
@@ -74,12 +127,12 @@ def serialize_reservation(reservation: Reservation, db: Session):
         "guest_id": reservation.guest_id,
         "check_in_date": reservation.check_in_date,
         "check_out_date": reservation.check_out_date,
-        "total_price": reservation.total_price,
+        "total_price": price_breakdown["total_price"],
         "price": {
-            "base_price": base_price,
-            "tax_price": tax_price,
-            "per_night_price": per_night_price,
-            "total_price": reservation.total_price,
+            "base_price": price_breakdown["base_price"],
+            "tax_price": price_breakdown["tax_price"],
+            "per_night_price": price_breakdown["per_night_price"],
+            "total_price": price_breakdown["total_price"],
         },
         "currency": reservation.currency,
         "booking_status": reservation.booking_status,
@@ -94,12 +147,7 @@ def recalculate_reservation_total(reservation: Reservation, db: Session) -> Deci
         .scalars()
         .all()
     )
-    night_count = max(1, (reservation.check_out_date - reservation.check_in_date).days)
-    nightly_total = sum(
-        Decimal(item.room_rate_snapshot or 0) + Decimal(item.tax_snapshot or 0)
-        for item in reservation_rooms
-    )
-    total_price = nightly_total * Decimal(night_count)
+    total_price = calculate_reservation_price_breakdown(reservation, reservation_rooms, db)["total_price"]
     reservation.total_price = total_price
     return total_price
 

@@ -155,6 +155,40 @@ function getCellNote(availability, index) {
   return index === 0 ? "Today" : availability;
 }
 
+function getAvailabilityUiClasses(availability) {
+  const normalized = String(availability || "").toUpperCase();
+  if (!normalized) {
+    return {
+      box: "border-slate-300 bg-slate-100/90",
+      badge: "border-slate-300 bg-slate-100 text-slate-600",
+      select: "border-slate-300 bg-slate-50 text-slate-600",
+    };
+  }
+  if (normalized === "AVAILABLE") {
+    return {
+      box: "border-emerald-200 bg-emerald-50/70",
+      badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      select: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    };
+  }
+  if (normalized === "UNAVAILABLE") {
+    return {
+      box: "border-rose-200 bg-rose-50/80",
+      badge: "border-rose-200 bg-rose-50 text-rose-700",
+      select: "border-rose-200 bg-rose-50 text-rose-700",
+    };
+  }
+  return {
+    box: "",
+    badge: isUnavailableAvailability(normalized)
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "border-emerald-200 bg-emerald-50 text-emerald-700",
+    select: isUnavailableAvailability(normalized)
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "border-emerald-200 bg-emerald-50 text-emerald-700",
+  };
+}
+
 function toIsoDateFromParts(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
@@ -1705,7 +1739,7 @@ export function DailyRatesPage({ propertyId }) {
 
               {availableRows.map((row) => (
                 <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
-                  <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+                  <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-slate-900">{row.title}</p>
@@ -1756,8 +1790,7 @@ export function DailyRatesPage({ propertyId }) {
                   const cellAvailability = cell.availability || "";
                   const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
                   const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
-                  const availabilityIsUnavailable = isUnavailableAvailability(cellAvailability);
-                  const isBookedStatus = String(cellAvailability || "").toUpperCase() === "BOOKED";
+                  const availabilityUi = getAvailabilityUiClasses(cellAvailability);
                   return (
                     <div
                       key={`${row.code}-${index}`}
@@ -1768,7 +1801,7 @@ export function DailyRatesPage({ propertyId }) {
                         .filter(Boolean)
                         .join(" ")}
                     >
-                      <div className={`${styles.box} min-h-[122px] transition-shadow hover:shadow-md`}>
+                      <div className={`${styles.box} ${availabilityUi.box} min-h-[122px] transition-shadow hover:shadow-md`}>
                         <span
                           className={[
                             styles.note,
@@ -1806,9 +1839,7 @@ export function DailyRatesPage({ propertyId }) {
                         <div
                           className={[
                             "mt-2 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
-                            availabilityIsUnavailable
-                              ? "border-rose-200 text-rose-700"
-                              : "border-emerald-200 text-emerald-700",
+                            availabilityUi.badge,
                           ].join(" ")}
                         >
                           {availabilityLabel}
@@ -1823,9 +1854,7 @@ export function DailyRatesPage({ propertyId }) {
                           }}
                           className={[
                             "mt-2 w-full rounded-md border bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider outline-none",
-                            availabilityIsUnavailable
-                              ? "border-rose-200 text-rose-700"
-                              : "border-emerald-200 text-emerald-700",
+                            availabilityUi.select,
                           ].join(" ")}
                         >
                           {availabilityOptions.map((status) => (

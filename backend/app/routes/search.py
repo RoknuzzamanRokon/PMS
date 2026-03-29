@@ -6,13 +6,13 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import RateCalendar, RatePlan, Room, RoomInventoryCalendar
+from ..models import RateCalendar, RatePlan, Room
 from ..schemas import AvailabilityDatesResponse, AvailabilitySearchResponse
 from .reservations import get_available_room_options
 
 router = APIRouter(prefix="/api/v1/search", tags=["search"])
 
-UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
+UNAVAILABLE_CALENDAR_STATUSES = {"UNAVAILABLE", "SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 
 
 @router.get("/availability", response_model=AvailabilitySearchResponse)
@@ -131,26 +131,6 @@ def search_available_dates(
         )
 
     live_room_ids = [room.room_id for room in live_rooms]
-    inventory_rows = (
-        db.execute(
-            select(RoomInventoryCalendar)
-            .where(
-                RoomInventoryCalendar.property_id == property_id,
-                RoomInventoryCalendar.room_id.in_(live_room_ids),
-                RoomInventoryCalendar.stay_date >= start,
-                RoomInventoryCalendar.stay_date <= end,
-            )
-            .order_by(RoomInventoryCalendar.stay_date.asc(), RoomInventoryCalendar.room_id.asc())
-        )
-        .scalars()
-        .all()
-    )
-    available_room_ids_by_date: dict[date, set[str]] = {}
-    for row in inventory_rows:
-        if not row.is_live or row.available_inventory <= 0:
-            continue
-        available_room_ids_by_date.setdefault(row.stay_date, set()).add(row.room_id)
-
     rate_plans = (
         db.execute(
             select(RatePlan)
@@ -197,9 +177,6 @@ def search_available_dates(
             continue
         rate_plan = rate_plan_by_id.get(calendar.rate_id)
         if not rate_plan:
-            continue
-        available_room_ids = available_room_ids_by_date.get(calendar.stay_date, set())
-        if rate_plan.room_id not in available_room_ids:
             continue
         grouped_by_date.setdefault(calendar.stay_date, {}).setdefault(rate_plan.room_id, set()).add(rate_plan.rate_id)
 

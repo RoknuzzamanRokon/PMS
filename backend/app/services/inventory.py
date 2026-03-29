@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..models import RateCalendar, RatePlan, Reservation, ReservationRoom, Room, RoomInventoryCalendar
 
 LIVE_ROOM_STATUS = "LIVE"
-UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
+UNAVAILABLE_CALENDAR_STATUSES = {"UNAVAILABLE", "SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 INACTIVE_BOOKING_STATUSES = {"CANCELLED"}
 
 

@@ -7,7 +7,7 @@ import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
 const visibleMatrixDays = 7;
-const unavailableStatuses = ["BOOKED", "PROSSING", "AB-UNAVAILABLE", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
+const unavailableStatuses = ["UNAVAILABLE", "BOOKED", "PROSSING", "AB-UNAVAILABLE", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
 
 const fallbackRows = [
   {
@@ -105,7 +105,7 @@ function createDays(startDate, total) {
 }
 
 function getTone(item, index) {
-  if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(item.availability)) {
+  if (["UNAVAILABLE", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(item.availability)) {
     return "disabled";
   }
   if (index === 0) {
@@ -130,7 +130,29 @@ function getAvailabilitySelectValue(value) {
 }
 
 function normalizeAvailabilityInput(value) {
-  return value === "UNAVAILABLE" ? "" : value;
+  return value;
+}
+
+function getCellNote(availability, index) {
+  if (!availability) {
+    return "No data";
+  }
+  if (availability === "BOOKED") {
+    return "Booked";
+  }
+  if (availability === "PROSSING") {
+    return "Processing";
+  }
+  if (availability === "AB-UNAVAILABLE") {
+    return "Alt booked";
+  }
+  if (availability === "UNAVAILABLE") {
+    return "Unavailable";
+  }
+  if (["CTA", "CTD"].includes(availability)) {
+    return "Review";
+  }
+  return index === 0 ? "Today" : availability;
 }
 
 function toIsoDateFromParts(year, month, day) {
@@ -294,19 +316,7 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
         original_base_rate: baseRate,
         original_availability: availability,
         changed: false,
-        note: !availability
-            ? "No data"
-            : availability === "BOOKED"
-              ? "Booked"
-            : availability === "PROSSING"
-              ? "Processing"
-            : availability === "AB-UNAVAILABLE"
-              ? "Alt booked"
-            : ["CTA", "CTD"].includes(availability)
-              ? "Review"
-              : index === 0
-                ? "Today"
-                : availability,
+        note: getCellNote(availability, index),
         tone: getTone({ availability, base_rate: Number(baseRate) }, index),
       };
     });
@@ -657,7 +667,7 @@ export function DailyRatesPage({ propertyId }) {
         if (["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)) {
           summary.booked += 1;
         }
-        if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(cell.availability)) {
+        if (["UNAVAILABLE", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(cell.availability)) {
           summary.blocked += 1;
         }
         return summary;
@@ -957,7 +967,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(nextCell.original_base_rate) ||
                 nextAvailability !== nextCell.original_availability,
-              note: !nextAvailability ? "No data" : ["BOOKED", "PROSSING", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: getCellNote(nextAvailability, index),
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -1022,7 +1032,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(cell.original_base_rate) ||
                 nextAvailability !== cell.original_availability,
-              note: !nextAvailability ? "No data" : ["BOOKED", "PROSSING", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: getCellNote(nextAvailability, index),
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -1763,6 +1773,7 @@ export function DailyRatesPage({ propertyId }) {
                           className={[
                             styles.note,
                             cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+                            cell.note === "Alt booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
                             cell.note === "Processing" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
                           ]
                             .filter(Boolean)
@@ -1770,6 +1781,8 @@ export function DailyRatesPage({ propertyId }) {
                           style={
                             cell.note === "Booked"
                               ? { backgroundColor: "#4df714" }
+                              : cell.note === "Alt booked"
+                                ? { backgroundColor: "#bb8df7" }
                               : cell.note === "Processing"
                                 ? { backgroundColor: "#f2eb16" }
                                 : undefined

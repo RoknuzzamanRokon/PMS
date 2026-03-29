@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Guest, Property, RateCalendar, RatePlan, Reservation, ReservationRoom, Room
 
-UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
+UNAVAILABLE_CALENDAR_STATUSES = {"UNAVAILABLE", "SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 

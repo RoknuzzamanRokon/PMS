@@ -224,6 +224,10 @@ def update_reservation(
     next_check_in_date = payload.check_in_date or reservation.check_in_date
     next_check_out_date = payload.check_out_date or reservation.check_out_date
     validate_reservation_dates(next_check_in_date, next_check_out_date)
+    is_same_stay_window = (
+        next_check_in_date == reservation.check_in_date
+        and next_check_out_date == reservation.check_out_date
+    )
 
     reservation_rooms = (
         db.execute(select(ReservationRoom).where(ReservationRoom.booking_id == reservation.booking_id))
@@ -242,6 +246,8 @@ def update_reservation(
         )
         available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
         for item in reservation_rooms:
+            if is_same_stay_window:
+                continue
             if (item.room_id, item.rate_id) not in available_room_rate_pairs:
                 raise HTTPException(
                     status_code=422,

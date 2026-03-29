@@ -2,11 +2,11 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import RateCalendar, RatePlan, Room
+from ..models import RateCalendar, RatePlan, Room, RoomInventoryCalendar
 from ..schemas import AvailabilityDatesResponse, AvailabilitySearchResponse
 from .reservations import get_available_room_options
 
@@ -61,8 +61,6 @@ def search_availability(
             not rate_plan.status
             or rate_plan.available_inventory <= 0
             or rate_plan.stop_sell
-            or rate_plan.closed_to_arrival
-            or rate_plan.closed_to_departure
         ):
             continue
         if requested_nights < rate_plan.min_stay or requested_nights > rate_plan.max_stay:
@@ -108,32 +106,124 @@ def search_available_dates(
     start = max(requested_start, today)
     end = start + timedelta(days=days - 1)
 
-    available_dates = []
-    current = start
-    while current <= end:
-        next_date = current + timedelta(days=1)
-        available_rooms = get_available_room_options(
-            db,
-            property_id,
-            current,
-            next_date,
-            "USD",
-        )
-        if available_rooms:
-            available_dates.append(
-                {
-                    "stay_date": current,
-                    "available_room_count": len({item["room_id"] for item in available_rooms}),
-                    "available_rate_plan_count": len({item["rate_id"] for item in available_rooms}),
-                    "room_ids": sorted({item["room_id"] for item in available_rooms}),
-                    "rate_ids": sorted({item["rate_id"] for item in available_rooms}),
-                }
+    live_rooms = (
+        db.execute(
+            select(Room)
+            .where(
+                Room.property_id == property_id,
+                func.upper(func.coalesce(Room.room_status, "")) == "LIVE",
             )
-        current = next_date
+            .order_by(Room.room_id.asc())
+        )
+        .scalars()
+        .all()
+    )
+    if not live_rooms:
+        return AvailabilityDatesResponse(
+            property={
+                "id": property_id,
+                "availability_period": {
+                    "start_date": start,
+                    "end_date": end,
+                },
+            },
+            availability=[],
+        )
+
+    live_room_ids = [room.room_id for room in live_rooms]
+    inventory_rows = (
+        db.execute(
+            select(RoomInventoryCalendar)
+            .where(
+                RoomInventoryCalendar.property_id == property_id,
+                RoomInventoryCalendar.room_id.in_(live_room_ids),
+                RoomInventoryCalendar.stay_date >= start,
+                RoomInventoryCalendar.stay_date <= end,
+            )
+            .order_by(RoomInventoryCalendar.stay_date.asc(), RoomInventoryCalendar.room_id.asc())
+        )
+        .scalars()
+        .all()
+    )
+    available_room_ids_by_date: dict[date, set[str]] = {}
+    for row in inventory_rows:
+        if not row.is_live or row.available_inventory <= 0:
+            continue
+        available_room_ids_by_date.setdefault(row.stay_date, set()).add(row.room_id)
+
+    rate_plans = (
+        db.execute(
+            select(RatePlan)
+            .where(
+                RatePlan.room_id.in_(live_room_ids),
+                RatePlan.status == 1,
+                RatePlan.stop_sell == 0,
+            )
+            .order_by(RatePlan.room_id.asc(), RatePlan.rate_id.asc())
+        )
+        .scalars()
+        .all()
+    )
+    rate_plan_by_id = {rate_plan.rate_id: rate_plan for rate_plan in rate_plans}
+    if not rate_plan_by_id:
+        return AvailabilityDatesResponse(
+            property={
+                "id": property_id,
+                "availability_period": {
+                    "start_date": start,
+                    "end_date": end,
+                },
+            },
+            availability=[],
+        )
+
+    calendars = (
+        db.execute(
+            select(RateCalendar)
+            .where(
+                RateCalendar.rate_id.in_(rate_plan_by_id.keys()),
+                RateCalendar.stay_date >= start,
+                RateCalendar.stay_date <= end,
+            )
+            .order_by(RateCalendar.stay_date.asc(), RateCalendar.rate_id.asc())
+        )
+        .scalars()
+        .all()
+    )
+
+    grouped_by_date: dict[date, dict[str, set[str]]] = {}
+    for calendar in calendars:
+        if calendar.availability in UNAVAILABLE_CALENDAR_STATUSES:
+            continue
+        rate_plan = rate_plan_by_id.get(calendar.rate_id)
+        if not rate_plan:
+            continue
+        available_room_ids = available_room_ids_by_date.get(calendar.stay_date, set())
+        if rate_plan.room_id not in available_room_ids:
+            continue
+        grouped_by_date.setdefault(calendar.stay_date, {}).setdefault(rate_plan.room_id, set()).add(rate_plan.rate_id)
+
+    availability = [
+        {
+            "date": stay_date,
+            "rooms": [
+                {
+                    "room_id": room_id,
+                    "rates": [{"rate_id": rate_id} for rate_id in sorted(rate_ids)],
+                }
+                for room_id, rate_ids in sorted(room_map.items())
+            ],
+        }
+        for stay_date, room_map in sorted(grouped_by_date.items())
+    ]
 
     return AvailabilityDatesResponse(
-        property_id=property_id,
-        start_date=start,
-        end_date=end,
-        available_dates=available_dates,
+        property={
+            "id": property_id,
+            "availability_period": {
+                "start_date": start,
+                "end_date": end,
+            },
+        },
+        availability=availability,
     )

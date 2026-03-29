@@ -287,13 +287,14 @@ export function InventoryPage({ propertyId }) {
     if (!selectedBooking?.booking_id) {
       return;
     }
+    const bookingId = selectedBooking.booking_id;
 
     setSavingEdit(true);
     setCalendarError("");
     setCalendarSuccess("");
 
     try {
-      await fetchJson(`/reservations/${encodeURIComponent(selectedBooking.booking_id)}`, {
+      await fetchJson(`/reservations/${encodeURIComponent(bookingId)}`, {
         method: "PATCH",
         body: JSON.stringify({
           check_in_date: editForm.check_in_date,
@@ -301,11 +302,11 @@ export function InventoryPage({ propertyId }) {
           booking_status: editForm.booking_status,
         }),
       });
-      await loadCalendar();
-      setCalendarSuccess(`Updated ${selectedBooking.booking_id} successfully.`);
       closeBookingEditor();
+      await loadCalendar();
+      setCalendarSuccess(`Updated ${bookingId} successfully.`);
     } catch (error) {
-      setCalendarError(error.message || `Could not update ${selectedBooking.booking_id}.`);
+      setCalendarError(error.message || `Could not update ${bookingId}.`);
       setSavingEdit(false);
     }
   }
@@ -627,94 +628,118 @@ export function InventoryPage({ propertyId }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveBookingEditor} className="mt-6 space-y-4">
+            <form onSubmit={handleSaveBookingEditor} className="mt-6 space-y-5">
               {loadingBookingDetails ? (
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
                   Loading booking details...
                 </div>
               ) : null}
 
-              <div className="grid gap-3 md:grid-cols-2">
-                {[
-                  ["Customer Name", selectedBooking.guest_name || "N/A"],
-                  ["Room", [selectedBooking.room_name, selectedBooking.room_id].filter(Boolean).join(" • ") || "N/A"],
-                  ["Stay Start", editForm.check_in_date || "N/A"],
-                  ["Stay Nights", bookingNightCount ? `${bookingNightCount} night${bookingNightCount > 1 ? "s" : ""}` : "0 nights"],
-                  ["Total Amount", formatCurrency(bookingTotalPrice, bookingCurrency)],
-                  ["Paid Amount", formatCurrency(bookingPaidTotal, bookingCurrency)],
-                  ["Due Amount", formatCurrency(bookingDueTotal, bookingCurrency)],
-                  ["Created", bookingDetails?.created_at ? new Date(bookingDetails.created_at).toLocaleString("en-US") : "N/A"],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/70"
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {label}
+              <div className="space-y-5">
+                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div className="mb-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                      Basic Info
                     </p>
-                    <p className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">
-                      {value}
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Read-only reservation and payment details.
                     </p>
                   </div>
-                ))}
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Check-in Date
-                  </span>
-                  <input
-                    type="date"
-                    value={editForm.check_in_date}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        check_in_date: event.target.value,
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Check-out Date
-                  </span>
-                  <input
-                    type="date"
-                    value={editForm.check_out_date}
-                    onChange={(event) =>
-                      setEditForm((current) => ({
-                        ...current,
-                        check_out_date: event.target.value,
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                  />
-                </label>
-              </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      ["Customer Name", selectedBooking.guest_name || "N/A"],
+                      ["Room", [selectedBooking.room_name, selectedBooking.room_id].filter(Boolean).join(" • ") || "N/A"],
+                      ["Stay Start", editForm.check_in_date || "N/A"],
+                      ["Stay Nights", bookingNightCount ? `${bookingNightCount} night${bookingNightCount > 1 ? "s" : ""}` : "0 nights"],
+                      ["Total Amount", formatCurrency(bookingTotalPrice, bookingCurrency)],
+                      ["Paid Amount", formatCurrency(bookingPaidTotal, bookingCurrency)],
+                      ["Due Amount", formatCurrency(bookingDueTotal, bookingCurrency)],
+                      ["Created", bookingDetails?.created_at ? new Date(bookingDetails.created_at).toLocaleString("en-US") : "N/A"],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/70"
+                      >
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">
+                          {value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Booking Status
-                </span>
-                <select
-                  value={editForm.booking_status}
-                  onChange={(event) =>
-                    setEditForm((current) => ({
-                      ...current,
-                      booking_status: event.target.value,
-                    }))
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                >
-                  {["CONFIRMED", "CHECKED_IN", "PENDING"].map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/70">
+                  <div className="mb-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                      Booking Change
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      Update dates and reservation status.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Check-in Date
+                      </span>
+                      <input
+                        type="date"
+                        value={editForm.check_in_date}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            check_in_date: event.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Check-out Date
+                      </span>
+                      <input
+                        type="date"
+                        value={editForm.check_out_date}
+                        onChange={(event) =>
+                          setEditForm((current) => ({
+                            ...current,
+                            check_out_date: event.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="mt-4 block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Booking Status
+                    </span>
+                    <select
+                      value={editForm.booking_status}
+                      onChange={(event) =>
+                        setEditForm((current) => ({
+                          ...current,
+                          booking_status: event.target.value,
+                        }))
+                      }
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    >
+                      {["CONFIRMED", "CHECKED_IN", "PENDING"].map((status) => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
@@ -729,7 +754,7 @@ export function InventoryPage({ propertyId }) {
                   disabled={savingEdit || loadingBookingDetails}
                   className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {savingEdit ? "Saving..." : "Save Changes"}
+                  {savingEdit ? "Saving..." : "Save & Close"}
                 </button>
               </div>
             </form>

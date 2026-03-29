@@ -369,6 +369,24 @@ function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventory
   });
 }
 
+function normalizeAvailableDatesResponse(payload) {
+  const availability = Array.isArray(payload?.availability) ? payload.availability : [];
+
+  return availability.map((entry) => {
+    const rooms = Array.isArray(entry?.rooms) ? entry.rooms : [];
+    return {
+      date: entry?.date || "",
+      rooms,
+      room_ids: rooms.map((room) => room.room_id).filter(Boolean),
+      rate_ids: rooms.flatMap((room) =>
+        (Array.isArray(room?.rates) ? room.rates : [])
+          .map((rate) => rate?.rate_id)
+          .filter(Boolean),
+      ),
+    };
+  });
+}
+
 function StatCard({ stat }) {
   const toneMap = {
     primary: "bg-primary/10 text-primary",
@@ -500,7 +518,7 @@ export function DailyRatesPage({ propertyId }) {
           ).catch(() => ({ rows: [] })),
           fetchJson(
             `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-          ).catch(() => ({ available_dates: [] })),
+          ).catch(() => ({ property: null, availability: [] })),
         ]);
 
         if (ignore) {
@@ -533,7 +551,7 @@ export function DailyRatesPage({ propertyId }) {
               inventoryBoardData?.rows || [],
             );
         setInventoryDates(nextInventoryDates);
-        setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
+        setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
         setApiConnected(true);
         setPublishError("");
       } catch {
@@ -704,7 +722,7 @@ export function DailyRatesPage({ propertyId }) {
       ).catch(() => ({ rows: [] })),
       fetchJson(
         `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-      ).catch(() => ({ available_dates: [] })),
+      ).catch(() => ({ property: null, availability: [] })),
     ]);
     const calendarByRateId = Object.fromEntries(
       (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
@@ -731,7 +749,7 @@ export function DailyRatesPage({ propertyId }) {
           inventoryBoardData?.rows || [],
         );
     setInventoryDates(nextInventoryDates);
-    setAvailableDates(Array.isArray(availableDatesData?.available_dates) ? availableDatesData.available_dates : []);
+    setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
     setApiConnected(true);
   }
 
@@ -1495,20 +1513,7 @@ export function DailyRatesPage({ propertyId }) {
             {publishSuccess}
           </div>
         ) : null}
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-slate-50/80 px-5 py-3">
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-            Selected Date: <span className="text-primary">{selectedStayDate || "N/A"}</span>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-            Queued changes: <span className="font-bold text-slate-900">{selectedDateSummary.queued}</span>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-            Warning states: <span className="font-bold text-amber-700">{selectedDateSummary.booked}</span>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
-            Blocked states: <span className="font-bold text-rose-700">{selectedDateSummary.blocked}</span>
-          </div>
-        </div>
+
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="custom-scrollbar overflow-x-auto overflow-y-visible">

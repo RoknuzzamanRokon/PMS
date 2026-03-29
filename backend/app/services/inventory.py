@@ -181,7 +181,7 @@ def get_sellable_rate_options(
             continue
         if not rate_plan.status:
             continue
-        if rate_plan.stop_sell or rate_plan.closed_to_arrival or rate_plan.closed_to_departure:
+        if rate_plan.stop_sell:
             continue
         if total_nights < rate_plan.min_stay or total_nights > rate_plan.max_stay:
             continue

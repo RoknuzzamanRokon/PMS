@@ -11,6 +11,7 @@ from ..models import (
     RateCalendar,
     RateCancellationPolicy,
     RatePlan,
+    Reservation,
     ReservationRoom,
     Room,
 )
@@ -108,15 +109,45 @@ def daily_rates_matrix(
         else []
     )
 
+    booked_rate_dates: dict[tuple[str, str], dict] = {}
+    reservations = (
+        db.execute(
+            select(Reservation, ReservationRoom)
+            .join(ReservationRoom, ReservationRoom.booking_id == Reservation.booking_id)
+            .where(
+                Reservation.property_id == property_id,
+                ReservationRoom.rate_id.in_(rate_ids),
+                Reservation.booking_status.not_in(["CANCELLED", "Cancelled", "cancelled"]),
+                Reservation.check_out_date > start,
+                Reservation.check_in_date <= end,
+            )
+        )
+        .all()
+        if rate_ids
+        else []
+    )
+    for reservation, reservation_room in reservations:
+        current = max(reservation.check_in_date, start)
+        stay_end = min(reservation.check_out_date, end + timedelta(days=1))
+        while current < stay_end:
+            booked_rate_dates[(reservation_room.rate_id, current.isoformat())] = {
+                "booking_id": reservation.booking_id,
+                "booking_status": reservation.booking_status,
+            }
+            current += timedelta(days=1)
+
     calendar_by_rate_id: dict[str, list[dict]] = {}
     for item in calendars:
+        booking = booked_rate_dates.get((item.rate_id, item.stay_date.isoformat()))
         calendar_by_rate_id.setdefault(item.rate_id, []).append(
             {
                 "stay_date": item.stay_date.isoformat(),
                 "currency": item.currency,
                 "base_rate": item.base_rate,
                 "tax": item.tax,
-                "availability": item.availability,
+                "availability": "BOOKED" if booking else item.availability,
+                "booking_id": booking["booking_id"] if booking else None,
+                "booking_status": booking["booking_status"] if booking else None,
             }
         )
 

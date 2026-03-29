@@ -1198,85 +1198,128 @@ export function DailyRatesPage({ propertyId }) {
       </section>
 
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              Property:{" "}
-              <span className="font-bold text-slate-900">
-                {selectedProperty || "Not selected"}
-              </span>
-            </div>
-            <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              <span className="mr-2">Switch:</span>
-              <select
-                value={selectedProperty}
-                onChange={(event) => {
-                  const nextPropertyId = event.target.value;
-                  setSelectedProperty(nextPropertyId);
-                  router.push(`/daily-rates?property_id=${encodeURIComponent(nextPropertyId)}`);
-                }}
-                className="bg-transparent font-bold text-slate-900 outline-none"
-              >
-                {properties.map((property) => (
-                  <option key={property.property_id} value={property.property_id}>
-                    {property.property_id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              Rooms Loaded:{" "}
-              <span className="font-bold text-slate-900">{rooms.length || rows.length}</span>
-            </div>
-            <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              Rate Plans: <span className="font-bold text-slate-900">{availableRows.length}</span>
-            </div>
-            <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
-              <span className="mr-2">Start:</span>
-              <input
-                type="date"
-                value={calendarStartDate}
-                onChange={(event) => setCalendarStartDate(event.target.value)}
-                className="bg-transparent font-bold text-slate-900 outline-none"
-              />
-            </label>
-            <div className="ml-auto flex items-center gap-2">
-              <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => shiftCalendar(-range)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+        <div className="grid gap-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+                Property:{" "}
+                <span className="font-bold text-slate-900">
+                  {selectedProperty || "Not selected"}
+                </span>
+              </div>
+              <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+                <span className="mr-2">Switch:</span>
+                <select
+                  value={selectedProperty}
+                  onChange={(event) => {
+                    const nextPropertyId = event.target.value;
+                    setSelectedProperty(nextPropertyId);
+                    router.push(`/daily-rates?property_id=${encodeURIComponent(nextPropertyId)}`);
+                  }}
+                  className="bg-transparent font-bold text-slate-900 outline-none"
                 >
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  onClick={() => shiftCalendar(range)}
-                  className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
-                >
-                  Next
-                </button>
+                  {properties.map((property) => (
+                    <option key={property.property_id} value={property.property_id}>
+                      {property.property_id}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+                Rooms Loaded:{" "}
+                <span className="font-bold text-slate-900">{rooms.length || rows.length}</span>
+              </div>
+              <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+                Rate Plans: <span className="font-bold text-slate-900">{availableRows.length}</span>
+              </div>
+              <label className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
+                <span className="mr-2">Start:</span>
+                <input
+                  type="date"
+                  value={calendarStartDate}
+                  onChange={(event) => setCalendarStartDate(event.target.value)}
+                  className="bg-transparent font-bold text-slate-900 outline-none"
+                />
+              </label>
+              <div className="ml-auto flex items-center gap-2">
+                <div className="flex gap-1 rounded-lg bg-slate-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendar(-range)}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => shiftCalendar(range)}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            {[
-              ["API", apiConnected ? "Connected" : "Offline"],
-              ["Property", `${selectedProperty || "Not selected"} • ${propertyName}`],
-              ["Daily Rates", `/rate-plans/daily-rates?property_id=${selectedProperty || ""}&days=${totalDays}&start_date=${calendarStartDate}`],
-              ["Calendar Save", "/rate-plans/{rate_id}/calendar/bulk-upsert"],
-            ].map(([label, value]) => (
-              <div
-                key={label}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {label}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Debug APIs</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  APIs used by the Rate Matrix section.
                 </p>
-                <p className="mt-1 text-sm font-semibold text-slate-700">{value}</p>
               </div>
-            ))}
+              <span className="rounded-full border border-amber-300 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                Debug
+              </span>
+            </div>
+
+            <div className="mt-4 space-y-3 text-sm text-slate-700">
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Main matrix data</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">
+                  /api/v1/rate-plans/daily-rates?property_id=...&days=30&start_date=...
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hotel Summary row</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">
+                  /api/v1/properties/{'{property_id}'}/inventory-calendar?start_date=...&end_date=...
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Booking overlay / booked room info</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">
+                  /api/v1/inventory/calendar?property_id=...&start_date=...&days=...
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Available dates helper</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">
+                  /api/v1/search/available-dates?property_id=...&start_date=...&days=...
+                </p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Dropdown / metadata</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/rate-plans/availability-statuses</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/meal-plans</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate create / update / delete</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">POST /api/v1/rate-plans</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">PATCH /api/v1/rate-plans/{'{rate_id}'}</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">DELETE /api/v1/rate-plans/{'{rate_id}'}</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate calendar save</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">POST /api/v1/rate-plans/{'{rate_id}'}/calendar/bulk-upsert</p>
+              </div>
+              <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Full rate details for edit modal</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">GET /api/v1/rate-plans/{'{rate_id}'}</p>
+              </div>
+            </div>
           </div>
         </div>
 

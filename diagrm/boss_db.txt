@@ -135,6 +135,20 @@ erDiagram
         varchar amenity_code
     }
 
+    room_inventory_calendar {
+        int Id PK
+        varchar property_id FK
+        varchar room_id FK
+        date stay_date
+        tinyint is_live
+        int total_inventory
+        int booked_inventory
+        int blocked_inventory
+        int available_inventory
+        timestamp created_at
+        timestamp updated_at
+    }
+
     rooms {
         int Id PK
         timestamp created_at
@@ -202,6 +216,7 @@ erDiagram
     rooms ||--o{ rate_plans : "room_id"
     rooms ||--o{ reservations_rooms : "room_id"
     rooms ||--o{ room_amenities : "room_id"
+    rooms ||--o{ room_inventory_calendar : "room_id"
 
     rate_plans ||--o{ rate_calendar : "rate_id"
     rate_plans ||--o{ rate_cancellation_policies : "rate_id"
@@ -216,3 +231,5 @@ erDiagram
 
     z_amenities_codes ||--o{ property_amenities : "amenity_code"
     z_amenities_codes ||--o{ room_amenities : "amenity_code"
+
+    properties ||--o{ room_inventory_calendar : "property_id"

@@ -447,7 +447,6 @@ export function DailyRatesPage({ propertyId }) {
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
-  const [rateMatrixSearch, setRateMatrixSearch] = useState("");
   const [bulkForm, setBulkForm] = useState({
     rate_id: "",
     start_date: new Date().toISOString().slice(0, 10),
@@ -608,18 +607,6 @@ export function DailyRatesPage({ propertyId }) {
     () => rows.filter((row) => liveRoomIds.has(row.roomId)),
     [liveRoomIds, rows],
   );
-  const filteredAvailableRows = useMemo(() => {
-    const query = rateMatrixSearch.trim().toLowerCase();
-    if (!query) {
-      return availableRows;
-    }
-
-    return availableRows.filter((row) =>
-      [row.title, row.roomLabel, row.code, row.roomId]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query)),
-    );
-  }, [availableRows, rateMatrixSearch]);
   const roomList = useMemo(() => {
     return rooms
       .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
@@ -641,7 +628,7 @@ export function DailyRatesPage({ propertyId }) {
       return { queued: 0, booked: 0, blocked: 0 };
     }
 
-    return filteredAvailableRows.reduce(
+    return availableRows.reduce(
       (summary, row) => {
         const cell = row.cells.find((item) => item.stay_date === selectedStayDate);
         if (!cell) {
@@ -661,7 +648,7 @@ export function DailyRatesPage({ propertyId }) {
       },
       { queued: 0, booked: 0, blocked: 0 },
     );
-  }, [filteredAvailableRows, selectedStayDate]);
+  }, [availableRows, selectedStayDate]);
   const inventorySummaryByDate = useMemo(
     () => new Map(inventoryDates.map((item) => [item.stay_date, item])),
     [inventoryDates],
@@ -1491,16 +1478,6 @@ export function DailyRatesPage({ propertyId }) {
                 className="bg-transparent text-slate-900 outline-none"
               />
             </label>
-            <label className="flex min-w-[280px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
-              <span className="material-symbols-outlined text-base text-slate-400">search</span>
-              <input
-                type="text"
-                value={rateMatrixSearch}
-                onChange={(event) => setRateMatrixSearch(event.target.value)}
-                placeholder="Search room name, room ID, or rate ID"
-                className="w-full bg-transparent text-slate-900 outline-none"
-              />
-            </label>
           </div>
         </div>
         {publishError ? (
@@ -1609,17 +1586,15 @@ export function DailyRatesPage({ propertyId }) {
               })}
               </div>
 
-              {!filteredAvailableRows.length ? (
+              {!availableRows.length ? (
                 <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
-                  {rateMatrixSearch.trim()
-                    ? "No rate plans matched that search."
-                    : apiConnected
+                  {apiConnected
                     ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
                     : "Backend offline. Start the API to load editable daily rates."}
                 </div>
               ) : null}
 
-              {filteredAvailableRows.map((row) => (
+              {availableRows.map((row) => (
                 <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
                   <div className="sticky left-0 z-10 border-r border-slate-200 bg-inherit px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
                   <div className="flex items-start justify-between gap-3">

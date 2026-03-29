@@ -90,6 +90,7 @@ def inventory_calendar(
             "meta": f"{reservation.booking_id} • {reservation.booking_status}",
             "booking_id": reservation.booking_id,
             "booking_status": reservation.booking_status,
+            "rate_id": reservation_room.rate_id,
             "check_in_date": reservation.check_in_date.isoformat(),
             "check_out_date": reservation.check_out_date.isoformat(),
         })

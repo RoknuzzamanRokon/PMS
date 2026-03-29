@@ -11,7 +11,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_DB_PATH = BASE_DIR / "innorooms.db"
-database_url = os.getenv("APP_DATABASE_URL", f"sqlite:///{DEFAULT_DB_PATH}")
+database_url = os.getenv("APP_DATABASE_URL") or os.getenv("DATABASE_URL") or f"sqlite:///{DEFAULT_DB_PATH}"
 
 connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
 

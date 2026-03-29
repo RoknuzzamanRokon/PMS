@@ -441,17 +441,6 @@ export function InventoryPage({ propertyId }) {
           </div>
         </div>
 
-        {calendarError ? (
-          <div className="border-b border-rose-100 bg-rose-50 px-6 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/30 lg:px-8">
-            {calendarError}
-          </div>
-        ) : null}
-        {calendarSuccess ? (
-          <div className="border-b border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 lg:px-8">
-            {calendarSuccess}
-          </div>
-        ) : null}
-
         <div className="custom-scrollbar flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/40">
           <div className="min-w-max">
             <div
@@ -601,6 +590,16 @@ export function InventoryPage({ propertyId }) {
             </div>
           </div>
         </div>
+        {calendarError ? (
+          <div className="border-t border-rose-100 bg-rose-50 px-6 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/30 lg:px-8">
+            {calendarError}
+          </div>
+        ) : null}
+        {calendarSuccess ? (
+          <div className="border-t border-emerald-100 bg-emerald-50 px-6 py-3 text-sm font-medium text-emerald-700 dark:border-emerald-900/30 dark:bg-emerald-950/30 lg:px-8">
+            {calendarSuccess}
+          </div>
+        ) : null}
       </div>
       )}
 

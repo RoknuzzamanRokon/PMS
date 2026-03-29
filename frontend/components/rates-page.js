@@ -1601,7 +1601,7 @@ export function DailyRatesPage({ propertyId }) {
             onMouseMove={handleMatrixMouseMove}
             onMouseUp={handleMatrixMouseUp}
             onMouseLeave={handleMatrixMouseUp}
-            className="custom-scrollbar cursor-grab overflow-x-auto overflow-y-visible active:cursor-grabbing"
+            className="custom-scrollbar cursor-grab select-none overflow-x-auto overflow-y-visible active:cursor-grabbing"
           >
             <div
               className="min-w-[820px]"

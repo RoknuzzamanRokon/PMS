@@ -27,6 +27,7 @@ from ..utils import next_code
 
 router = APIRouter(prefix="/api/v1/rate-plans", tags=["rate-plans"])
 LIVE_ROOM_STATUS = "LIVE"
+HARD_BOOKING_STATUSES = {"CONFIRMED", "CHECKED_IN"}
 
 
 def _get_live_room_or_409(db: Session, room_id: str) -> Room:
@@ -91,6 +92,7 @@ def daily_rates_matrix(
         if room_ids
         else []
     )
+    rate_plan_by_id = {rate_plan.rate_id: rate_plan for rate_plan in rate_plans}
     rate_ids = [rate_plan.rate_id for rate_plan in rate_plans]
 
     calendars = (
@@ -110,6 +112,7 @@ def daily_rates_matrix(
     )
 
     booked_rate_dates: dict[tuple[str, str], dict] = {}
+    hard_booked_room_dates: set[tuple[str, str]] = set()
     reservations = (
         db.execute(
             select(Reservation, ReservationRoom)
@@ -130,22 +133,34 @@ def daily_rates_matrix(
         current = max(reservation.check_in_date, start)
         stay_end = min(reservation.check_out_date, end + timedelta(days=1))
         while current < stay_end:
-            booked_rate_dates[(reservation_room.rate_id, current.isoformat())] = {
+            stay_date = current.isoformat()
+            booking_status = reservation.booking_status
+            booked_rate_dates[(reservation_room.rate_id, stay_date)] = {
                 "booking_id": reservation.booking_id,
-                "booking_status": reservation.booking_status,
+                "booking_status": booking_status,
             }
+            if str(booking_status or "").upper() in HARD_BOOKING_STATUSES:
+                hard_booked_room_dates.add((reservation_room.room_id, stay_date))
             current += timedelta(days=1)
 
     calendar_by_rate_id: dict[str, list[dict]] = {}
     for item in calendars:
-        booking = booked_rate_dates.get((item.rate_id, item.stay_date.isoformat()))
+        stay_date = item.stay_date.isoformat()
+        booking = booked_rate_dates.get((item.rate_id, stay_date))
+        rate_plan = rate_plan_by_id.get(item.rate_id)
+        booking_status = str(booking["booking_status"] or "").upper() if booking else ""
+        availability = item.availability
+        if booking:
+            availability = "BOOKED" if booking_status in HARD_BOOKING_STATUSES else "PROSSING"
+        elif rate_plan and (rate_plan.room_id, stay_date) in hard_booked_room_dates:
+            availability = "AB-UNAVAILABLE"
         calendar_by_rate_id.setdefault(item.rate_id, []).append(
             {
-                "stay_date": item.stay_date.isoformat(),
+                "stay_date": stay_date,
                 "currency": item.currency,
                 "base_rate": item.base_rate,
                 "tax": item.tax,
-                "availability": "BOOKED" if booking else item.availability,
+                "availability": availability,
                 "booking_id": booking["booking_id"] if booking else None,
                 "booking_status": booking["booking_status"] if booking else None,
             }

@@ -7,7 +7,7 @@ import { fetchJson } from "../lib/api";
 
 const totalDays = 30;
 const visibleMatrixDays = 7;
-const unavailableStatuses = ["BOOKED", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
+const unavailableStatuses = ["BOOKED", "PROSSING", "AB-UNAVAILABLE", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
 
 const fallbackRows = [
   {
@@ -105,13 +105,13 @@ function createDays(startDate, total) {
 }
 
 function getTone(item, index) {
-  if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"].includes(item.availability)) {
+  if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(item.availability)) {
     return "disabled";
   }
   if (index === 0) {
     return "primary";
   }
-  if (["BOOKED", "CTA", "CTD"].includes(item.availability)) {
+  if (["BOOKED", "PROSSING", "CTA", "CTD"].includes(item.availability)) {
     return "amber";
   }
   return Number(item.base_rate) >= 220 ? "emerald" : "default";
@@ -271,12 +271,18 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
         currentDate.getDate(),
       );
       const item = calendarMap.get(stayDate);
-      const isBooked =
+      const fallbackBooked =
         booking?.check_in_date &&
         booking?.check_out_date &&
+        booking?.rate_id === ratePlan.rate_id &&
         stayDate >= booking.check_in_date &&
         stayDate < booking.check_out_date;
-      const availability = isBooked ? "BOOKED" : item?.availability || "";
+      const fallbackBookingStatus = String(booking?.booking_status || "").toUpperCase();
+      const availability = item?.availability || (fallbackBooked
+        ? ["CONFIRMED", "CHECKED_IN"].includes(fallbackBookingStatus)
+          ? "BOOKED"
+          : "PROSSING"
+        : "");
       const baseRate = formatRateValue(item?.base_rate ?? ratePlan.base_rate ?? 0);
       const tax = formatRateValue(item?.tax ?? 0);
       return {
@@ -288,11 +294,15 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
         original_base_rate: baseRate,
         original_availability: availability,
         changed: false,
-        note: isBooked
-          ? "Booked"
-          : !availability
+        note: !availability
             ? "No data"
-            : ["BOOKED", "CTA", "CTD"].includes(availability)
+            : availability === "BOOKED"
+              ? "Booked"
+            : availability === "PROSSING"
+              ? "Processing"
+            : availability === "AB-UNAVAILABLE"
+              ? "Alt booked"
+            : ["CTA", "CTD"].includes(availability)
               ? "Review"
               : index === 0
                 ? "Today"
@@ -638,10 +648,10 @@ export function DailyRatesPage({ propertyId }) {
         if (cell.changed) {
           summary.queued += 1;
         }
-        if (["BOOKED", "CTA", "CTD"].includes(cell.availability)) {
+        if (["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)) {
           summary.booked += 1;
         }
-        if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"].includes(cell.availability)) {
+        if (["STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(cell.availability)) {
           summary.blocked += 1;
         }
         return summary;
@@ -908,7 +918,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(nextCell.original_base_rate) ||
                 nextAvailability !== nextCell.original_availability,
-              note: !nextAvailability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: !nextAvailability ? "No data" : ["BOOKED", "PROSSING", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -973,7 +983,7 @@ export function DailyRatesPage({ propertyId }) {
               changed:
                 nextBaseRate !== formatRateValue(cell.original_base_rate) ||
                 nextAvailability !== cell.original_availability,
-              note: !nextAvailability ? "No data" : ["BOOKED", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
+              note: !nextAvailability ? "No data" : ["BOOKED", "PROSSING", "CTA", "CTD"].includes(nextAvailability) ? "Review" : index === 0 ? "Today" : nextAvailability,
               tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
             };
           }),
@@ -1062,7 +1072,7 @@ export function DailyRatesPage({ propertyId }) {
       },
       {
         label: "Low Availability",
-        value: `${allCells.filter((cell) => ["BOOKED", "CTA", "CTD"].includes(cell.availability)).length} days`,
+        value: `${allCells.filter((cell) => ["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)).length} days`,
         note: "Potential pressure dates in selected view",
         icon: "trending_up",
         tone: "amber",

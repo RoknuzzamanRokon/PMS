@@ -5,7 +5,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Guest, Property, Reservation, ReservationRoom, Room
+from ..models import Guest, Property, RateCalendar, RatePlan, Reservation, ReservationRoom, Room
+
+UNAVAILABLE_CALENDAR_STATUSES = {"SOLD_OUT", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"}
 
 router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 
@@ -26,6 +28,34 @@ def inventory_calendar(
         .scalars()
         .all()
     )
+    room_ids = [room.room_id for room in rooms]
+
+    rate_rows = (
+        db.execute(
+            select(RatePlan, RateCalendar)
+            .join(RateCalendar, RateCalendar.rate_id == RatePlan.rate_id)
+            .where(
+                RatePlan.room_id.in_(room_ids),
+                RatePlan.status == 1,
+                RatePlan.stop_sell == 0,
+                RateCalendar.stay_date >= start,
+                RateCalendar.stay_date < end,
+            )
+            .order_by(RatePlan.room_id.asc(), RatePlan.rate_id.asc(), RateCalendar.stay_date.asc())
+        )
+        .all()
+        if room_ids
+        else []
+    )
+    active_rates_by_room = {}
+    for rate_plan, rate_calendar in rate_rows:
+        if rate_calendar.availability in UNAVAILABLE_CALENDAR_STATUSES:
+            continue
+        active_rates_by_room.setdefault(rate_plan.room_id, {})
+        active_rates_by_room[rate_plan.room_id][rate_plan.rate_id] = {
+            "rate_id": rate_plan.rate_id,
+            "title": rate_plan.title,
+        }
 
     reservations = (
         db.execute(
@@ -66,12 +96,15 @@ def inventory_calendar(
 
     rows = []
     for room in rooms:
+        room_rates = list((active_rates_by_room.get(room.room_id) or {}).values())
         room_bookings = bookings_by_room.get(room.room_id, [])
         if not room_bookings:
             rows.append(
                 {
                     "room_id": room.room_id,
                     "room_name": room.room_name,
+                    "rate_ids": [rate["rate_id"] for rate in room_rates],
+                    "rates": room_rates,
                     "booking": None,
                 }
             )
@@ -82,6 +115,8 @@ def inventory_calendar(
                 {
                     "room_id": room.room_id,
                     "room_name": room.room_name,
+                    "rate_ids": [rate["rate_id"] for rate in room_rates],
+                    "rates": room_rates,
                     "booking": booking,
                 }
             )

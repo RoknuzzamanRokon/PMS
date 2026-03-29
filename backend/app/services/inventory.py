@@ -340,7 +340,7 @@ def property_inventory_summary_for_dates(
 
     rate_ids_by_date: dict[date, set[str]] = defaultdict(set)
     for rate_plan, rate_calendar in rates:
-        if rate_plan.stop_sell or rate_plan.closed_to_arrival or rate_plan.closed_to_departure:
+        if rate_plan.stop_sell:
             continue
         if rate_calendar.availability in UNAVAILABLE_CALENDAR_STATUSES:
             continue

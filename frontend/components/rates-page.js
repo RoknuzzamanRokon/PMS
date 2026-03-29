@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
@@ -425,6 +425,12 @@ function StatCard({ stat }) {
 
 export function DailyRatesPage({ propertyId }) {
   const router = useRouter();
+  const matrixScrollRef = useRef(null);
+  const matrixDragRef = useRef({
+    active: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
   const hasSelectedProperty = Boolean(propertyId);
   const liveRoomStatus = "LIVE";
   const [range, setRange] = useState(7);
@@ -748,6 +754,39 @@ export function DailyRatesPage({ propertyId }) {
     setInventoryDates(nextInventoryDates);
     setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
     setApiConnected(true);
+  }
+
+  function handleMatrixMouseDown(event) {
+    if (event.button !== 0) {
+      return;
+    }
+    if (event.target.closest("input, select, button, textarea, option")) {
+      return;
+    }
+    const container = matrixScrollRef.current;
+    if (!container) {
+      return;
+    }
+    matrixDragRef.current = {
+      active: true,
+      startX: event.clientX,
+      scrollLeft: container.scrollLeft,
+    };
+  }
+
+  function handleMatrixMouseMove(event) {
+    const container = matrixScrollRef.current;
+    const drag = matrixDragRef.current;
+    if (!container || !drag.active) {
+      return;
+    }
+    event.preventDefault();
+    const deltaX = event.clientX - drag.startX;
+    container.scrollLeft = drag.scrollLeft - deltaX;
+  }
+
+  function handleMatrixMouseUp() {
+    matrixDragRef.current.active = false;
   }
 
   function openRatePlanModal(room) {
@@ -1546,7 +1585,14 @@ export function DailyRatesPage({ propertyId }) {
 
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="custom-scrollbar overflow-x-auto overflow-y-visible">
+          <div
+            ref={matrixScrollRef}
+            onMouseDown={handleMatrixMouseDown}
+            onMouseMove={handleMatrixMouseMove}
+            onMouseUp={handleMatrixMouseUp}
+            onMouseLeave={handleMatrixMouseUp}
+            className="custom-scrollbar cursor-grab overflow-x-auto overflow-y-visible active:cursor-grabbing"
+          >
             <div
               className="min-w-[820px]"
               style={{

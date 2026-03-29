@@ -1717,10 +1717,17 @@ export function DailyRatesPage({ propertyId }) {
                           className={[
                             styles.note,
                             cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+                            cell.note === "Processing" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
                           ]
                             .filter(Boolean)
                             .join(" ")}
-                          style={cell.note === "Booked" ? { backgroundColor: "#4df714" } : undefined}
+                          style={
+                            cell.note === "Booked"
+                              ? { backgroundColor: "#4df714" }
+                              : cell.note === "Processing"
+                                ? { backgroundColor: "#f2eb16" }
+                                : undefined
+                          }
                         >
                           {cell.note}
                         </span>

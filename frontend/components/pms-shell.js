@@ -158,15 +158,15 @@ export function PmsShell({
 
         <div
           className={[
-            "fixed bottom-0 left-0 z-40 hidden px-6 pb-6 lg:block",
-            sidebarCollapsed ? "w-20 px-3" : "w-64",
+            "fixed bottom-0 left-0 z-40 hidden pb-6 lg:block",
+            sidebarCollapsed ? "flex w-20 justify-center px-0" : "w-64 px-6",
           ].join(" ")}
         >
           <div
             className={[
               "bg-primary text-white shadow-panel",
               sidebarCollapsed
-                ? "mx-auto flex size-14 items-center justify-center rounded-full"
+                ? "flex size-14 items-center justify-center rounded-full"
                 : "rounded-2xl p-4",
             ].join(" ")}
           >

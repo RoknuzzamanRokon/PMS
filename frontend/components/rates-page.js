@@ -1190,55 +1190,55 @@ export function DailyRatesPage({ propertyId }) {
       : 0;
 
     return [
-      {
-        label: "Publish Queue",
-        value: `${pendingChanges} changes`,
-        note: apiConnected ? "Editable calendar cells waiting to publish." : "Static demo queue",
-        icon: "publish",
-        tone: "primary",
-      },
-      {
-        label: "ADR Window",
-        value: `$${adr.toFixed(2)}`,
-        note: `${visibleRows.length} room groups in view`,
-        icon: "payments",
-        tone: "emerald",
-      },
-      {
-        label: "Low Availability",
-        value: `${allCells.filter((cell) => ["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)).length} days`,
-        note: "Potential pressure dates in selected view",
-        icon: "trending_up",
-        tone: "amber",
-      },
-      {
-        label: "Restriction Flags",
-        value: `${visibleRows.filter((row) => row.stopSell || row.cta || row.ctd).length} plans`,
-        note: "CTA, CTD, or stop-sell enabled",
-        icon: "rule_settings",
-        tone: "blue",
-      },
+      // {
+      //   label: "Publish Queue",
+      //   value: `${pendingChanges} changes`,
+      //   note: apiConnected ? "Editable calendar cells waiting to publish." : "Static demo queue",
+      //   icon: "publish",
+      //   tone: "primary",
+      // },
+      // {
+      //   label: "ADR Window",
+      //   value: `$${adr.toFixed(2)}`,
+      //   note: `${visibleRows.length} room groups in view`,
+      //   icon: "payments",
+      //   tone: "emerald",
+      // },
+      // {
+      //   label: "Low Availability",
+      //   value: `${allCells.filter((cell) => ["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)).length} days`,
+      //   note: "Potential pressure dates in selected view",
+      //   icon: "trending_up",
+      //   tone: "amber",
+      // },
+      // {
+      //   label: "Restriction Flags",
+      //   value: `${visibleRows.filter((row) => row.stopSell || row.cta || row.ctd).length} plans`,
+      //   note: "CTA, CTD, or stop-sell enabled",
+      //   icon: "rule_settings",
+      //   tone: "blue",
+      // },
     ];
   }, [apiConnected, availableRows, pendingChanges, range]);
 
   const insightCards = useMemo(
     () => [
-          {
-            title: "API Connection",
-            items: [
-              apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
-              `Loaded ${properties.length || 1} properties and ${rooms.length || availableRows.length} room records.`,
-              apiConnected ? "Single-day and bulk calendar edits publish through `/rate-plans/{rate_id}/calendar/bulk-upsert`." : "Start the backend to hydrate this matrix with live data.",
-            ],
-          },
-      {
-        title: "Active Property",
-        items: [
-          `Property: ${selectedProperty || "Not selected"}`,
-          `${rooms.length} rooms fetched for rate review.`,
-          `Calendar start: ${calendarStartDate}`,
-        ],
-      },
+      //     {
+      //       title: "API Connection",
+      //       items: [
+      //         apiConnected ? "Connected to FastAPI backend." : "Backend not reachable, showing local fallback data.",
+      //         `Loaded ${properties.length || 1} properties and ${rooms.length || availableRows.length} room records.`,
+      //         apiConnected ? "Single-day and bulk calendar edits publish through `/rate-plans/{rate_id}/calendar/bulk-upsert`." : "Start the backend to hydrate this matrix with live data.",
+      //       ],
+      //     },
+      // {
+      //   title: "Active Property",
+      //   items: [
+      //     `Property: ${selectedProperty || "Not selected"}`,
+      //     `${rooms.length} rooms fetched for rate review.`,
+      //     `Calendar start: ${calendarStartDate}`,
+      //   ],
+      // },
     ],
     [apiConnected, availableRows.length, calendarStartDate, properties.length, rooms.length, selectedProperty],
   );
@@ -1342,7 +1342,7 @@ export function DailyRatesPage({ propertyId }) {
       </section>
 
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
-        <div className="grid gap-4">
+        {/* <div className="grid gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
@@ -1465,7 +1465,7 @@ export function DailyRatesPage({ propertyId }) {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         <div className="grid gap-4">
           <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -1602,7 +1602,7 @@ export function DailyRatesPage({ propertyId }) {
                 disabled={!apiConnected || !availableRows.length}
                 className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
               >
-                <span className="material-symbols-outlined text-base">calendar_edit</span>
+                {/* <span className="material-symbols-outlined text-base">calendar_edit</span> */}
                 Apply To Range
               </button>
             </form>
@@ -2299,10 +2299,10 @@ export function DailyRatesPage({ propertyId }) {
                         {plan.cells?.[0]?.currency || "USD"} {plan.cells?.[0]?.base_rate || "0.00"}
                       </p>
                     </div>
-                    <div className="rounded-xl bg-white px-3 py-3">
+                    {/* <div className="rounded-xl bg-white px-3 py-3">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy</p>
                       <p className="mt-1 text-sm font-bold text-slate-900">{plan.occupancy}</p>
-                    </div>
+                    </div> */}
                     <div className="rounded-xl bg-white px-3 py-3">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Flags</p>
                       <p className="mt-1 text-sm font-bold text-slate-900">

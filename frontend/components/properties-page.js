@@ -316,77 +316,7 @@ export function PropertiesPage() {
         </div>
       </div>
 
-      <section className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          [
-            "Total Properties",
-            "domain",
-            String(properties.length),
-            "Loaded from `/api/v1/properties`.",
-            "primary",
-          ],
-          [
-            "Property Types",
-            "category",
-            String(propertyTypeCount),
-            "Distinct property categories in the current list.",
-            "blue",
-          ],
-          [
-            "Latest Added",
-            "schedule",
-            latestProperty ? latestProperty.property_id : "N/A",
-            latestProperty
-              ? latestProperty.name
-              : "No property records available.",
-            "emerald",
-          ],
-          [
-            "Search Results",
-            "manage_search",
-            String(filteredProperties.length),
-            "Filtered count based on your current search.",
-            "amber",
-          ],
-        ].map(([title, icon, value, note, tone]) => (
-          <article
-            key={title}
-            className={[
-              "rounded-xl bg-white p-5 shadow-sm dark:bg-slate-900/80",
-              tone === "emerald" && "border border-emerald-200",
-              tone === "blue" && "border border-blue-200",
-              tone === "amber" && "border border-amber-200",
-              tone === "primary" &&
-                "border border-slate-200 dark:border-slate-700",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                {title}
-              </p>
-              <span
-                className={[
-                  "material-symbols-outlined rounded-lg p-2",
-                  tone === "emerald" && "bg-emerald-100 text-emerald-600",
-                  tone === "blue" && "bg-blue-100 text-blue-600",
-                  tone === "amber" && "bg-amber-100 text-amber-600",
-                  tone === "primary" && "bg-primary/10 text-primary",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {icon}
-              </span>
-            </div>
-            <p className="text-3xl font-bold">{value}</p>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {note}
-            </p>
-          </article>
-        ))}
-      </section>
+
 
       <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -811,7 +741,7 @@ export function PropertiesPage() {
                   ))}
                 </section>
 
-                <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+                {/* <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
                   <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
                     <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                       Summary
@@ -893,7 +823,7 @@ export function PropertiesPage() {
                       ))}
                     </div>
                   </article>
-                </section>
+                </section> */}
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
                   <div className="flex flex-wrap items-center justify-between gap-3">

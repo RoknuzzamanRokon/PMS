@@ -203,6 +203,15 @@ function formatRateValue(value) {
   return Number.isFinite(numeric) ? numeric.toFixed(2) : "0.00";
 }
 
+function formatMoneyWithCurrency(currency, value) {
+  const normalizedCurrency = (currency || "USD").toUpperCase();
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) {
+    return `${normalizedCurrency} 0.00`;
+  }
+  return `${normalizedCurrency} ${amount.toFixed(2)}`;
+}
+
 function parseIntegerValue(value) {
   const numeric = Number.parseInt(String(value), 10);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -518,6 +527,36 @@ export function DailyRatesPage({ propertyId }) {
   const [newRatePlanForm, setNewRatePlanForm] = useState(createRatePlanForm(null));
   const days = useMemo(() => createDays(calendarStartDate, totalDays), [calendarStartDate]);
   const visibleDays = useMemo(() => days.slice(0, range), [days, range]);
+  const ratePlanPreview = useMemo(() => {
+    const baseRate = parseRateValue(newRatePlanForm.base_rate);
+    const taxAndServiceFee = parseRateValue(newRatePlanForm.tax_and_service_fee);
+    const surcharges = parseRateValue(newRatePlanForm.surcharges);
+    const mandatoryFee = parseRateValue(newRatePlanForm.mandatory_fee);
+    const resortFee = parseRateValue(newRatePlanForm.resort_fee);
+    const mandatoryTax = parseRateValue(newRatePlanForm.mandatory_tax);
+    const subtotal =
+      baseRate +
+      taxAndServiceFee +
+      surcharges +
+      mandatoryFee +
+      resortFee +
+      mandatoryTax;
+
+    return {
+      baseRate,
+      taxAndServiceFee,
+      surcharges,
+      mandatoryFee,
+      resortFee,
+      mandatoryTax,
+      subtotal,
+      totalInventory: parseIntegerValue(newRatePlanForm.total_inventory),
+      availableInventory: parseIntegerValue(newRatePlanForm.available_inventory),
+      soldInventory: parseIntegerValue(newRatePlanForm.sold_inventory),
+      minStay: parseIntegerValue(newRatePlanForm.min_stay),
+      maxStay: parseIntegerValue(newRatePlanForm.max_stay),
+    };
+  }, [newRatePlanForm]);
 
   useEffect(() => {
     setSelectedProperty(propertyId || "");
@@ -2063,6 +2102,119 @@ export function DailyRatesPage({ propertyId }) {
                     <span>{label}</span>
                   </label>
                 ))}
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Preview</p>
+                    <h4 className="mt-2 text-lg font-bold text-slate-900">
+                      {newRatePlanForm.title || "Untitled Rate Plan"}
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {[
+                        newRatePlanForm.room_id || selectedRoomForRatePlan?.room_id,
+                        newRatePlanForm.meal_plan || "Meal plan pending",
+                        newRatePlanForm.bed_type || "Bed type pending",
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white px-4 py-3 text-right shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Subtotal Price</p>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">
+                      {formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.subtotal)}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Base + tax/service + surcharges + mandatory fees
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Price Breakdown</p>
+                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      <div className="flex items-center justify-between">
+                        <span>Base rate</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.baseRate)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Tax & service</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.taxAndServiceFee)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Surcharges</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.surcharges)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Mandatory fee</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.mandatoryFee)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Resort fee</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.resortFee)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span>Mandatory tax</span>
+                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.mandatoryTax)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Inventory Snapshot</p>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      {[
+                        ["Total", ratePlanPreview.totalInventory],
+                        ["Available", ratePlanPreview.availableInventory],
+                        ["Sold", ratePlanPreview.soldInventory],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-xl bg-slate-50 px-3 py-3 text-center">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+                          <p className="mt-1 text-base font-bold text-slate-900">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                      Stay window: <span className="font-bold text-slate-900">{ratePlanPreview.minStay}</span> to{" "}
+                      <span className="font-bold text-slate-900">{ratePlanPreview.maxStay}</span> nights
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Flags & Policy</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {[
+                        newRatePlanForm.status ? "Active" : "Inactive",
+                        newRatePlanForm.is_refundable ? "Refundable" : "Non-refundable",
+                        newRatePlanForm.closed_to_arrival ? "CTA" : null,
+                        newRatePlanForm.closed_to_departure ? "CTD" : null,
+                        newRatePlanForm.stop_sell ? "Stop Sell" : null,
+                      ]
+                        .filter(Boolean)
+                        .map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                    </div>
+                    <div className="mt-4 space-y-2 text-sm text-slate-600">
+                      <p>
+                        Cancellation: <span className="font-bold text-slate-900">{newRatePlanForm.cancellation_policy || "Not set"}</span>
+                      </p>
+                      <p>
+                        Extra adult: <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, newRatePlanForm.extra_adult_rate)}</span>
+                      </p>
+                      <p>
+                        Extra child: <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, newRatePlanForm.extra_child_rate)}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
               {ratePlanModalError ? (
                 <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">

@@ -9,12 +9,25 @@ from ..models import Property, RatePlan, ReservationRoom, Room
 from ..schemas import RoomCreate, RoomDetailRead, RoomRead, RoomUpdate
 from ..utils import next_code
 
+
 router = APIRouter(prefix="/api/v1/rooms", tags=["rooms"])
 
 
 @router.get("", response_model=list[RoomRead])
 def list_rooms(property_id: str | None = None, db: Session = Depends(get_db)):
     stmt = select(Room).order_by(Room.created_at.desc())
+    if property_id:
+        stmt = stmt.where(Room.property_id == property_id)
+    return db.execute(stmt).scalars().all()
+
+
+@router.get("/live-rooms", response_model=list[RoomRead])
+def list_live_rooms(property_id: str | None = None, db: Session = Depends(get_db)):
+    stmt = (
+        select(Room)
+        .where(Room.room_status == "LIVE")
+        .order_by(Room.created_at.desc())
+    )
     if property_id:
         stmt = stmt.where(Room.property_id == property_id)
     return db.execute(stmt).scalars().all()
@@ -175,3 +188,13 @@ def update_room(room_id: str, payload: RoomUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(room)
     return room
+
+
+@router.get("/live-rooms", response_model=list[RoomRead])
+def list_live_rooms(property_id: str | None = None, db: Session = Depends(get_db)):
+    stmt = (
+        select(Room).where(Room.room_status == "LIVE").order_by(Room.created_at.desc())
+    )
+    if property_id:
+        stmt = stmt.where(Room.property_id == property_id)
+    return db.execute(stmt).scalars().all()

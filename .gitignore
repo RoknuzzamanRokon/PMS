@@ -1,11 +1,5 @@
-<<<<<<< HEAD
-backend/log/
-frontend/.env.production
-frontend/log/
-*.sh
-=======
 *.sh
 backend/log/
 frontend/.env.production
 frontend/log/
->>>>>>> f95d854a82057e5e8b179b0f736ad6c9d7261c5b
+

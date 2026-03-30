@@ -5,6 +5,7 @@ from .auth import router as auth_router
 from .dashboard import router as dashboard_router
 from .guests import router as guests_router
 from .inventory import router as inventory_router
+from .live_project_push import router as live_project_push_router
 from .meal_plans import router as meal_plans_router
 from .properties import router as properties_router
 from .rate_plans import router as rate_plans_router
@@ -18,6 +19,7 @@ api_router.include_router(auth_router)
 api_router.include_router(available_rooms_router)
 api_router.include_router(properties_router)
 api_router.include_router(meal_plans_router)
+api_router.include_router(live_project_push_router)
 api_router.include_router(rooms_router)
 api_router.include_router(rate_plans_router)
 api_router.include_router(guests_router)

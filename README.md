@@ -77,11 +77,9 @@ From the `backend` directory:
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install pipenv
 pipenv install
-.venv/bin/uvicorn app.main:app --reload
+pipenv shell
+pipenv run uvicorn app.main:app --reload
 ```
 
 The API will run at:

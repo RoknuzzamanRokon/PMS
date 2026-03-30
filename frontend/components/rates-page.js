@@ -2103,6 +2103,16 @@ export function DailyRatesPage({ propertyId }) {
                   </label>
                 ))}
               </div>
+              {ratePlanModalError ? (
+                <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                  {ratePlanModalError}
+                </p>
+              ) : null}
+              {ratePlanModalSuccess ? (
+                <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                  {ratePlanModalSuccess}
+                </p>
+              ) : null}
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
@@ -2216,16 +2226,6 @@ export function DailyRatesPage({ propertyId }) {
                   </div>
                 </div>
               </div>
-              {ratePlanModalError ? (
-                <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                  {ratePlanModalError}
-                </p>
-              ) : null}
-              {ratePlanModalSuccess ? (
-                <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                  {ratePlanModalSuccess}
-                </p>
-              ) : null}
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"

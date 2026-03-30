@@ -1,1 +1,4 @@
 *.sh
+backend/log/
+frontend/.env.production
+frontend/log/

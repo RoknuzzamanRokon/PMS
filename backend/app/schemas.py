@@ -479,6 +479,8 @@ class ReservationUpdate(BaseModel):
     check_out_date: Optional[date] = None
     booking_status: Optional[str] = None
     currency: Optional[str] = None
+    room_id: Optional[str] = None
+    rate_id: Optional[str] = None
 
 
 class PaymentCreate(BaseModel):

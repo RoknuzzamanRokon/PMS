@@ -282,6 +282,21 @@ def update_reservation(
         .scalars()
         .all()
     )
+    current_room = reservation_rooms[0] if reservation_rooms else None
+    next_room_id = payload.room_id or (current_room.room_id if current_room else None)
+    next_rate_id = payload.rate_id or (current_room.rate_id if current_room else None)
+    is_same_room_rate = (
+        next_room_id == (current_room.room_id if current_room else None)
+        and next_rate_id == (current_room.rate_id if current_room else None)
+    )
+
+    if (
+        payload.room_id is not None or payload.rate_id is not None
+    ) and len(reservation_rooms) != 1:
+        raise HTTPException(
+            status_code=409,
+            detail="Drag update for room or rate is supported only for reservations with one room.",
+        )
 
     if reservation_rooms and (payload.booking_status or reservation.booking_status).upper() != "CANCELLED":
         available_room_options = get_available_room_options(
@@ -293,13 +308,18 @@ def update_reservation(
             exclude_booking_id=reservation.booking_id,
         )
         available_room_rate_pairs = {(item["room_id"], item["rate_id"]) for item in available_room_options}
+        available_room_options_by_pair = {
+            (item["room_id"], item["rate_id"]): item for item in available_room_options
+        }
         for item in reservation_rooms:
-            if is_same_stay_window:
+            room_id_to_validate = next_room_id if item is current_room and next_room_id else item.room_id
+            rate_id_to_validate = next_rate_id if item is current_room and next_rate_id else item.rate_id
+            if is_same_stay_window and is_same_room_rate:
                 continue
-            if (item.room_id, item.rate_id) not in available_room_rate_pairs:
+            if (room_id_to_validate, rate_id_to_validate) not in available_room_rate_pairs:
                 raise HTTPException(
                     status_code=422,
-                    detail=f"Room {item.room_id} with rate plan {item.rate_id} is not available for the selected dates.",
+                    detail=f"Room {room_id_to_validate} with rate plan {rate_id_to_validate} is not available for the selected dates.",
                 )
 
     previous_check_in_date = reservation.check_in_date
@@ -317,6 +337,16 @@ def update_reservation(
         reservation.booking_status = payload.booking_status
     if payload.currency is not None:
         reservation.currency = payload.currency
+    if current_room and (payload.room_id is not None or payload.rate_id is not None):
+        selected_pair = (next_room_id, next_rate_id)
+        available_option = available_room_options_by_pair[selected_pair]
+        room = db.scalar(select(Room).where(Room.room_id == next_room_id))
+        current_room.room_id = next_room_id
+        current_room.rate_id = next_rate_id
+        current_room.room_name = room.room_name if room else next_room_id
+        current_room.room_name_lang = room.room_name_lang if room else None
+        current_room.room_rate_snapshot = available_option["base_rate"]
+        current_room.tax_snapshot = available_option["tax_and_service_fee"]
 
     adjust_reservation_inventory(db, reservation, delta=1)
     recalculate_reservation_total(reservation, db)

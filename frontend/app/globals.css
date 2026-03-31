@@ -154,7 +154,7 @@ a {
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: 180px repeat(var(--inventory-days, 15), minmax(100px, 1fr));
+  grid-template-columns: 180px 240px repeat(var(--inventory-days, 15), minmax(100px, 1fr));
 }
 
 .rates-grid {

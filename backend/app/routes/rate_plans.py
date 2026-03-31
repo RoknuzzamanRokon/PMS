@@ -14,6 +14,7 @@ from ..models import (
     Reservation,
     ReservationRoom,
     Room,
+    RoomInventoryCalendar,
 )
 from ..schemas import (
     AvailabilityStatusRead,
@@ -65,6 +66,65 @@ def _get_live_rate_plan_or_409(db: Session, rate_id: str) -> RatePlan:
         raise HTTPException(status_code=404, detail="Rate plan not found")
     _get_live_room_or_409(db, rate_plan.room_id)
     return rate_plan
+
+
+def _next_room_inventory_calendar_id(db: Session) -> int:
+    return int(db.scalar(select(func.coalesce(func.max(RoomInventoryCalendar.id), 0))) or 0) + 1
+
+
+def _ensure_room_inventory_calendar_rows(
+    db: Session,
+    room: Room,
+    stay_dates: list[date],
+) -> int:
+    if not stay_dates:
+        return 0
+
+    existing_rows = (
+        db.execute(
+            select(RoomInventoryCalendar).where(
+                RoomInventoryCalendar.room_id == room.room_id,
+                RoomInventoryCalendar.stay_date.in_(stay_dates),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    existing_by_date = {row.stay_date: row for row in existing_rows}
+    next_id = _next_room_inventory_calendar_id(db)
+    created = 0
+
+    for stay_date in stay_dates:
+        row = existing_by_date.get(stay_date)
+        if row:
+            row.property_id = room.property_id
+            row.is_live = 1 if str(room.room_status or "").upper() == LIVE_ROOM_STATUS else 0
+            row.available_inventory = max(row.total_inventory - row.booked_inventory - row.blocked_inventory, 0) if row.is_live else 0
+            continue
+
+        total_inventory = 1
+        booked_inventory = 0
+        blocked_inventory = 0
+        is_live = 1 if str(room.room_status or "").upper() == LIVE_ROOM_STATUS else 0
+        available_inventory = max(total_inventory - booked_inventory - blocked_inventory, 0) if is_live else 0
+        db.add(
+            RoomInventoryCalendar(
+                id=next_id,
+                property_id=room.property_id,
+                room_id=room.room_id,
+                stay_date=stay_date,
+                is_live=is_live,
+                total_inventory=total_inventory,
+                booked_inventory=booked_inventory,
+                blocked_inventory=blocked_inventory,
+                available_inventory=available_inventory,
+            )
+        )
+        next_id += 1
+        created += 1
+
+    db.flush()
+    return created
 
 
 @router.get("/availability-statuses", response_model=list[AvailabilityStatusRead])
@@ -321,10 +381,14 @@ def bulk_upsert_rate_calendar(
     payload: CalendarBulkUpsertRequest,
     db: Session = Depends(get_db),
 ):
-    _get_live_rate_plan_or_409(db, rate_id)
+    rate_plan = _get_live_rate_plan_or_409(db, rate_id)
+    room = _get_live_room_or_409(db, rate_plan.room_id)
 
     updated = 0
     created = 0
+    room_inventory_created = 0
+    stay_dates = [item.stay_date for item in payload.items]
+    room_inventory_created = _ensure_room_inventory_calendar_rows(db, room, stay_dates)
     for item in payload.items:
         availability_code = _ensure_availability_status_code(db, item.availability)
         existing = db.scalar(
@@ -346,7 +410,13 @@ def bulk_upsert_rate_calendar(
             created += 1
 
     db.commit()
-    return {"rate_id": rate_id, "created": created, "updated": updated}
+    return {
+        "rate_id": rate_id,
+        "room_id": room.room_id,
+        "created": created,
+        "updated": updated,
+        "room_inventory_created": room_inventory_created,
+    }
 
 
 @router.get("/{rate_id}/calendar", response_model=list[CalendarItemRead])

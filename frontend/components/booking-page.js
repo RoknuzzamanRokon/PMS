@@ -442,10 +442,10 @@ export function BookingPage({ propertyId }) {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                          {plan.room_name}
+                          {plan.rate_title}
                         </p>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                          {plan.room_id} • {plan.rate_id} • {plan.rate_title}
+                          {plan.room_name} • {plan.room_id} • {plan.rate_id}
                         </p>
                       </div>
                       <span
@@ -473,7 +473,9 @@ export function BookingPage({ propertyId }) {
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Nights
                         </p>
-                        <p className="mt-2 text-base font-semibold">{plan.total_nights}</p>
+                        <p className="mt-2 text-base font-semibold">
+                          {plan.total_nights}
+                        </p>
                       </div>
                       <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">

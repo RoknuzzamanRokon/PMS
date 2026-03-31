@@ -11,21 +11,21 @@ const inventoryViewOptions = [7, 15, 30];
 const bookingToneClasses = {
   blue: {
     dot: "bg-blue-500",
-    card: "border-blue-500 bg-blue-500/15 hover:bg-blue-500/25",
+    card: "border-blue-500 bg-gradient-to-br from-blue-400/25 via-blue-300/20 to-cyan-200/20 shadow-[0_10px_24px_-18px_rgba(37,99,235,0.9)] hover:from-blue-400/35 hover:via-blue-300/25 hover:to-cyan-200/30",
     title: "text-blue-700",
     meta: "text-blue-600",
     badge: "bg-blue-500 text-white",
   },
   green: {
     dot: "bg-green-500",
-    card: "border-green-500 bg-green-500/15 hover:bg-green-500/25",
+    card: "border-green-500 bg-gradient-to-br from-emerald-400/25 via-green-300/20 to-lime-200/20 shadow-[0_10px_24px_-18px_rgba(34,197,94,0.9)] hover:from-emerald-400/35 hover:via-green-300/25 hover:to-lime-200/30",
     title: "text-green-700",
     meta: "text-green-600",
     badge: "bg-green-500 text-white",
   },
   amber: {
     dot: "bg-amber-400",
-    card: "border-amber-400 bg-amber-400/20 hover:bg-amber-400/30",
+    card: "border-amber-400 bg-gradient-to-br from-amber-300/35 via-yellow-200/30 to-orange-200/25 shadow-[0_10px_24px_-18px_rgba(245,158,11,0.85)] hover:from-amber-300/45 hover:via-yellow-200/35 hover:to-orange-200/30",
     title: "text-amber-700",
     meta: "text-amber-700",
     badge: "bg-amber-400 text-slate-900",
@@ -458,30 +458,35 @@ export function InventoryPage({ propertyId }) {
               {days.map((day) => (
                 <div
                   key={`${day.label}-${day.date}`}
-                  className={[
-                    "flex flex-col items-center justify-center border-r border-slate-200 p-2 dark:border-slate-700",
-                    day.today && "bg-slate-50 dark:bg-slate-800/80",
-                    day.weekend && "bg-slate-100/60 dark:bg-slate-800/40",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
+                  className="border-r border-slate-200 bg-transparent p-2 dark:border-slate-700"
                 >
-                  <span
+                  <div
                     className={[
-                      "text-[10px] font-bold uppercase",
-                      day.today ? "text-primary" : "text-slate-400",
+                      "flex h-full flex-col items-center justify-center rounded-2xl border border-white/70 px-2 py-3 shadow-sm backdrop-blur dark:border-slate-700/70",
+                      "bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-800/80",
+                      day.today &&
+                        "border-primary/30 bg-gradient-to-br from-primary/15 via-white to-sky-50 dark:from-primary/20 dark:via-slate-900 dark:to-sky-950/30",
+                      day.weekend &&
+                        "bg-gradient-to-br from-slate-100 via-white to-slate-200 dark:from-slate-800/90 dark:via-slate-900 dark:to-slate-800/70",
                     ].join(" ")}
                   >
-                    {day.label}
-                  </span>
-                  <span
-                    className={[
-                      "text-sm font-bold",
-                      day.today ? "text-primary" : "text-slate-800 dark:text-slate-200",
-                    ].join(" ")}
-                  >
-                    {day.date}
-                  </span>
+                    <span
+                      className={[
+                        "text-[10px] font-bold uppercase",
+                        day.today ? "text-primary" : "text-slate-400",
+                      ].join(" ")}
+                    >
+                      {day.label}
+                    </span>
+                    <span
+                      className={[
+                        "text-sm font-bold",
+                        day.today ? "text-primary" : "text-slate-800 dark:text-slate-200",
+                      ].join(" ")}
+                    >
+                      {day.date}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -500,24 +505,41 @@ export function InventoryPage({ propertyId }) {
                     </span>
                   </div>
                   <div
-                    className="relative h-full border-r border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-900/70"
+                    className="relative h-full border-r border-slate-100 bg-transparent p-1 dark:border-slate-800"
                     style={{
                       gridColumn: "2 / -1",
                       display: "grid",
                       gridTemplateColumns: `repeat(${calendar.days}, minmax(${dayColumnWidth}px, 1fr))`,
                     }}
                   >
-                    <div className="pointer-events-none absolute left-[0px] top-0 h-full w-[100px] border-x border-primary/10 bg-primary/5 dark:border-primary/20 dark:bg-primary/10" />
+                    {days.map((day) => (
+                      <div
+                        key={`${row.room_id}-${day.label}-${day.date}`}
+                        className="pointer-events-none border-r border-slate-100 bg-transparent p-1 dark:border-slate-800"
+                      >
+                        <div
+                          className={[
+                            "h-full rounded-2xl border border-white/70 shadow-sm backdrop-blur dark:border-slate-700/60",
+                            "bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-900/90 dark:via-slate-900/80 dark:to-slate-800/60",
+                            day.today &&
+                              "bg-gradient-to-br from-primary/10 via-white to-sky-50 dark:from-primary/20 dark:via-slate-900/85 dark:to-sky-950/20",
+                            day.weekend &&
+                              "bg-gradient-to-br from-slate-100 via-white to-slate-200 dark:from-slate-800/80 dark:via-slate-900/80 dark:to-slate-800/60",
+                          ].join(" ")}
+                        />
+                      </div>
+                    ))}
+                    <div className="pointer-events-none absolute left-[5px] top-[5px] h-[calc(100%-10px)] w-[90px] rounded-2xl border border-primary/10 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent dark:border-primary/20 dark:from-primary/20 dark:via-primary/10 dark:to-transparent" />
                     {row.booking ? (
                       <div
-                        className="absolute top-2 z-10 h-12 px-1"
+                        className="absolute inset-y-[5px] z-10 px-1"
                         style={{
                           left: `${
                             (dragState?.bookingId === row.booking.booking_id
                               ? dragState.previewLeftDays
-                              : row.booking.left_days) * dayColumnWidth
+                              : row.booking.left_days) * dayColumnWidth + 5
                           }px`,
-                          width: `${row.booking.duration_days * dayColumnWidth}px`,
+                          width: `${(row.booking.duration_days + 1) * dayColumnWidth - 10}px`,
                         }}
                       >
                         {(() => {
@@ -526,56 +548,71 @@ export function InventoryPage({ propertyId }) {
                           const [bookingId, bookingStatus] = String(row.booking.meta || "")
                             .split(" • ");
                           return (
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          onMouseDown={(event) => {
-                            if (savingBookingId) {
-                              return;
-                            }
-                            event.preventDefault();
-                            setCalendarError("");
-                            setCalendarSuccess("");
-                            setDragState({
-                              bookingId: row.booking.booking_id,
-                              startX: event.clientX,
-                              originalLeftDays: row.booking.left_days,
-                              previewLeftDays: row.booking.left_days,
-                              durationDays: row.booking.duration_days,
-                              hasMoved: false,
-                            });
-                          }}
-                          onClick={() => {
-                            if (ignoreNextClickBookingId === row.booking.booking_id) {
-                              return;
-                            }
-                            openBookingEditor(row.booking, row);
-                          }}
-                          className={[
-                            "flex h-full cursor-grab flex-col justify-center overflow-hidden rounded-lg border-l-4 p-2 transition-all active:cursor-grabbing",
-                            tone.card,
-                            savingBookingId === row.booking.booking_id && "opacity-60",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={["truncate text-[10px] font-black uppercase", tone.title].join(" ")}>
-                              {row.booking.guest_name}
-                            </p>
-                            <span
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onMouseDown={(event) => {
+                                if (savingBookingId) {
+                                  return;
+                                }
+                                event.preventDefault();
+                                setCalendarError("");
+                                setCalendarSuccess("");
+                                setDragState({
+                                  bookingId: row.booking.booking_id,
+                                  startX: event.clientX,
+                                  originalLeftDays: row.booking.left_days,
+                                  previewLeftDays: row.booking.left_days,
+                                  durationDays: row.booking.duration_days,
+                                  hasMoved: false,
+                                });
+                              }}
+                              onClick={() => {
+                                if (
+                                  ignoreNextClickBookingId ===
+                                  row.booking.booking_id
+                                ) {
+                                  return;
+                                }
+                                openBookingEditor(row.booking, row);
+                              }}
                               className={[
-                                "shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider",
-                                tone.badge,
-                              ].join(" ")}
+                                "flex h-full cursor-grab flex-col justify-center overflow-hidden rounded-[18px] border-l-4 border-r-4 px-3 py-2.5 transition-all active:cursor-grabbing",
+                                "backdrop-blur-[2px] ring-1 ring-white/30",
+                                tone.card,
+                                savingBookingId === row.booking.booking_id &&
+                                  "opacity-60",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
                             >
-                              {bookingStatus || "CONFIRMED"}
-                            </span>
-                          </div>
-                          <p className={["truncate text-[9px]", tone.meta].join(" ")}>
-                            {bookingId || row.booking.booking_id}
-                          </p>
-                        </div>
+                              <div className="flex items-center justify-between gap-2">
+                                <p
+                                  className={[
+                                    "truncate text-[10px] font-black uppercase tracking-[0.12em]",
+                                    tone.title,
+                                  ].join(" ")}
+                                >
+                                  {row.booking.guest_name}
+                                </p>
+                                <span
+                                  className={[
+                                    "shrink-0 rounded-full px-2 py-0.5 text-[8px] font-black uppercase tracking-wider",
+                                    tone.badge,
+                                  ].join(" ")}
+                                >
+                                  {bookingStatus || "CONFIRMED"}
+                                </span>
+                              </div>
+                              <p
+                                className={[
+                                  "mt-1 truncate text-[9px] font-semibold",
+                                  tone.meta,
+                                ].join(" ")}
+                              >
+                                {bookingId || row.booking.booking_id}
+                              </p>
+                            </div>
                           );
                         })()}
                       </div>

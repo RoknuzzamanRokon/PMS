@@ -1773,11 +1773,11 @@ export function DailyRatesPage({ propertyId }) {
                           <p className="mt-1 text-sm text-blue-800">{summary.total_active_rate}</p>
                         </div>
                         <div className="rounded-lg bg-amber-50 px-2.5 py-2 text-amber-700">
-                          <p className="text-[9px] text-amber-600">Booked</p>
+                          <p className="text-[9px] text-amber-600">Booked -</p>
                           <p className="mt-1 text-sm text-amber-800">{summary.booked_room}</p>
                         </div>
                         <div className="rounded-lg bg-rose-50 px-2.5 py-2 text-rose-700">
-                          <p className="text-[9px] text-rose-600">Unavailable</p>
+                          <p className="text-[9px] text-rose-600">Unava- ilable</p>
                           <p className="mt-1 text-sm text-rose-800">{summary.unavailable_room}</p>
                         </div>
                       </div>
@@ -1988,121 +1988,177 @@ export function DailyRatesPage({ propertyId }) {
                   Loading full rate plan details...
                 </p>
               ) : null}
-              <div className="grid gap-4 md:grid-cols-1">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</span>
-                  <input
-                    value={newRatePlanForm.title}
-                    onChange={(event) => setNewRatePlanForm((current) => ({ ...current, title: event.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
+              <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3.5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Room Summary</p>
+                    <h4 className="mt-1 text-sm font-bold text-slate-900">
+                      {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id || "Selected Room"}
+                    </h4>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {[
+                        selectedRoomForRatePlan?.room_id,
+                        selectedRoomForRatePlan?.room_name_lang,
+                        selectedRoomForRatePlan?.room_status,
+                      ]
+                        .filter(Boolean)
+                        .join(" • ")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Total Room Amount</p>
+                    <p className="mt-1 text-lg font-bold text-slate-900">
+                      {formatMoneyWithCurrency(
+                        newRatePlanForm.currency || "USD",
+                        Number(selectedRoomForRatePlan?.base_rate || 0) +
+                          Number(selectedRoomForRatePlan?.tax_and_service_fee || 0) +
+                          Number(selectedRoomForRatePlan?.surcharges || 0) +
+                          Number(selectedRoomForRatePlan?.mandatory_fee || 0) +
+                          Number(selectedRoomForRatePlan?.resort_fee || 0) +
+                          Number(selectedRoomForRatePlan?.mandatory_tax || 0),
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2.5 grid gap-2 md:grid-cols-6">
+                  {[
+                    ["Base Rate --", selectedRoomForRatePlan?.base_rate || 0],
+                    ["Tax & Service", selectedRoomForRatePlan?.tax_and_service_fee || 0],
+                    ["Surcharges --", selectedRoomForRatePlan?.surcharges || 0],
+                    ["Mandatory Fee", selectedRoomForRatePlan?.mandatory_fee || 0],
+                    ["Resort Fee", selectedRoomForRatePlan?.resort_fee || 0],
+                    ["Mandatory Tax", selectedRoomForRatePlan?.mandatory_tax || 0],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl bg-white px-2.5 py-2 shadow-sm">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                      <p className="mt-0.5 text-xs font-bold text-slate-900">
+                        {formatMoneyWithCurrency(newRatePlanForm.currency || "USD", value)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-                <textarea
-                  value={newRatePlanForm.description}
-                  onChange={(event) => setNewRatePlanForm((current) => ({ ...current, description: event.target.value }))}
-                  rows={3}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                />
-              </label>
-              <div className="grid gap-4 md:grid-cols-4">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Meal Plan</span>
-                  <select
-                    value={newRatePlanForm.meal_plan}
-                    onChange={(event) =>
-                      setNewRatePlanForm((current) => ({ ...current, meal_plan: event.target.value }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  >
-                    {mealPlanOptions.map((mealPlan) => (
-                      <option key={mealPlan.value} value={mealPlan.value}>
-                        {mealPlan.label}
-                      </option>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Rate Details</p>
+                <div className="mt-4 space-y-4">
+                  <div className="grid gap-4 md:grid-cols-1">
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</span>
+                      <input
+                        value={newRatePlanForm.title}
+                        onChange={(event) => setNewRatePlanForm((current) => ({ ...current, title: event.target.value }))}
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      />
+                    </label>
+                  </div>
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
+                    <textarea
+                      value={newRatePlanForm.description}
+                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, description: event.target.value }))}
+                      rows={3}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                    />
+                  </label>
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Meal Plan</span>
+                      <select
+                        value={newRatePlanForm.meal_plan}
+                        onChange={(event) =>
+                          setNewRatePlanForm((current) => ({ ...current, meal_plan: event.target.value }))
+                        }
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      >
+                        {mealPlanOptions.map((mealPlan) => (
+                          <option key={mealPlan.value} value={mealPlan.value}>
+                            {mealPlan.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {[
+                      ["bed_type", "Bed Type"],
+                      ["currency", "Currency"],
+                      ["cancellation_policy", "Cancellation"],
+                    ].map(([field, label]) => (
+                      <label key={field} className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                        <input
+                          value={newRatePlanForm[field]}
+                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                        />
+                      </label>
                     ))}
-                  </select>
-                </label>
-                {[
-                  ["bed_type", "Bed Type"],
-                  ["currency", "Currency"],
-                  ["cancellation_policy", "Cancellation"],
-                ].map(([field, label]) => (
-                  <label key={field} className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                    <input
-                      value={newRatePlanForm[field]}
-                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                    />
-                  </label>
-                ))}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-4">
+                    {[
+                      ["base_rate", "Base Rate"],
+                      ["tax_and_service_fee", "Tax & Service"],
+                      ["surcharges", "Surcharges"],
+                      ["mandatory_fee", "Mandatory Fee"],
+                      ["resort_fee", "Resort Fee"],
+                      ["mandatory_tax", "Mandatory Tax"],
+                      ["extra_adult_rate", "Extra Adult"],
+                      ["extra_child_rate", "Extra Child"],
+                    ].map(([field, label]) => (
+                      <label key={field} className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={newRatePlanForm[field]}
+                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-4">
+                    {[
+                      ["min_stay", "Min Stay"],
+                      ["max_stay", "Max Stay"],
+                      ["total_inventory", "Total Inventory"],
+                      ["available_inventory", "Available"],
+                      ["sold_inventory", "Sold"],
+                    ].map(([field, label]) => (
+                      <label key={field} className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={newRatePlanForm[field]}
+                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-5">
+                    {[
+                      ["is_refundable", "Refund able"],
+                      ["status", "Active"],
+                      ["closed_to_arrival", "CTA"],
+                      ["closed_to_departure", "CTD"],
+                      ["stop_sell", "Stop Sell"],
+                    ].map(([field, label]) => (
+                      <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(newRatePlanForm[field])}
+                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.checked }))}
+                          className="size-4 rounded border-slate-300"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-4">
-                {[
-                  ["base_rate", "Base Rate"],
-                  ["tax_and_service_fee", "Tax & Service"],
-                  ["surcharges", "Surcharges"],
-                  ["mandatory_fee", "Mandatory Fee"],
-                  ["resort_fee", "Resort Fee"],
-                  ["mandatory_tax", "Mandatory Tax"],
-                  ["extra_adult_rate", "Extra Adult"],
-                  ["extra_child_rate", "Extra Child"],
-                ].map(([field, label]) => (
-                  <label key={field} className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newRatePlanForm[field]}
-                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                    />
-                  </label>
-                ))}
-              </div>
-              <div className="grid gap-4 md:grid-cols-4">
-                {[
-                  ["min_stay", "Min Stay"],
-                  ["max_stay", "Max Stay"],
-                  ["total_inventory", "Total Inventory"],
-                  ["available_inventory", "Available"],
-                  ["sold_inventory", "Sold"],
-                ].map(([field, label]) => (
-                  <label key={field} className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={newRatePlanForm[field]}
-                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                    />
-                  </label>
-                ))}
-              </div>
-              <div className="grid gap-3 md:grid-cols-5">
-                {[
-                  ["is_refundable", "Refundable"],
-                  ["status", "Active"],
-                  ["closed_to_arrival", "CTA"],
-                  ["closed_to_departure", "CTD"],
-                  ["stop_sell", "Stop Sell"],
-                ].map(([field, label]) => (
-                  <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(newRatePlanForm[field])}
-                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.checked }))}
-                      className="size-4 rounded border-slate-300"
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
               {ratePlanModalError ? (
                 <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
                   {ratePlanModalError}
@@ -2118,7 +2174,14 @@ export function DailyRatesPage({ propertyId }) {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Preview</p>
                     <h4 className="mt-2 text-lg font-bold text-slate-900">
-                      {newRatePlanForm.title || "Untitled Rate Plan"}
+                      {String(newRatePlanForm.title || "Untitled Rate Plan")
+                        .match(/.{1,20}/g)
+                        ?.map((chunk, index) => (
+                          <span key={`${chunk}-${index}`}>
+                            {chunk}
+                            <br />
+                          </span>
+                        ))}
                     </h4>
                     <p className="mt-1 text-sm text-slate-500">
                       {[
@@ -2130,7 +2193,7 @@ export function DailyRatesPage({ propertyId }) {
                         .join(" • ")}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-white px-4 py-3 text-right shadow-sm">
+                  <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Subtotal Price</p>
                     <p className="mt-2 text-2xl font-bold text-slate-900">
                       {formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.subtotal)}
@@ -2242,6 +2305,7 @@ export function DailyRatesPage({ propertyId }) {
                   {savingNewRatePlan ? "Saving..." : ratePlanModalMode === "edit" ? "Save Rate Plan" : "Create Rate Plan"}
                 </button>
               </div>
+              </div>
             </form>
           </div>
         </div>
@@ -2251,7 +2315,7 @@ export function DailyRatesPage({ propertyId }) {
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plans</p>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plan List</p>
                 <h3 className="mt-2 text-2xl font-bold text-slate-900">
                   {activeRoomPlansModal.room_name} · {activeRoomPlansModal.room_id}
                 </h3>

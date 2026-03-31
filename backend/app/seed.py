@@ -99,20 +99,33 @@ def seed_database(db: Session) -> None:
             )
 
     availability_status_records = [
-        (1, "1", "AVAILABLE", "Room is free and can be booked."),
-        (2, "2", "BOOKED", "Room is already reserved by a guest."),
-        (3, "3", "STOP_SELL", "Hotel stops selling the room even if inventory exists."),
-        (4, "4", "CTA", "Guests cannot check-in on that date, but they may stay if they checked in earlier."),
-        (5, "5", "CTD", "Guests cannot check out on that date."),
-        (6, "6", "OUT_OF_ORDER", "Room cannot be sold because of maintenance or damage."),
-        (7, "7", "OUT_OF_SERVICE", "Room is temporarily unavailable but not under major repair."),
-        (11, "8", "OVERBOOKED", "Hotel sells more rooms than available intentionally."),
+        (1, "AVAILABLE", "AVAILABLE", "Room is free and can be booked."),
+        (2, "BOOKED", "BOOKED", "Room is already reserved by a guest."),
+        (3, "STOP_SELL", "STOP_SELL", "Hotel stops selling the room even if inventory exists."),
+        (4, "CTA", "CTA", "Guests cannot check-in on that date, but they may stay if they checked in earlier."),
+        (5, "CTD", "CTD", "Guests cannot check out on that date."),
+        (6, "OUT_OF_ORDER", "OUT_OF_ORDER", "Room cannot be sold because of maintenance or damage."),
+        (7, "OUT_OF_SERVICE", "OUT_OF_SERVICE", "Room is temporarily unavailable but not under major repair."),
+        (8, "UNAVAILABLE", "UNAVAILABLE", "Room is unavailable for sale on that date."),
+        (9, "SOLD_OUT", "SOLD_OUT", "No sellable inventory remains for that date."),
+        (10, "OVERBOOKED", "OVERBOOKED", "Hotel sells more rooms than available intentionally."),
     ]
+    expected_availability_codes = {code for _, code, _, _ in availability_status_records}
     for status_id, code, title, description in availability_status_records:
-        status = db.scalar(select(AvailabilityStatus).where(AvailabilityStatus.code == code))
+        matches = db.execute(
+            select(AvailabilityStatus).where(
+                (AvailabilityStatus.code == code) | (AvailabilityStatus.title == title)
+            )
+        ).scalars().all()
+        status = matches[0] if matches else None
         if status:
+            status.code = code
             status.title = title
             status.description = description
+            if status.id is None:
+                status.id = status_id
+            for duplicate in matches[1:]:
+                db.delete(duplicate)
         else:
             db.add(
                 AvailabilityStatus(
@@ -122,6 +135,13 @@ def seed_database(db: Session) -> None:
                     description=description,
                 )
             )
+
+    stale_numeric_statuses = db.execute(
+        select(AvailabilityStatus).where(AvailabilityStatus.code.not_in(expected_availability_codes))
+    ).scalars().all()
+    for stale_status in stale_numeric_statuses:
+        if str(stale_status.code or "").isdigit():
+            db.delete(stale_status)
 
     if not _exists(db, User, "username", "admin"):
         db.add(

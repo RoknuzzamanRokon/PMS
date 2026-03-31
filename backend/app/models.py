@@ -214,7 +214,7 @@ class AvailabilityStatus(Base):
     __tablename__ = "z_availability_status"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    code: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     description: Mapped[str | None] = mapped_column("desc", String(255), nullable=True)
 

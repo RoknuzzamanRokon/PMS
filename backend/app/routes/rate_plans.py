@@ -30,6 +30,23 @@ LIVE_ROOM_STATUS = "LIVE"
 HARD_BOOKING_STATUSES = {"CONFIRMED", "CHECKED_IN"}
 
 
+def _ensure_availability_status_code(db: Session, availability_code: str | None) -> str:
+    code = str(availability_code or "AVAILABLE").strip().upper()
+    existing = db.scalar(select(AvailabilityStatus).where(AvailabilityStatus.code == code))
+    if existing:
+        return code
+
+    db.add(
+        AvailabilityStatus(
+            code=code,
+            title=code.replace("-", " ").replace("_", " "),
+            description=f"Auto-created status for rate calendar availability: {code}.",
+        )
+    )
+    db.flush()
+    return code
+
+
 def _get_live_room_or_409(db: Session, room_id: str) -> Room:
     room = db.scalar(select(Room).where(Room.room_id == room_id))
     if not room:
@@ -309,6 +326,7 @@ def bulk_upsert_rate_calendar(
     updated = 0
     created = 0
     for item in payload.items:
+        availability_code = _ensure_availability_status_code(db, item.availability)
         existing = db.scalar(
             select(RateCalendar).where(
                 RateCalendar.rate_id == rate_id,
@@ -319,10 +337,12 @@ def bulk_upsert_rate_calendar(
             existing.currency = item.currency
             existing.base_rate = item.base_rate
             existing.tax = item.tax
-            existing.availability = item.availability
+            existing.availability = availability_code
             updated += 1
         else:
-            db.add(RateCalendar(rate_id=rate_id, **item.model_dump()))
+            payload_data = item.model_dump()
+            payload_data["availability"] = availability_code
+            db.add(RateCalendar(rate_id=rate_id, **payload_data))
             created += 1
 
     db.commit()

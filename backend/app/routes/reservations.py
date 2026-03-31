@@ -1,7 +1,7 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -120,6 +120,7 @@ def serialize_reservation(reservation: Reservation, db: Session):
         .all()
     )
     price_breakdown = calculate_reservation_price_breakdown(reservation, reservation_rooms, db)
+    total_stay = max(1, (reservation.check_out_date - reservation.check_in_date).days)
 
     return {
         "booking_id": reservation.booking_id,
@@ -127,11 +128,22 @@ def serialize_reservation(reservation: Reservation, db: Session):
         "guest_id": reservation.guest_id,
         "check_in_date": reservation.check_in_date,
         "check_out_date": reservation.check_out_date,
+        "rooms": [
+            {
+                "room_id": item.room_id,
+                "rate_id": item.rate_id,
+                "room_name": item.room_name,
+                "room_name_lang": item.room_name_lang,
+                "occupant_name": item.occupant_name,
+            }
+            for item in reservation_rooms
+        ],
         "total_price": price_breakdown["total_price"],
         "price": {
             "base_price": price_breakdown["base_price"],
             "tax_price": price_breakdown["tax_price"],
             "per_night_price": price_breakdown["per_night_price"],
+            "total_stay": total_stay,
             "total_price": price_breakdown["total_price"],
         },
         "currency": reservation.currency,
@@ -248,6 +260,23 @@ def list_available_rooms_for_reservation(
         "check_out_date": payload.check_out_date,
         "currency": payload.currency,
         "available_rooms": available_rooms,
+    }
+
+
+@router.get("/get-all")
+def list_all_reservations(
+    property_id: str | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    stmt = select(Reservation).order_by(Reservation.check_in_date.asc(), Reservation.created_at.desc())
+    if property_id:
+        stmt = stmt.where(Reservation.property_id == property_id)
+
+    reservations = db.execute(stmt).scalars().all()
+    return {
+        "property_id": property_id,
+        "total": len(reservations),
+        "reservations": [serialize_reservation(reservation, db) for reservation in reservations],
     }
 
 

@@ -453,7 +453,16 @@ class ReservationPriceBreakdown(BaseModel):
     base_price: Decimal
     tax_price: Decimal
     per_night_price: Decimal
+    total_stay: int
     total_price: Decimal
+
+
+class ReservationRoomRead(BaseModel):
+    room_id: str
+    rate_id: str
+    room_name: Optional[str] = None
+    room_name_lang: Optional[str] = None
+    occupant_name: Optional[str] = None
 
 
 class ReservationRead(APIModel):
@@ -462,6 +471,7 @@ class ReservationRead(APIModel):
     guest_id: str
     check_in_date: date
     check_out_date: date
+    rooms: list[ReservationRoomRead] = Field(default_factory=list)
     total_price: Decimal
     price: ReservationPriceBreakdown
     currency: str

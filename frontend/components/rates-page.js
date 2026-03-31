@@ -366,8 +366,8 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
 
     return {
       roomId: ratePlan.room_id,
-      title: room?.room_name || ratePlan.title,
-      roomLabel: room?.room_id || ratePlan.room_id,
+      title: ratePlan.title || room?.room_name || ratePlan.rate_id,
+      roomLabel: room?.room_name ? `${room.room_name} • ${room.room_id}` : room?.room_id || ratePlan.room_id,
       code: ratePlan.rate_id,
       subtitle: `${ratePlan.available_inventory} available`,
       occupancy: `${occupancyPercent}%`,

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { navItems, profileImage } from "./data";
 import { ThemeToggle } from "./theme-toggle";
+import DotGrid from "./DotGrid";
 
 function NavLink({ item, active, collapsed }) {
   return (
@@ -89,8 +90,25 @@ export function PmsShell({
           </div>
         </div>
       </header>
+    
+      <div 
+        className="fixed inset-0 pointer-events-none"
+        style={{ zIndex: 0 }}
+      >
+        <DotGrid
+          dotSize={5}
+          gap={15}
+          baseColor="#271E37"
+          activeColor="#5227FF"
+          proximity={120}
+          shockRadius={250}
+          shockStrength={5}
+          resistance={750}
+          returnDuration={1.5}
+        />
+      </div>
 
-      <div className="flex grow overflow-hidden pt-[73px]">
+      <div className="flex grow overflow-hidden pt-[73px] relative" style={{ zIndex: 1 }}>
         <aside
           className={[
             "theme-panel fixed left-0 top-[73px] z-30 hidden h-[calc(100vh-73px)] shrink-0 flex-col border-r lg:flex",
@@ -159,7 +177,7 @@ export function PmsShell({
         <div
           className={[
             "fixed bottom-0 left-0 z-40 hidden pb-6 lg:block",
-            sidebarCollapsed ? "flex w-20 justify-center px-0" : "w-64 px-6",
+            sidebarCollapsed ? "flex w-20 justify-center px-3" : "w-64 px-6",
           ].join(" ")}
         >
           <div
@@ -197,3 +215,5 @@ export function PmsShell({
     </div>
   );
 }
+
+

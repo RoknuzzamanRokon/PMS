@@ -4,15 +4,11 @@ import { useTheme } from "./theme-provider";
 import { useState, useRef, useEffect } from "react";
 
 export function ThemeToggle() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const themeMeta = {
-    system: {
-      label: "System",
-      icon: resolvedTheme === "dark" || resolvedTheme === "midnight" ? "desktop_windows" : "devices",
-    },
     light: {
       label: "Light",
       icon: "light_mode",
@@ -31,7 +27,7 @@ export function ThemeToggle() {
     },
   };
 
-  const currentTheme = themeMeta[theme] || themeMeta.system;
+  const currentTheme = themeMeta[theme] || themeMeta.light;
 
   useEffect(() => {
     function handleClickOutside(event) {

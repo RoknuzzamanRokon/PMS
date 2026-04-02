@@ -3,25 +3,21 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 const ThemeContext = createContext({
-  theme: "system",
+  theme: "light",
   resolvedTheme: "light",
   setTheme: () => {},
   toggleTheme: () => {},
 });
 
 const storageKey = "inno-rooms-theme";
-const themeOrder = ["system", "light", "soft-light", "dark", "midnight"];
+const themeOrder = ["light", "soft-light", "dark", "midnight"];
 
 function applyTheme(theme) {
   if (typeof document === "undefined") {
     return "light";
   }
 
-  const prefersDark =
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const resolvedTheme =
-    theme === "system" ? (prefersDark ? "dark" : "light") : theme;
+  const resolvedTheme = theme === "system" ? "light" : theme;
   const root = document.documentElement;
   const isDarkFamily = resolvedTheme === "dark" || resolvedTheme === "midnight";
 
@@ -33,23 +29,14 @@ function applyTheme(theme) {
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState("system");
+  const [theme, setThemeState] = useState("light");
   const [resolvedTheme, setResolvedTheme] = useState("light");
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(storageKey) || "system";
-    setThemeState(savedTheme);
-    setResolvedTheme(applyTheme(savedTheme));
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      setResolvedTheme(applyTheme(window.localStorage.getItem(storageKey) || "system"));
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-    };
+    const savedTheme = window.localStorage.getItem(storageKey) || "light";
+    const normalizedTheme = savedTheme === "system" ? "light" : savedTheme;
+    setThemeState(normalizedTheme);
+    setResolvedTheme(applyTheme(normalizedTheme));
   }, []);
 
   function setTheme(nextTheme) {

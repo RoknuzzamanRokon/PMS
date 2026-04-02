@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const dayColumnWidth = 72;
@@ -151,6 +152,7 @@ const fallbackCalendar = {
 };
 
 export function InventoryPage({ propertyId }) {
+  const { theme } = useTheme();
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
@@ -599,6 +601,7 @@ export function InventoryPage({ propertyId }) {
     editForm.check_in_date,
     editForm.check_out_date,
   );
+  const isSoftLightTheme = theme === "soft-light";
 
   function handleCalendarWheel(event) {
     const scroller = calendarScrollerRef.current;
@@ -774,26 +777,46 @@ export function InventoryPage({ propertyId }) {
                 style={{
                   width: `${roomColumnWidth + calendar.days * dayColumnWidth}px`,
                   borderColor: "var(--soft-border)",
-                  background: "rgba(255, 255, 255, 0.03)", // very soft tint
-                  backdropFilter: "blur(3px)", // soft blur
-                  WebkitBackdropFilter: "blur(6px)", // Safari support
+
+                  background: "rgba(255, 255, 255, 0.01)", // almost invisible
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
                 }}
               >
                 <div
-                  className="sticky top-0 z-30 grid"
+                  className="sticky top-0 z-50 grid"
                   style={{
-                    backgroundColor: "rgba(248, 250, 252, 0.96)",
+                    background: isSoftLightTheme
+                      ? "linear-gradient(135deg, rgba(116, 43, 101, 0.82) 0%, rgba(154, 73, 137, 0.78) 55%, rgba(201, 120, 184, 0.72) 100%)"
+                      : "linear-gradient(180deg, rgba(15, 23, 42, 0.84) 0%, rgba(30, 41, 59, 0.78) 100%)",
+
+                    backdropFilter: "blur(18px) saturate(140%)",
+                    WebkitBackdropFilter: "blur(18px) saturate(140%)",
+
+                    borderBottom: "1px solid rgba(255,255,255,0.16)",
+
                     gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                   }}
                 >
                   <div
-                    className="sticky left-0 z-40 flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.08)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.24)]"
+                    className="sticky left-0 z-[60] flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.18)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.32)]"
                     style={{
-                      borderRight: "1px solid rgba(148, 163, 184, 0.18)",
-                      backgroundColor: "rgba(248, 250, 252, 0.98)",
+                      borderRight: "1px solid rgba(255, 255, 255, 0.18)",
+
+                      background: isSoftLightTheme
+                        ? "linear-gradient(135deg, rgba(96, 33, 84, 0.9) 0%, rgba(140, 56, 123, 0.84) 100%)"
+                        : "linear-gradient(180deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.82) 100%)",
+
+                      backdropFilter: "blur(20px) saturate(145%)",
+                      WebkitBackdropFilter: "blur(20px) saturate(145%)",
                     }}
                   >
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    <span
+                      className={[
+                        "text-[10px] font-bold uppercase tracking-widest",
+                        "text-white/90",
+                      ].join(" ")}
+                    >
                       Room Category
                     </span>
                   </div>
@@ -802,28 +825,28 @@ export function InventoryPage({ propertyId }) {
                       key={day.isoDate}
                       className="min-w-[48px] p-3 text-center"
                       style={{
-                        borderRight: "1px solid rgba(148, 163, 184, 0.12)",
+                        borderRight: "1px solid rgba(255, 255, 255, 0.1)",
                         backgroundColor: day.weekend
-                          ? "rgba(241, 245, 249, 0.92)"
-                          : "transparent",
+                          ? "rgba(255, 255, 255, 0.08)"
+                          : "rgba(255, 255, 255, 0.03)",
                       }}
                     >
                       <div className="flex flex-col items-center">
-                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                        <span className="font-mono text-[10px] text-white/70">
                           {day.label}
                         </span>
                         <span
                           className="mt-1 text-lg font-bold"
                           style={{
                             color: day.today
-                              ? "rgb(15 23 42)"
-                              : "rgb(51 65 85)",
+                              ? "rgb(255 255 255)"
+                              : "rgba(255,255,255,0.92)",
                           }}
                         >
                           {day.date}
                         </span>
                         {day.today ? (
-                          <span className="mt-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white dark:bg-slate-100 dark:text-slate-900">
+                          <span className="mt-1 rounded-full bg-white/18 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
                             Today
                           </span>
                         ) : null}
@@ -895,23 +918,42 @@ export function InventoryPage({ propertyId }) {
                       }}
                     >
                       <div
-                        className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
-                        style={{
-                          minHeight: `${rowHeight}px`,
-                          borderRight: "1px solid rgba(148, 163, 184, 0.18)",
-                          backgroundColor:
-                            rowIndex % 2 === 0
-                              ? "rgba(255,255,255,0.96)"
-                              : "rgba(248,250,252,0.96)",
-                        }}
+                      className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
+                      style={{
+                        minHeight: `${rowHeight}px`,
+                        borderRight: isSoftLightTheme
+                          ? "1px solid rgba(255, 255, 255, 0.2)"
+                          : "1px solid rgba(148, 163, 184, 0.18)",
+                        background: isSoftLightTheme
+                          ? rowIndex % 2 === 0
+                            ? "linear-gradient(135deg, rgba(201, 120, 184, 0.22) 0%, rgba(255, 255, 255, 0.3) 100%)"
+                            : "linear-gradient(135deg, rgba(183, 93, 165, 0.24) 0%, rgba(250, 232, 245, 0.38) 100%)"
+                          : rowIndex % 2 === 0
+                            ? "rgba(255,255,255,0.96)"
+                            : "rgba(248,250,252,0.96)",
+                      }}
+                    >
+                      <span
+                        className={[
+                          "font-headline font-semibold",
+                          isSoftLightTheme
+                            ? "text-[#6f2f62]"
+                            : "text-slate-800 dark:text-slate-100",
+                        ].join(" ")}
                       >
-                        <span className="font-headline font-semibold text-slate-800 dark:text-slate-100">
-                          {room.room_name || room.room_id}
-                        </span>
-                        <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
-                          {room.room_id}
-                        </span>
-                      </div>
+                        {room.room_name || room.room_id}
+                      </span>
+                      <span
+                        className={[
+                          "mt-1 font-mono text-[10px] uppercase tracking-[0.16em]",
+                          isSoftLightTheme
+                            ? "text-[#9b5b8d]"
+                            : "text-slate-400 dark:text-slate-500",
+                        ].join(" ")}
+                      >
+                        {room.room_id}
+                      </span>
+                    </div>
 
                       <div
                         className="relative"
@@ -1002,6 +1044,7 @@ export function InventoryPage({ propertyId }) {
                             displayBooking.meta || "",
                           ).split(" • ");
 
+                          
                           return (
                             <div
                               key={displayBooking.booking_id}

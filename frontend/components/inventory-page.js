@@ -1103,6 +1103,82 @@ export function InventoryPage({ propertyId }) {
     }
   }
 
+  const calendarBodyToneMap = {
+    available: {
+      borderColor: "rgba(16, 185, 129, 0.38)",
+      background:
+        "linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(15, 23, 42, 0.06) 100%)",
+      boxShadow:
+        "0 0 0 1px rgba(16, 185, 129, 0.16), 0 0 0 3px rgba(16, 185, 129, 0.08)",
+      opacity: 1,
+    },
+    unavailable: {
+      borderColor: "rgba(100, 116, 139, 0.22)",
+      background:
+        "linear-gradient(135deg, rgba(148, 163, 184, 0.10) 0%, rgba(15, 23, 42, 0.04) 100%)",
+      boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.08)",
+      opacity: 0.96,
+    },
+    past: {
+      borderColor: "rgba(148, 163, 184, 0.16)",
+      background:
+        "linear-gradient(135deg, rgba(148, 163, 184, 0.06) 0%, rgba(15, 23, 42, 0.02) 100%)",
+      boxShadow: "0 0 0 1px rgba(148, 163, 184, 0.04)",
+      opacity: 0.58,
+    },
+    selected: {
+      borderColor: "rgba(99, 102, 241, 0.54)",
+      background:
+        "linear-gradient(135deg, rgba(99, 102, 241, 0.26) 0%, rgba(34, 211, 238, 0.14) 100%)",
+      boxShadow:
+        "0 0 0 1px rgba(99, 102, 241, 0.24), 0 0 0 4px rgba(99, 102, 241, 0.10)",
+      opacity: 1,
+    },
+    selectedAvailable: {
+      borderColor: "rgba(45, 212, 191, 0.56)",
+      background:
+        "linear-gradient(135deg, rgba(45, 212, 191, 0.24) 0%, rgba(99, 102, 241, 0.16) 100%)",
+      boxShadow:
+        "0 0 0 1px rgba(45, 212, 191, 0.24), 0 0 0 4px rgba(45, 212, 191, 0.10)",
+      opacity: 1,
+    },
+    selectedUnavailable: {
+      borderColor: "rgba(244, 114, 182, 0.48)",
+      background:
+        "linear-gradient(135deg, rgba(244, 114, 182, 0.22) 0%, rgba(251, 191, 36, 0.12) 100%)",
+      boxShadow:
+        "0 0 0 1px rgba(244, 114, 182, 0.22), 0 0 0 4px rgba(244, 114, 182, 0.09)",
+      opacity: 1,
+    },
+  };
+
+  function getCalendarBodyCellTone({
+    isAvailable,
+    isPast,
+    isSelected,
+    isToday,
+  }) {
+    let tone = calendarBodyToneMap.unavailable;
+
+    if (isPast) {
+      tone = calendarBodyToneMap.past;
+    } else if (isSelected && isAvailable) {
+      tone = calendarBodyToneMap.selectedAvailable;
+    } else if (isSelected && !isAvailable) {
+      tone = calendarBodyToneMap.selectedUnavailable;
+    } else if (isSelected) {
+      tone = calendarBodyToneMap.selected;
+    } else if (isAvailable) {
+      tone = calendarBodyToneMap.available;
+    }
+
+    return {
+      ...tone,
+      outline: isToday ? "1px solid rgba(255,255,255,0.16)" : "none",
+      outlineOffset: isToday ? "-1px" : "0",
+    };
+  }
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
@@ -1476,19 +1552,27 @@ export function InventoryPage({ propertyId }) {
                             minHeight: `${rowHeight}px`,
                           }}
                         >
-                          {days.map((day) => {
+                          {days.map((day, dayIndex) => {
                             const isAvailableRoomDay =
                               roomAvailableDateKeys.has(
                                 `${room.room_id}::${day.isoDate}`,
                               );
-                            const neutralCell =
-                              rowIndex % 2 === 0
-                                ? "rgba(255,255,255,0.92)"
-                                : "rgba(248,250,252,0.92)";
-                            const weekendCell =
-                              rowIndex % 2 === 0
-                                ? "rgba(248,250,252,0.96)"
-                                : "rgba(241,245,249,0.96)";
+                            const isPastDay =
+                              new Date(`${day.isoDate}T00:00:00`).getTime() <
+                              new Date(`${toIsoDate(new Date())}T00:00:00`).getTime();
+                            const isSelectedCell =
+                              Boolean(dragState) &&
+                              dragState.targetRoomId === room.room_id &&
+                              dayIndex >= Number(dragState.previewLeftDays || 0) &&
+                              dayIndex <=
+                                Number(dragState.previewLeftDays || 0) +
+                                  Number(dragState.durationDays || 0);
+                            const cellTone = getCalendarBodyCellTone({
+                              isAvailable: isAvailableRoomDay,
+                              isPast: isPastDay,
+                              isSelected: isSelectedCell,
+                              isToday: day.today,
+                            });
 
                             return (
                               <div
@@ -1500,18 +1584,15 @@ export function InventoryPage({ propertyId }) {
                                 }}
                               >
                                 <div
-                                  className="flex h-full w-full items-center justify-center rounded-sm border transition-all hover:scale-[1.01] hover:shadow-sm"
+                                  className="flex h-full w-full items-center justify-center rounded-sm border transition-all duration-150 hover:scale-[1.01] hover:border-white/60 hover:brightness-105"
                                   style={{
                                     minHeight: `${rowHeight - 8}px`,
-                                    borderColor: isAvailableRoomDay
-                                      ? "rgba(100, 116, 139, 0.28)"
-                                      : "rgba(148, 163, 184, 0.18)",
-                                    backgroundColor: isAvailableRoomDay
-                                      ? "rgba(226, 232, 240, 0.75)"
-                                      : day.weekend
-                                        ? weekendCell
-                                        : neutralCell,
-                                    opacity: 1,
+                                    borderColor: cellTone.borderColor,
+                                    background: cellTone.background,
+                                    boxShadow: cellTone.boxShadow,
+                                    opacity: cellTone.opacity,
+                                    outline: cellTone.outline,
+                                    outlineOffset: cellTone.outlineOffset,
                                   }}
                                 />
                               </div>

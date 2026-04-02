@@ -691,8 +691,155 @@ export function InventoryPage({ propertyId }) {
     editForm.check_in_date,
     editForm.check_out_date,
   );
-  const isSoftLightTheme = theme === "soft-light";
   const isLightTheme = theme === "light";
+  const isSoftLightTheme = theme === "soft-light";
+  const isDarkTheme = theme === "dark";
+  const isMidnightTheme = theme === "midnight";
+
+  const calendarThemeStyles = {
+    headerRow: {
+      background: isLightTheme
+        ? "linear-gradient(180deg, rgba(255,255,255,0.82) 0%, rgba(247,242,247,0.76) 100%)"
+        : isSoftLightTheme
+          ? "linear-gradient(135deg, rgba(116,43,101,0.82) 0%, rgba(154,73,137,0.78) 55%, rgba(201,120,184,0.72) 100%)"
+          : isDarkTheme
+            ? "linear-gradient(180deg, rgba(30,41,59,0.88) 0%, rgba(51,65,85,0.82) 100%)"
+            : "linear-gradient(180deg, rgba(2,6,23,0.94) 0%, rgba(15,23,42,0.90) 100%)",
+      backdropFilter: isLightTheme
+        ? "blur(16px) saturate(140%)"
+        : isSoftLightTheme
+          ? "blur(18px) saturate(140%)"
+          : isDarkTheme
+            ? "blur(18px) saturate(135%)"
+            : "blur(20px) saturate(145%)",
+      WebkitBackdropFilter: isLightTheme
+        ? "blur(16px) saturate(140%)"
+        : isSoftLightTheme
+          ? "blur(18px) saturate(140%)"
+          : isDarkTheme
+            ? "blur(18px) saturate(135%)"
+            : "blur(20px) saturate(145%)",
+      borderBottom: isLightTheme
+        ? "1px solid rgba(148,163,184,0.14)"
+        : isSoftLightTheme
+          ? "1px solid rgba(255,255,255,0.16)"
+          : isDarkTheme
+            ? "1px solid rgba(148,163,184,0.18)"
+            : "1px solid rgba(71,85,105,0.26)",
+      boxShadow: isLightTheme
+        ? "0 8px 24px rgba(15,23,42,0.06)"
+        : isSoftLightTheme
+          ? "0 10px 28px rgba(83,29,72,0.16)"
+          : isDarkTheme
+            ? "0 12px 28px rgba(2,6,23,0.24)"
+            : "0 14px 30px rgba(2,6,23,0.34)",
+    },
+    firstColumn: {
+      borderRight: isLightTheme
+        ? "1px solid rgba(148,163,184,0.12)"
+        : isSoftLightTheme
+          ? "1px solid rgba(255,255,255,0.18)"
+          : isDarkTheme
+            ? "1px solid rgba(148,163,184,0.16)"
+            : "1px solid rgba(71,85,105,0.24)",
+      background: isLightTheme
+        ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,240,245,0.86) 100%)"
+        : isSoftLightTheme
+          ? "linear-gradient(135deg, rgba(96,33,84,0.90) 0%, rgba(140,56,123,0.84) 100%)"
+          : isDarkTheme
+            ? "linear-gradient(180deg, rgba(30,41,59,0.92) 0%, rgba(51,65,85,0.86) 100%)"
+            : "linear-gradient(180deg, rgba(2,6,23,0.96) 0%, rgba(15,23,42,0.92) 100%)",
+      backdropFilter: isLightTheme
+        ? "blur(16px) saturate(140%)"
+        : isSoftLightTheme
+          ? "blur(20px) saturate(145%)"
+          : isDarkTheme
+            ? "blur(18px) saturate(135%)"
+            : "blur(20px) saturate(145%)",
+      WebkitBackdropFilter: isLightTheme
+        ? "blur(16px) saturate(140%)"
+        : isSoftLightTheme
+          ? "blur(20px) saturate(145%)"
+          : isDarkTheme
+            ? "blur(18px) saturate(135%)"
+            : "blur(20px) saturate(145%)",
+      title: isLightTheme
+        ? "text-slate-800"
+        : isSoftLightTheme
+          ? "text-white/95"
+          : isDarkTheme
+            ? "text-slate-100"
+            : "text-slate-50",
+      subtext: isLightTheme
+        ? "text-slate-500"
+        : isSoftLightTheme
+          ? "text-white/72"
+          : isDarkTheme
+            ? "text-slate-400"
+            : "text-slate-500",
+    },
+    roomCell: {
+      evenBg: isLightTheme
+        ? "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(248,244,248,0.90) 100%)"
+        : isSoftLightTheme
+          ? "linear-gradient(135deg, rgba(201,120,184,0.22) 0%, rgba(255,255,255,0.30) 100%)"
+          : isDarkTheme
+            ? "linear-gradient(135deg, rgba(51,65,85,0.68) 0%, rgba(30,41,59,0.78) 100%)"
+            : "linear-gradient(135deg, rgba(15,23,42,0.88) 0%, rgba(2,6,23,0.94) 100%)",
+      oddBg: isLightTheme
+        ? "linear-gradient(135deg, rgba(252,250,252,0.96) 0%, rgba(243,238,243,0.90) 100%)"
+        : isSoftLightTheme
+          ? "linear-gradient(135deg, rgba(183,93,165,0.24) 0%, rgba(250,232,245,0.38) 100%)"
+          : isDarkTheme
+            ? "linear-gradient(135deg, rgba(30,41,59,0.76) 0%, rgba(15,23,42,0.84) 100%)"
+            : "linear-gradient(135deg, rgba(2,6,23,0.94) 0%, rgba(1,4,18,0.98) 100%)",
+    },
+    dayCell: {
+      borderRight: isLightTheme
+        ? "1px solid rgba(148,163,184,0.10)"
+        : isSoftLightTheme
+          ? "1px solid rgba(255,255,255,0.10)"
+          : isDarkTheme
+            ? "1px solid rgba(148,163,184,0.12)"
+            : "1px solid rgba(71,85,105,0.20)",
+      weekdayBg: isLightTheme
+        ? "rgba(255,255,255,0.22)"
+        : isSoftLightTheme
+          ? "rgba(255,255,255,0.03)"
+          : isDarkTheme
+            ? "rgba(255,255,255,0.03)"
+            : "rgba(255,255,255,0.02)",
+      weekendBg: isLightTheme
+        ? "rgba(248,244,248,0.40)"
+        : isSoftLightTheme
+          ? "rgba(255,255,255,0.08)"
+          : isDarkTheme
+            ? "rgba(255,255,255,0.06)"
+            : "rgba(255,255,255,0.04)",
+      label: isLightTheme
+        ? "text-slate-500"
+        : isSoftLightTheme
+          ? "text-white/70"
+          : isDarkTheme
+            ? "text-slate-300"
+            : "text-slate-400",
+      date: isLightTheme
+        ? "text-slate-800"
+        : isSoftLightTheme
+          ? "text-white"
+          : isDarkTheme
+            ? "text-slate-100"
+            : "text-slate-50",
+      todayBadge: isLightTheme
+        ? "bg-fuchsia-100 text-fuchsia-700"
+        : isSoftLightTheme
+          ? "bg-white/18 text-white"
+          : isDarkTheme
+            ? "bg-slate-200/14 text-slate-100"
+            : "bg-slate-100/10 text-slate-100",
+    },
+  };
+
   const bookingStatusPalette = {
     CONFIRMED: {
       label: "Confirmed",
@@ -700,37 +847,51 @@ export function InventoryPage({ propertyId }) {
         ? "bg-fuchsia-500"
         : isSoftLightTheme
           ? "bg-fuchsia-300"
-          : "bg-fuchsia-400",
+          : isDarkTheme
+            ? "bg-fuchsia-400"
+            : "bg-fuchsia-500",
       legendText: isLightTheme
         ? "text-fuchsia-700"
         : isSoftLightTheme
           ? "text-fuchsia-100"
-          : "text-fuchsia-300",
+          : isDarkTheme
+            ? "text-fuchsia-300"
+            : "text-fuchsia-200",
       legendBadge: isLightTheme
         ? "border border-fuchsia-200 bg-fuchsia-50/90 text-fuchsia-700"
         : isSoftLightTheme
           ? "border border-fuchsia-200/20 bg-fuchsia-400/10 text-fuchsia-100"
-          : "border border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300",
+          : isDarkTheme
+            ? "border border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300"
+            : "border border-fuchsia-400/20 bg-fuchsia-400/12 text-fuchsia-200",
       card: isLightTheme
         ? "border-[rgba(217,70,239,0.18)] bg-[linear-gradient(135deg,rgba(255,250,255,0.98)_0%,rgba(250,240,255,0.96)_100%)] shadow-[0_8px_18px_rgba(192,38,211,0.08)]"
         : isSoftLightTheme
           ? "border-[rgba(183,93,165,0.24)] bg-[linear-gradient(135deg,rgba(201,120,184,0.24)_0%,rgba(221,160,210,0.17)_100%)] shadow-[0_8px_18px_rgba(183,93,165,0.12)] backdrop-blur-md"
-          : "border-[rgba(244,114,182,0.18)] bg-[linear-gradient(135deg,rgba(244,114,182,0.18)_0%,rgba(251,207,232,0.10)_100%)] shadow-[0_8px_18px_rgba(244,114,182,0.10)] backdrop-blur-md",
+          : isDarkTheme
+            ? "border-[rgba(217,70,239,0.18)] bg-[linear-gradient(135deg,rgba(88,28,135,0.22)_0%,rgba(76,29,149,0.16)_100%)] shadow-[0_8px_18px_rgba(168,85,247,0.10)] backdrop-blur-md"
+            : "border-[rgba(217,70,239,0.20)] bg-[linear-gradient(135deg,rgba(88,28,135,0.24)_0%,rgba(59,7,100,0.20)_100%)] shadow-[0_10px_20px_rgba(168,85,247,0.12)] backdrop-blur-md",
       title: isLightTheme
         ? "text-fuchsia-900"
         : isSoftLightTheme
           ? "text-[rgba(122,51,108,0.95)]"
-          : "text-fuchsia-100",
+          : isDarkTheme
+            ? "text-fuchsia-100"
+            : "text-fuchsia-50",
       meta: isLightTheme
         ? "text-fuchsia-700"
         : isSoftLightTheme
           ? "text-[rgba(143,73,129,0.88)]"
-          : "text-fuchsia-200/90",
+          : isDarkTheme
+            ? "text-fuchsia-200/90"
+            : "text-fuchsia-200/85",
       badge: isLightTheme
         ? "bg-fuchsia-600 text-white"
         : isSoftLightTheme
           ? "bg-[rgba(150,60,132,0.92)] text-white"
-          : "bg-fuchsia-300 text-slate-950",
+          : isDarkTheme
+            ? "bg-fuchsia-400 text-slate-950"
+            : "bg-fuchsia-300 text-slate-950",
     },
     CHECKED_IN: {
       label: "Checked-in",
@@ -738,37 +899,51 @@ export function InventoryPage({ propertyId }) {
         ? "bg-violet-500"
         : isSoftLightTheme
           ? "bg-violet-300"
-          : "bg-violet-400",
+          : isDarkTheme
+            ? "bg-violet-400"
+            : "bg-violet-500",
       legendText: isLightTheme
         ? "text-violet-700"
         : isSoftLightTheme
           ? "text-violet-100"
-          : "text-violet-300",
+          : isDarkTheme
+            ? "text-violet-300"
+            : "text-violet-200",
       legendBadge: isLightTheme
         ? "border border-violet-200 bg-violet-50/90 text-violet-700"
         : isSoftLightTheme
           ? "border border-violet-200/20 bg-violet-400/10 text-violet-100"
-          : "border border-violet-400/20 bg-violet-400/10 text-violet-300",
+          : isDarkTheme
+            ? "border border-violet-400/20 bg-violet-400/10 text-violet-300"
+            : "border border-violet-400/20 bg-violet-400/12 text-violet-200",
       card: isLightTheme
         ? "border-[rgba(139,92,246,0.18)] bg-[linear-gradient(135deg,rgba(248,246,255,0.98)_0%,rgba(241,236,255,0.96)_100%)] shadow-[0_8px_18px_rgba(139,92,246,0.08)]"
         : isSoftLightTheme
           ? "border-[rgba(168,132,196,0.24)] bg-[linear-gradient(135deg,rgba(196,167,231,0.24)_0%,rgba(220,196,242,0.17)_100%)] shadow-[0_8px_18px_rgba(168,132,196,0.12)] backdrop-blur-md"
-          : "border-[rgba(167,139,250,0.20)] bg-[linear-gradient(135deg,rgba(167,139,250,0.18)_0%,rgba(196,181,253,0.10)_100%)] shadow-[0_8px_18px_rgba(167,139,250,0.10)] backdrop-blur-md",
+          : isDarkTheme
+            ? "border-[rgba(139,92,246,0.18)] bg-[linear-gradient(135deg,rgba(67,56,202,0.20)_0%,rgba(91,33,182,0.16)_100%)] shadow-[0_8px_18px_rgba(139,92,246,0.10)] backdrop-blur-md"
+            : "border-[rgba(139,92,246,0.20)] bg-[linear-gradient(135deg,rgba(49,46,129,0.28)_0%,rgba(76,29,149,0.18)_100%)] shadow-[0_10px_20px_rgba(139,92,246,0.12)] backdrop-blur-md",
       title: isLightTheme
         ? "text-violet-900"
         : isSoftLightTheme
           ? "text-[rgba(88,61,122,0.95)]"
-          : "text-violet-100",
+          : isDarkTheme
+            ? "text-violet-100"
+            : "text-violet-50",
       meta: isLightTheme
         ? "text-violet-700"
         : isSoftLightTheme
           ? "text-[rgba(107,79,145,0.88)]"
-          : "text-violet-200/90",
+          : isDarkTheme
+            ? "text-violet-200/90"
+            : "text-violet-200/85",
       badge: isLightTheme
         ? "bg-violet-600 text-white"
         : isSoftLightTheme
           ? "bg-[rgba(109,76,164,0.92)] text-white"
-          : "bg-violet-300 text-slate-950",
+          : isDarkTheme
+            ? "bg-violet-400 text-slate-950"
+            : "bg-violet-300 text-slate-950",
     },
     PENDING: {
       label: "Pending",
@@ -776,37 +951,51 @@ export function InventoryPage({ propertyId }) {
         ? "bg-amber-500"
         : isSoftLightTheme
           ? "bg-amber-300"
-          : "bg-amber-400",
+          : isDarkTheme
+            ? "bg-amber-400"
+            : "bg-amber-500",
       legendText: isLightTheme
         ? "text-amber-700"
         : isSoftLightTheme
           ? "text-amber-100"
-          : "text-amber-300",
+          : isDarkTheme
+            ? "text-amber-300"
+            : "text-amber-200",
       legendBadge: isLightTheme
         ? "border border-amber-200 bg-amber-50/90 text-amber-700"
         : isSoftLightTheme
           ? "border border-amber-200/20 bg-amber-400/10 text-amber-100"
-          : "border border-amber-400/20 bg-amber-400/10 text-amber-300",
+          : isDarkTheme
+            ? "border border-amber-400/20 bg-amber-400/10 text-amber-300"
+            : "border border-amber-400/20 bg-amber-400/12 text-amber-200",
       card: isLightTheme
         ? "border-[rgba(245,158,11,0.20)] bg-[linear-gradient(135deg,rgba(255,252,245,0.98)_0%,rgba(255,247,220,0.96)_100%)] shadow-[0_8px_18px_rgba(245,158,11,0.08)]"
         : isSoftLightTheme
           ? "border-[rgba(236,153,75,0.24)] bg-[linear-gradient(135deg,rgba(255,205,146,0.22)_0%,rgba(255,228,196,0.16)_100%)] shadow-[0_8px_18px_rgba(236,153,75,0.12)] backdrop-blur-md"
-          : "border-[rgba(251,191,36,0.20)] bg-[linear-gradient(135deg,rgba(251,191,36,0.18)_0%,rgba(253,230,138,0.10)_100%)] shadow-[0_8px_18px_rgba(251,191,36,0.10)] backdrop-blur-md",
+          : isDarkTheme
+            ? "border-[rgba(245,158,11,0.20)] bg-[linear-gradient(135deg,rgba(146,64,14,0.22)_0%,rgba(120,53,15,0.16)_100%)] shadow-[0_8px_18px_rgba(245,158,11,0.10)] backdrop-blur-md"
+            : "border-[rgba(245,158,11,0.22)] bg-[linear-gradient(135deg,rgba(120,53,15,0.24)_0%,rgba(69,26,3,0.20)_100%)] shadow-[0_10px_20px_rgba(245,158,11,0.12)] backdrop-blur-md",
       title: isLightTheme
         ? "text-amber-900"
         : isSoftLightTheme
           ? "text-[rgba(133,84,32,0.95)]"
-          : "text-amber-100",
+          : isDarkTheme
+            ? "text-amber-100"
+            : "text-amber-50",
       meta: isLightTheme
         ? "text-amber-700"
         : isSoftLightTheme
           ? "text-[rgba(156,101,44,0.88)]"
-          : "text-amber-200/90",
+          : isDarkTheme
+            ? "text-amber-200/90"
+            : "text-amber-200/85",
       badge: isLightTheme
         ? "bg-amber-500 text-white"
         : isSoftLightTheme
           ? "bg-[rgba(214,136,52,0.94)] text-white"
-          : "bg-amber-300 text-slate-950",
+          : isDarkTheme
+            ? "bg-amber-400 text-slate-950"
+            : "bg-amber-300 text-slate-950",
     },
   };
 
@@ -999,55 +1188,32 @@ export function InventoryPage({ propertyId }) {
                 <div
                   className="sticky top-0 z-50 grid"
                   style={{
-                    background: isLightTheme
-                      ? "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(248,244,248,0.72) 100%)"
-                      : isSoftLightTheme
-                        ? "linear-gradient(135deg, rgba(116, 43, 101, 0.82) 0%, rgba(154, 73, 137, 0.78) 55%, rgba(201, 120, 184, 0.72) 100%)"
-                        : "linear-gradient(180deg, rgba(15, 23, 42, 0.84) 0%, rgba(30, 41, 59, 0.78) 100%)",
-
-                    backdropFilter: isLightTheme
-                      ? "blur(16px) saturate(140%)"
-                      : "blur(18px) saturate(140%)",
-                    WebkitBackdropFilter: isLightTheme
-                      ? "blur(16px) saturate(140%)"
-                      : "blur(18px) saturate(140%)",
-
-                    borderBottom: isLightTheme
-                      ? "1px solid rgba(148, 163, 184, 0.14)"
-                      : "1px solid rgba(255,255,255,0.16)",
-
-                    boxShadow: isLightTheme
-                      ? "0 8px 24px rgba(15, 23, 42, 0.06)"
-                      : "0 10px 28px rgba(2, 6, 23, 0.22)",
-
+                    background: calendarThemeStyles.headerRow.background,
+                    backdropFilter:
+                      calendarThemeStyles.headerRow.backdropFilter,
+                    WebkitBackdropFilter:
+                      calendarThemeStyles.headerRow.WebkitBackdropFilter,
+                    borderBottom:
+                      calendarThemeStyles.headerRow.borderBottom,
+                    boxShadow: calendarThemeStyles.headerRow.boxShadow,
                     gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                   }}
                 >
                   <div
                     className="sticky left-0 z-[60] flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.18)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.32)]"
                     style={{
-                      borderRight: isLightTheme
-                        ? "1px solid rgba(148, 163, 184, 0.12)"
-                        : "1px solid rgba(255, 255, 255, 0.18)",
-
-                      background: isLightTheme
-                        ? "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(245,240,245,0.82) 100%)"
-                        : isSoftLightTheme
-                          ? "linear-gradient(135deg, rgba(96, 33, 84, 0.9) 0%, rgba(140, 56, 123, 0.84) 100%)"
-                          : "linear-gradient(180deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.82) 100%)",
-
-                      backdropFilter: isLightTheme
-                        ? "blur(16px) saturate(140%)"
-                        : "blur(20px) saturate(145%)",
-                      WebkitBackdropFilter: isLightTheme
-                        ? "blur(16px) saturate(140%)"
-                        : "blur(20px) saturate(145%)",
+                      borderRight: calendarThemeStyles.firstColumn.borderRight,
+                      background: calendarThemeStyles.firstColumn.background,
+                      backdropFilter:
+                        calendarThemeStyles.firstColumn.backdropFilter,
+                      WebkitBackdropFilter:
+                        calendarThemeStyles.firstColumn.WebkitBackdropFilter,
                     }}
                   >
                     <span
                       className={[
                         "text-[10px] font-bold uppercase tracking-widest",
-                        isLightTheme ? "text-[#6f2f62]" : "text-white/90",
+                        calendarThemeStyles.firstColumn.title,
                       ].join(" ")}
                     >
                       Room Category
@@ -1058,36 +1224,20 @@ export function InventoryPage({ propertyId }) {
                       key={day.isoDate}
                       className="min-w-[48px] p-3 text-center"
                       style={{
-                        borderRight: isLightTheme
-                          ? "1px solid rgba(201, 120, 184, 0.12)"
-                          : "1px solid rgba(255, 255, 255, 0.1)",
-                        backgroundColor: isLightTheme
-                          ? "linear-gradient(135deg, rgba(201,120,184,0.25) 0%, rgba(221,160,210,0.18) 55%, rgba(241,210,235,0.15) 100%)"
-                          : day.weekend
-                            ? "rgba(255, 255, 255, 0.08)"
-                            : "rgba(255, 255, 255, 0.03)",
+                        borderRight: calendarThemeStyles.dayCell.borderRight,
+                        backgroundColor: day.weekend
+                          ? calendarThemeStyles.dayCell.weekendBg
+                          : calendarThemeStyles.dayCell.weekdayBg,
                       }}
                     >
                       <div className="flex flex-col items-center">
                         <span
-                          className={[
-                            "font-mono text-[10px]",
-                            isLightTheme ? "text-[#8b5d86]" : "text-white/70",
-                          ].join(" ")}
+                          className={`font-mono text-[10px] ${calendarThemeStyles.dayCell.label}`}
                         >
                           {day.label}
                         </span>
                         <span
-                          className="mt-1 text-lg font-bold"
-                          style={{
-                            color: isLightTheme
-                              ? day.today
-                                ? "rgb(111 47 98)"
-                                : "rgb(91 33 74)"
-                              : day.today
-                                ? "rgb(255 255 255)"
-                                : "rgba(255,255,255,0.92)",
-                          }}
+                          className={`mt-1 text-lg font-bold ${calendarThemeStyles.dayCell.date}`}
                         >
                           {day.date}
                         </span>
@@ -1095,9 +1245,7 @@ export function InventoryPage({ propertyId }) {
                           <span
                             className={[
                               "mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider backdrop-blur-sm",
-                              isLightTheme
-                                ? "bg-white/60 text-[#6f2f62]"
-                                : "bg-white/18 text-white",
+                              calendarThemeStyles.dayCell.todayBadge,
                             ].join(" ")}
                           >
                             Today
@@ -1172,37 +1320,33 @@ export function InventoryPage({ propertyId }) {
                     >
                       <div
                         className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
-                      style={{
-                        minHeight: `${rowHeight}px`,
-                        borderRight: isLightTheme
-                          ? "1px solid rgba(148, 163, 184, 0.14)"
-                          : "1px solid rgba(148, 163, 184, 0.18)",
-                        background: isLightTheme
-                          ? rowIndex % 2 === 0
-                            ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,244,248,0.86) 100%)"
-                            : "linear-gradient(180deg, rgba(250,246,250,0.9) 0%, rgba(243,237,243,0.84) 100%)"
-                          : rowIndex % 2 === 0
-                            ? "rgba(255,255,255,0.96)"
-                            : "rgba(248,250,252,0.96)",
-                      }}
-                    >
+                        style={{
+                          minHeight: `${rowHeight}px`,
+                          borderRight:
+                            calendarThemeStyles.firstColumn.borderRight,
+                          background:
+                            rowIndex % 2 === 0
+                              ? calendarThemeStyles.roomCell.evenBg
+                              : calendarThemeStyles.roomCell.oddBg,
+                          backdropFilter:
+                            calendarThemeStyles.firstColumn.backdropFilter,
+                          WebkitBackdropFilter:
+                            calendarThemeStyles.firstColumn.WebkitBackdropFilter,
+                        }}
+                      >
                       <span
                         className={[
                           "font-headline font-semibold",
-                          isLightTheme
-                            ? "text-[#6f2f62]"
-                            : "text-slate-800 dark:text-slate-100",
+                          calendarThemeStyles.firstColumn.title,
                         ].join(" ")}
                         >
                           {room.room_name || room.room_id}
                         </span>
                         <span
-                        className={[
-                          "mt-1 font-mono text-[10px] uppercase tracking-[0.16em]",
-                          isLightTheme
-                            ? "text-[#9b5b8d]"
-                            : "text-slate-400 dark:text-slate-500",
-                        ].join(" ")}
+                          className={[
+                            "mt-1 font-mono text-[10px] uppercase tracking-[0.16em]",
+                            calendarThemeStyles.firstColumn.subtext,
+                          ].join(" ")}
                         >
                           {room.room_id}
                         </span>

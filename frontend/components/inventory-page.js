@@ -8,6 +8,7 @@ import { fetchJson } from "../lib/api";
 const dayColumnWidth = 72;
 const visibleDayCount = 20;
 const roomColumnWidth = 200;
+const visibleRoomCount = 7;
 
 const bookingToneClasses = {
   slate: {
@@ -170,6 +171,7 @@ export function InventoryPage({ propertyId }) {
   const [bookingPayments, setBookingPayments] = useState([]);
   const [loadingBookingDetails, setLoadingBookingDetails] = useState(false);
   const [availableRateDateKeys, setAvailableRateDateKeys] = useState(new Set());
+  const [roomSort, setRoomSort] = useState("updated-desc");
   const monthStartDate = useMemo(() => getMonthStartIsoDate(), []);
   const monthDayCount = useMemo(() => getDaysInMonth(), []);
   const calendarScrollerRef = useRef(null);
@@ -420,6 +422,8 @@ export function InventoryPage({ propertyId }) {
         groups.set(row.room_id, {
           room_id: row.room_id,
           room_name: row.room_name,
+          base_rate: Number(row.room_base_rate || 0),
+          room_updated_at: row.room_updated_at || null,
           rates: row.rates || [],
           rateTitleById: new Map(),
           bookings: [],
@@ -460,17 +464,49 @@ export function InventoryPage({ propertyId }) {
         return {
           ...group,
           defaultRateId: group.rates?.[0]?.rate_id || "",
+          highestRate: Math.max(
+            group.base_rate,
+            ...group.rates.map((rate) => Number(rate.base_rate || 0)),
+          ),
+          lastUpdatedAt: [
+            group.room_updated_at,
+            ...group.rates.map((rate) => rate.updated_at),
+            ...group.bookings.map((booking) => booking.updated_at),
+          ]
+            .filter(Boolean)
+            .sort((left, right) => new Date(right) - new Date(left))[0] || null,
           stackedBookings,
           laneCount,
           rowHeight: Math.max(56, laneCount * 28 + 16),
         };
       })
-      .sort((left, right) =>
-        String(left.room_name || left.room_id).localeCompare(
-          String(right.room_name || right.room_id),
-        ),
-      );
-  }, [calendar.rows]);
+      .sort((left, right) => {
+        if (roomSort === "name-asc") {
+          return String(left.room_name || left.room_id).localeCompare(
+            String(right.room_name || right.room_id),
+          );
+        }
+        if (roomSort === "price-high") {
+          return right.highestRate - left.highestRate;
+        }
+        if (roomSort === "price-low") {
+          return left.highestRate - right.highestRate;
+        }
+
+        return (
+          new Date(right.lastUpdatedAt || 0).getTime() -
+          new Date(left.lastUpdatedAt || 0).getTime()
+        );
+      });
+  }, [calendar.rows, roomSort]);
+  const visibleRoomWindowHeight = useMemo(
+    () =>
+      72 +
+      roomRows
+        .slice(0, visibleRoomCount)
+        .reduce((sum, room) => sum + room.rowHeight, 0),
+    [roomRows],
+  );
 
   async function openBookingEditor(booking, row) {
     if (!booking) {
@@ -608,7 +644,14 @@ export function InventoryPage({ propertyId }) {
           </div>
         </section>
       ) : (
-        <div className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8">
+        <div
+          className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8"
+          style={{
+            background: "color-mix(in srgb, var(--panel-bg) 48%, transparent)",
+            backdropFilter: "blur(28px) saturate(140%)",
+            WebkitBackdropFilter: "blur(28px) saturate(140%)",
+          }}
+        >
           <div
             className="border-b px-6 py-6 lg:px-8"
             style={{
@@ -686,6 +729,21 @@ export function InventoryPage({ propertyId }) {
                 </div>
               ))}
               <div className="ml-auto flex items-center gap-6">
+                <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Sort
+                  </span>
+                  <select
+                    value={roomSort}
+                    onChange={(event) => setRoomSort(event.target.value)}
+                    className="bg-transparent text-xs font-medium text-slate-700 outline-none dark:text-slate-200"
+                  >
+                    <option value="updated-desc">Last update</option>
+                    <option value="name-asc">Name</option>
+                    <option value="price-high">High price</option>
+                    <option value="price-low">Low price</option>
+                  </select>
+                </label>
                 {[
                   ["slate", "Confirmed"],
                   ["stone", "Checked-in"],
@@ -717,6 +775,8 @@ export function InventoryPage({ propertyId }) {
               style={{
                 maxWidth: "100%",
                 paddingRight: 0,
+                maxHeight: `${visibleRoomWindowHeight}px`,
+                overflowY: "auto",
               }}
             >
               <div

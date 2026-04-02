@@ -55,6 +55,8 @@ def inventory_calendar(
         active_rates_by_room[rate_plan.room_id][rate_plan.rate_id] = {
             "rate_id": rate_plan.rate_id,
             "title": rate_plan.title,
+            "base_rate": float(rate_plan.base_rate or 0),
+            "updated_at": rate_plan.updated_at.isoformat() if rate_plan.updated_at else None,
         }
 
     reservations = (
@@ -93,6 +95,7 @@ def inventory_calendar(
             "rate_id": reservation_room.rate_id,
             "check_in_date": reservation.check_in_date.isoformat(),
             "check_out_date": reservation.check_out_date.isoformat(),
+            "updated_at": reservation.updated_at.isoformat() if reservation.updated_at else None,
         })
 
     rows = []
@@ -104,6 +107,8 @@ def inventory_calendar(
                 {
                     "room_id": room.room_id,
                     "room_name": room.room_name,
+                    "room_base_rate": float(room.base_rate or 0),
+                    "room_updated_at": room.updated_at.isoformat() if room.updated_at else None,
                     "rate_ids": [rate["rate_id"] for rate in room_rates],
                     "rates": room_rates,
                     "booking": None,
@@ -116,6 +121,8 @@ def inventory_calendar(
                 {
                     "room_id": room.room_id,
                     "room_name": room.room_name,
+                    "room_base_rate": float(room.base_rate or 0),
+                    "room_updated_at": room.updated_at.isoformat() if room.updated_at else None,
                     "rate_ids": [rate["rate_id"] for rate in room_rates],
                     "rates": room_rates,
                     "booking": booking,

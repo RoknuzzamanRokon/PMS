@@ -1,0 +1,667 @@
+<!doctype html>
+
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Midnight Architect | Reservation Grid</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#2f2ebe",
+              "tertiary-fixed": "#f199f7",
+              "primary-dim": "#699cff",
+              "secondary-fixed-dim": "#bdbeff",
+              "surface-container": "#0f1930",
+              "inverse-primary": "#005bc4",
+              primary: "#85adff",
+              "on-secondary-container": "#ccccff",
+              "on-error": "#490006",
+              background: "#060e20",
+              "on-secondary": "#080079",
+              "outline-variant": "#40485d",
+              "secondary-dim": "#6063ee",
+              "primary-fixed": "#6e9fff",
+              "surface-variant": "#192540",
+              "error-dim": "#d7383b",
+              "tertiary-container": "#f199f7",
+              "on-tertiary-fixed": "#3e0047",
+              secondary: "#9093ff",
+              "on-error-container": "#ffa8a3",
+              outline: "#6d758c",
+              "tertiary-dim": "#e28ce9",
+              "on-tertiary-fixed-variant": "#681c73",
+              "on-tertiary": "#691d74",
+              "surface-bright": "#1f2b49",
+              "surface-container-lowest": "#000000",
+              "surface-container-high": "#141f38",
+              "on-primary": "#002c66",
+              tertiary: "#fbabff",
+              "on-primary-container": "#002150",
+              "surface-container-low": "#091328",
+              "surface-tint": "#85adff",
+              "primary-container": "#6e9fff",
+              "on-surface-variant": "#a3aac4",
+              "on-primary-fixed-variant": "#002a62",
+              "on-secondary-fixed-variant": "#3a3ac8",
+              "error-container": "#9f0519",
+              "on-surface": "#dee5ff",
+              "on-tertiary-container": "#5e106a",
+              "on-secondary-fixed": "#160bae",
+              "surface-dim": "#060e20",
+              "primary-fixed-dim": "#5391ff",
+              "inverse-on-surface": "#4d556b",
+              error: "#ff716c",
+              surface: "#060e20",
+              "on-primary-fixed": "#000000",
+              "inverse-surface": "#faf8ff",
+              "tertiary-fixed-dim": "#e28ce9",
+              "surface-container-highest": "#192540",
+              "secondary-fixed": "#cdcdff",
+              "on-background": "#dee5ff",
+            },
+            fontFamily: {
+              headline: ["Inter"],
+              body: ["Inter"],
+              label: ["Inter"],
+              mono: ["JetBrains Mono"],
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+        vertical-align: middle;
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #060e20;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #192540;
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #40485d;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background text-on-background font-body selection:bg-primary/30"
+  >
+    <!-- TopNavBar -->
+    <nav
+      class="fixed top-0 w-full z-50 bg-[#060e20]/80 backdrop-blur-xl flex justify-between items-center px-8 h-16 w-full shadow-2xl shadow-blue-900/10"
+    >
+      <div class="flex items-center gap-8">
+        <span class="text-xl font-bold tracking-tighter text-[#dee5ff]"
+          >Midnight Stays</span
+        >
+        <div class="hidden md:flex gap-6 items-center">
+          <a
+            class="font-['Inter'] font-medium text-sm tracking-tight text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200"
+            href="#"
+            >Jan</a
+          >
+          <a
+            class="font-['Inter'] font-medium text-sm tracking-tight text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200"
+            href="#"
+            >Feb</a
+          >
+          <a
+            class="font-['Inter'] font-medium text-sm tracking-tight text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200"
+            href="#"
+            >Mar</a
+          >
+          <a
+            class="font-['Inter'] font-medium text-sm tracking-tight text-[#a3aac4] hover:text-[#dee5ff] transition-colors duration-200"
+            href="#"
+            >Apr</a
+          >
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span
+          class="material-symbols-outlined text-[#a3aac4] cursor-pointer hover:text-[#dee5ff] transition-colors"
+          >notifications</span
+        >
+        <span
+          class="material-symbols-outlined text-[#a3aac4] cursor-pointer hover:text-[#dee5ff] transition-colors"
+          >settings</span
+        >
+        <div
+          class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant/30"
+        >
+          <img
+            alt="User profile"
+            class="w-full h-full object-cover"
+            data-alt="Close up portrait of a professional man in a dark studio setting with soft blue cinematic rim lighting"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuASb3jQDCgM607gWKivCSxVY3DbtvOQa0qR-S7oV_qnx0uiD2rYMmyIRGx3OUYThgIiTdhgzZla4yc8iZyrnoeh6BJrfhEEGL-A1s6ZRf8IJWi7DeGXYiY7Yr8rxW7llt7g4RMZBK8MyOZYzia9SKgpPJd6wf2ih5q7c7QzHFpcRYFCvIx79k6gBAtu4FzfnVEZXiwdIQJf4heM90q-UiZV9er2FrViOS_BptyJ9Z0v8QnaxmZ4zc2tFc5nmCGX10E9okMk0oT2d6Nt"
+          />
+        </div>
+      </div>
+    </nav>
+    <!-- SideNavBar -->
+    <aside
+      class="h-screen w-64 fixed left-0 top-0 z-40 bg-[#0f1930] flex flex-col p-4 gap-2 pt-20"
+    >
+      <div class="flex items-center gap-3 px-2 mb-8">
+        <div
+          class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center shadow-lg shadow-primary/20"
+        >
+          <span
+            class="material-symbols-outlined text-on-primary-container"
+            style="font-variation-settings: &quot;FILL&quot; 1"
+            >architecture</span
+          >
+        </div>
+        <div>
+          <h2 class="text-lg font-black text-[#dee5ff] leading-none">
+            The Midnight Architect
+          </h2>
+          <p
+            class="font-['Inter'] text-[10px] tracking-wide text-[#a3aac4] uppercase mt-1"
+          >
+            Admin Console
+          </p>
+        </div>
+      </div>
+      <nav class="flex flex-col gap-1 flex-1">
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide text-[#a3aac4] hover:bg-[#1a2642] hover:text-[#dee5ff] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span class="material-symbols-outlined text-lg">dashboard</span>
+          Dashboard
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide bg-black text-[#dee5ff] rounded-lg shadow-[0_0_15px_rgba(133,173,255,0.15)] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-lg"
+            style="font-variation-settings: &quot;FILL&quot; 1"
+            >domain</span
+          >
+          Properties
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide text-[#a3aac4] hover:bg-[#1a2642] hover:text-[#dee5ff] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span class="material-symbols-outlined text-lg">calendar_today</span>
+          Bookings
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide text-[#a3aac4] hover:bg-[#1a2642] hover:text-[#dee5ff] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span class="material-symbols-outlined text-lg">analytics</span>
+          Analytics
+        </a>
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide text-[#a3aac4] hover:bg-[#1a2642] hover:text-[#dee5ff] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span class="material-symbols-outlined text-lg">payments</span>
+          Billing
+        </a>
+      </nav>
+      <div class="border-t border-outline-variant/15 pt-4">
+        <a
+          class="flex items-center gap-3 px-3 py-2.5 font-['Inter'] text-sm tracking-wide text-[#a3aac4] hover:bg-[#1a2642] hover:text-[#dee5ff] transition-all duration-300 ease-in-out"
+          href="#"
+        >
+          <span class="material-symbols-outlined text-lg">help</span> Help
+          Center
+        </a>
+      </div>
+    </aside>
+    <!-- Main Content -->
+    <main class="ml-64 pt-24 px-8 pb-12">
+      <!-- Dashboard Header Area -->
+      <header
+        class="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6"
+      >
+        <div>
+          <span
+            class="font-mono text-primary text-xs tracking-[0.2em] uppercase mb-2 block"
+            >Central Management System</span
+          >
+          <h1 class="text-4xl font-extrabold text-on-surface tracking-tighter">
+            January 2024
+          </h1>
+          <div class="flex items-center gap-4 mt-3">
+            <div
+              class="px-3 py-1 bg-surface-container-highest rounded-md border border-outline-variant/20"
+            >
+              <span class="font-mono text-xs text-on-surface-variant"
+                >ID:
+              </span>
+              <span class="font-mono text-xs text-primary">HTL-2024-X</span>
+            </div>
+            <div
+              class="flex items-center gap-2 text-on-surface-variant text-sm"
+            >
+              <span class="material-symbols-outlined text-sm">event</span>
+              <span>Jan 01 - Jan 20, 2024</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button
+            class="bg-surface-container-high hover:bg-surface-bright text-on-surface px-4 py-2 rounded-lg flex items-center gap-2 transition-all border border-outline-variant/10"
+          >
+            <span class="material-symbols-outlined text-[18px]"
+              >chevron_left</span
+            >
+          </button>
+          <div
+            class="bg-surface-container-high px-6 py-2 rounded-lg flex items-center gap-3 border border-outline-variant/10"
+          >
+            <span class="material-symbols-outlined text-primary text-[20px]"
+              >calendar_month</span
+            >
+            <span class="text-sm font-medium">Select Range</span>
+          </div>
+          <button
+            class="bg-surface-container-high hover:bg-surface-bright text-on-surface px-4 py-2 rounded-lg flex items-center gap-2 transition-all border border-outline-variant/10"
+          >
+            <span class="material-symbols-outlined text-[18px]"
+              >chevron_right</span
+            >
+          </button>
+          <button
+            class="ml-4 bg-primary text-on-primary font-bold px-6 py-2 rounded-lg hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20"
+          >
+            New Booking
+          </button>
+        </div>
+      </header>
+      <!-- High Density Calendar Grid -->
+      <div
+        class="bg-surface-container rounded-xl overflow-hidden shadow-2xl border border-outline-variant/5"
+      >
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="bg-surface-container-lowest">
+                <th
+                  class="sticky left-0 z-20 bg-surface-container-lowest p-4 text-left min-w-[200px] border-r border-outline-variant/10 shadow-[2px_0_10px_rgba(0,0,0,0.5)]"
+                >
+                  <span
+                    class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold"
+                    >Room Category</span
+                  >
+                </th>
+                <!-- Generate 20 Day Headers -->
+                <!-- Logic: Jan 1 to 20 -->
+                <script>
+                  const days = [
+                    "Mon",
+                    "Tue",
+                    "Wed",
+                    "Thu",
+                    "Fri",
+                    "Sat",
+                    "Sun",
+                  ];
+                  for (let i = 1; i <= 20; i++) {
+                    const dayName = days[(i - 1) % 7];
+                    const isWeekend = dayName === "Sat" || dayName === "Sun";
+                    document.write(`
+                                        <th class="p-3 min-w-[48px] text-center border-r border-outline-variant/10 ${isWeekend ? "bg-surface-container-high/50" : ""}">
+                                            <div class="flex flex-col items-center">
+                                                <span class="font-mono text-[10px] text-on-surface-variant">${dayName}</span>
+                                                <span class="text-lg font-bold ${isWeekend ? "text-primary" : "text-on-surface"}">${i < 10 ? "0" + i : i}</span>
+                                            </div>
+                                        </th>
+                                    `);
+                  }
+                </script>
+              </tr>
+            </thead>
+            <tbody class="font-mono text-sm">
+              <!-- Room Types Rows -->
+              <script>
+                const rooms = [
+                  {
+                    name: "Deluxe Suite 101",
+                    status: [
+                      "A",
+                      "A",
+                      "P",
+                      "F",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                      "M",
+                      "M",
+                      "A",
+                      "V",
+                      "V",
+                      "A",
+                      "A",
+                      "A",
+                      "P",
+                      "P",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Deluxe Suite 102",
+                    status: [
+                      "F",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                      "V",
+                      "V",
+                      "V",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "P",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Executive Studio 204",
+                    status: [
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "M",
+                      "M",
+                      "M",
+                      "A",
+                      "P",
+                      "P",
+                      "A",
+                      "A",
+                      "A",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Garden Villa G01",
+                    status: [
+                      "V",
+                      "V",
+                      "V",
+                      "V",
+                      "V",
+                      "A",
+                      "A",
+                      "A",
+                      "F",
+                      "F",
+                      "F",
+                      "P",
+                      "P",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "M",
+                      "M",
+                    ],
+                  },
+                  {
+                    name: "Garden Villa G02",
+                    status: [
+                      "A",
+                      "A",
+                      "P",
+                      "P",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Penthouse P01",
+                    status: [
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "F",
+                      "V",
+                      "V",
+                      "V",
+                      "V",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Studio 405",
+                    status: [
+                      "M",
+                      "M",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "P",
+                      "P",
+                      "P",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                    ],
+                  },
+                  {
+                    name: "Studio 406",
+                    status: [
+                      "A",
+                      "P",
+                      "F",
+                      "F",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "M",
+                      "M",
+                      "A",
+                      "V",
+                      "V",
+                      "V",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                      "A",
+                    ],
+                  },
+                ];
+
+                const statusMap = {
+                  A: {
+                    class: "bg-emerald-500/20 border-emerald-500/40",
+                    icon: "",
+                  }, // Available
+                  F: { class: "bg-error/20 border-error/40", icon: "" }, // Fully Booked
+                  P: { class: "bg-amber-500/20 border-amber-500/40", icon: "" }, // Partially
+                  V: {
+                    class:
+                      "bg-tertiary-fixed/20 border-tertiary-fixed/40 text-tertiary-fixed",
+                    icon: "star",
+                  }, // VIP
+                  M: {
+                    class: "bg-outline/20 border-outline/40 opacity-40",
+                    icon: "block",
+                  }, // Maintenance
+                };
+
+                rooms.forEach((room, idx) => {
+                  const rowBg =
+                    idx % 2 === 0 ? "bg-surface" : "bg-surface-container-low";
+                  document.write(`
+                                    <tr class="${rowBg} hover:bg-surface-bright transition-colors group">
+                                        <td class="sticky left-0 z-10 ${rowBg} group-hover:bg-surface-bright p-4 border-r border-outline-variant/10 shadow-[2px_0_10px_rgba(0,0,0,0.5)] font-headline font-semibold text-on-surface">
+                                            ${room.name}
+                                        </td>
+                                        ${room.status
+                                          .map((s) => {
+                                            const config = statusMap[s];
+                                            return `
+                                                <td class="p-1 border-r border-outline-variant/5">
+                                                    <div class="w-full h-10 rounded-sm border flex items-center justify-center transition-all hover:scale-105 hover:shadow-lg cursor-pointer ${config.class}">
+                                                        ${config.icon ? `<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">${config.icon}</span>` : ""}
+                                                    </div>
+                                                </td>
+                                            `;
+                                          })
+                                          .join("")}
+                                    </tr>
+                                `);
+                });
+              </script>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <!-- Compact Color Legend -->
+      <footer class="mt-8 flex flex-wrap items-center justify-between gap-6">
+        <div
+          class="flex items-center gap-6 bg-surface-container-high/40 px-6 py-3 rounded-full border border-outline-variant/10"
+        >
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+            <span
+              class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant"
+              >Available</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-error"></div>
+            <span
+              class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant"
+              >Fully Booked</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+            <span
+              class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant"
+              >Partially Booked</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-tertiary-fixed"></div>
+            <span
+              class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant"
+              >VIP Selection</span
+            >
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-outline"></div>
+            <span
+              class="text-[10px] font-mono uppercase tracking-widest text-on-surface-variant"
+              >Maintenance</span
+            >
+          </div>
+        </div>
+        <!-- Global Footer Information -->
+        <div class="flex items-center gap-4 text-on-surface-variant">
+          <span class="font-mono text-[10px] uppercase tracking-widest"
+            >v2.4.0 Midnight Architect</span
+          >
+          <div class="h-4 w-[1px] bg-outline-variant/30"></div>
+          <a
+            class="font-mono text-[10px] uppercase tracking-widest hover:text-primary transition-colors"
+            href="#"
+            >Help &amp; Documentation</a
+          >
+        </div>
+      </footer>
+    </main>
+    <!-- Contextual FAB (Hidden on this transactional/focused screen as per instructions, but kept as comment for future) -->
+    <!-- <button class="fixed bottom-8 right-8 bg-primary text-on-primary w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all">
+        <span class="material-symbols-outlined">add</span>
+    </button> -->
+  </body>
+</html>

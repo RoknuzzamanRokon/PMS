@@ -47,7 +47,10 @@ export function PmsShell({
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
       <header className="theme-panel fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-center gap-8">
-          <Link href="/dashboard/" className="flex items-center gap-3 text-primary">
+          <Link
+            href="/dashboard/"
+            className="flex items-center gap-3 text-primary"
+          >
             <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
               <span className="material-symbols-outlined">domain</span>
             </div>
@@ -76,7 +79,9 @@ export function PmsShell({
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">
               <p className="text-xs font-bold">Alex Rivers</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400">Manager</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Manager
+              </p>
             </div>
             <div className="flex size-9 items-center justify-center overflow-hidden rounded-full border border-primary/20 bg-primary/10 dark:border-primary/30 dark:bg-primary/15">
               <Image
@@ -90,25 +95,25 @@ export function PmsShell({
           </div>
         </div>
       </header>
-    
-      <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{ zIndex: 0 }}
-      >
+
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <DotGrid
-          dotSize={5}
-          gap={15}
-          baseColor="#271E37"
-          activeColor="#5227FF"
-          proximity={120}
-          shockRadius={250}
-          shockStrength={5}
-          resistance={750}
-          returnDuration={1.5}
+          dotSize={2}
+          gap={24}
+          baseColor="#7f5757"
+          activeColor="#ff2929"
+          proximity={130}
+          shockRadius={80}
+          shockStrength={20}
+          resistance={950}
+          returnDuration={0.7}
         />
       </div>
 
-      <div className="flex grow overflow-hidden pt-[73px] relative" style={{ zIndex: 1 }}>
+      <div
+        className="flex grow overflow-hidden pt-[73px] relative"
+        style={{ zIndex: 1 }}
+      >
         <aside
           className={[
             "theme-panel fixed left-0 top-[73px] z-30 hidden h-[calc(100vh-73px)] shrink-0 flex-col border-r lg:flex",
@@ -136,15 +141,16 @@ export function PmsShell({
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-36">
-            {!sidebarCollapsed ? (
-              <div className="mb-4" />
-            ) : null}
+            {!sidebarCollapsed ? <div className="mb-4" /> : null}
             <nav className="space-y-1">
               {navItems.map((item) => (
                 <NavLink
                   key={item.href}
                   item={item}
-                  active={normalizedPathname === (item.href.replace(/\/+$/, "") || "/")}
+                  active={
+                    normalizedPathname ===
+                    (item.href.replace(/\/+$/, "") || "/")
+                  }
                   collapsed={sidebarCollapsed}
                 />
               ))}
@@ -188,8 +194,16 @@ export function PmsShell({
                 : "rounded-2xl p-4",
             ].join(" ")}
           >
-            {!sidebarCollapsed ? <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p> : null}
-            <p className={sidebarCollapsed ? "text-center text-base font-bold" : "text-xl font-bold"}>
+            {!sidebarCollapsed ? (
+              <p className="mb-1 text-xs opacity-80">{sidebarMetricLabel}</p>
+            ) : null}
+            <p
+              className={
+                sidebarCollapsed
+                  ? "text-center text-base font-bold"
+                  : "text-xl font-bold"
+              }
+            >
               {sidebarMetricValue}
             </p>
             {!sidebarCollapsed ? (

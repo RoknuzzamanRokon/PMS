@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PmsShell } from "./pms-shell";
 import { fetchJson } from "../lib/api";
 
-const dayColumnWidth = 100;
-const inventoryViewOptions = [7, 15, 30];
+const dayColumnWidth = 72;
+const visibleDayCount = 20;
+const roomColumnWidth = 200;
 
 const bookingToneClasses = {
   slate: {
@@ -37,17 +38,16 @@ function buildDays(startDate, totalDays) {
   return Array.from({ length: totalDays }, (_, index) => {
     const current = new Date(start);
     current.setDate(start.getDate() + index);
-    const today = index === 0;
-    const shortDay = current.toLocaleDateString("en-US", { weekday: "short" });
+    const today = toIsoDate(current) === toIsoDate(new Date());
+    const shortDay = current
+      .toLocaleDateString("en-US", { weekday: "short" })
+      .toUpperCase();
     return {
-      label: today ? "Today" : shortDay,
-      date: current.toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-      }),
+      label: shortDay,
+      date: current.toLocaleDateString("en-US", { day: "2-digit" }),
       isoDate: toIsoDate(current),
       today,
-      weekend: shortDay === "Sat" || shortDay === "Sun",
+      weekend: shortDay === "SAT" || shortDay === "SUN",
     };
   });
 }
@@ -63,6 +63,16 @@ function addDaysToIsoDate(startDate, offsetDays) {
   const date = new Date(startDate);
   date.setDate(date.getDate() + offsetDays);
   return toIsoDate(date);
+}
+
+function getMonthStartIsoDate(value = new Date()) {
+  const date = new Date(value);
+  return toIsoDate(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+function getDaysInMonth(value = new Date()) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
 function formatCurrency(value, currency = "USD") {
@@ -134,8 +144,8 @@ function buildStackedBookings(bookings) {
 
 const fallbackCalendar = {
   property: { property_id: "", name: "Selected Property" },
-  start_date: new Date().toISOString().slice(0, 10),
-  days: 15,
+  start_date: getMonthStartIsoDate(),
+  days: getDaysInMonth(),
   rows: [],
 };
 
@@ -143,7 +153,6 @@ export function InventoryPage({ propertyId }) {
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
-  const [selectedDays, setSelectedDays] = useState(15);
   const [apiConnected, setApiConnected] = useState(false);
   const [savingBookingId, setSavingBookingId] = useState("");
   const [calendarError, setCalendarError] = useState("");
@@ -161,6 +170,9 @@ export function InventoryPage({ propertyId }) {
   const [bookingPayments, setBookingPayments] = useState([]);
   const [loadingBookingDetails, setLoadingBookingDetails] = useState(false);
   const [availableRateDateKeys, setAvailableRateDateKeys] = useState(new Set());
+  const monthStartDate = useMemo(() => getMonthStartIsoDate(), []);
+  const monthDayCount = useMemo(() => getDaysInMonth(), []);
+  const calendarScrollerRef = useRef(null);
 
   async function loadCalendar() {
     if (!selectedPropertyId) {
@@ -171,7 +183,9 @@ export function InventoryPage({ propertyId }) {
 
     try {
       const data = await fetchJson(
-        `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=${selectedDays}`,
+        `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&start_date=${encodeURIComponent(
+          monthStartDate,
+        )}&days=${monthDayCount}`,
       );
       setCalendar(data);
       setApiConnected(true);
@@ -194,7 +208,9 @@ export function InventoryPage({ propertyId }) {
 
       try {
         const data = await fetchJson(
-          `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&days=${selectedDays}`,
+          `/inventory/calendar?property_id=${encodeURIComponent(selectedPropertyId)}&start_date=${encodeURIComponent(
+            monthStartDate,
+          )}&days=${monthDayCount}`,
         );
         if (!ignore) {
           setCalendar(data);
@@ -211,7 +227,7 @@ export function InventoryPage({ propertyId }) {
     return () => {
       ignore = true;
     };
-  }, [selectedDays, selectedPropertyId]);
+  }, [monthDayCount, monthStartDate, selectedPropertyId]);
 
   useEffect(() => {
     let ignore = false;
@@ -227,8 +243,8 @@ export function InventoryPage({ propertyId }) {
       try {
         const data = await fetchJson(
           `/search/available-dates?property_id=${encodeURIComponent(selectedPropertyId)}&start_date=${encodeURIComponent(
-            calendar.start_date,
-          )}&days=${selectedDays}`,
+            monthStartDate,
+          )}&days=${monthDayCount}`,
         );
         if (ignore) {
           return;
@@ -262,7 +278,7 @@ export function InventoryPage({ propertyId }) {
     return () => {
       ignore = true;
     };
-  }, [calendar.start_date, selectedDays, selectedPropertyId]);
+  }, [monthDayCount, monthStartDate, selectedPropertyId]);
 
   useEffect(() => {
     if (!dragState) {
@@ -548,6 +564,18 @@ export function InventoryPage({ propertyId }) {
     editForm.check_out_date,
   );
 
+  function handleCalendarWheel(event) {
+    const scroller = calendarScrollerRef.current;
+    if (!scroller) {
+      return;
+    }
+
+    if (Math.abs(event.deltaX) > 0) {
+      scroller.scrollLeft += event.deltaX;
+      event.preventDefault();
+    }
+  }
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
@@ -581,7 +609,13 @@ export function InventoryPage({ propertyId }) {
         </section>
       ) : (
         <div className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8">
-          <div className="border-b border-slate-200 bg-white px-6 py-6 dark:border-slate-700 dark:bg-slate-950 lg:px-8">
+          <div
+            className="border-b px-6 py-6 lg:px-8"
+            style={{
+              borderColor: "var(--soft-border)",
+              background: "var(--panel-bg)",
+            }}
+          >
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -606,23 +640,6 @@ export function InventoryPage({ propertyId }) {
                       pin_drop
                     </span>
                     Viewing {calendar.property.name}
-                  </div>
-                  <div className="inline-flex overflow-hidden rounded-xl border border-slate-300 bg-slate-100 dark:border-slate-700 dark:bg-slate-900">
-                    {inventoryViewOptions.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => setSelectedDays(option)}
-                        className={[
-                          "px-3 py-2 text-sm font-bold transition-colors",
-                          selectedDays === option
-                            ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                            : "text-slate-600 hover:bg-white hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
-                        ].join(" ")}
-                      >
-                        {option} Days
-                      </button>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -650,7 +667,7 @@ export function InventoryPage({ propertyId }) {
                 [
                   "link",
                   "Endpoint:",
-                  `/inventory/calendar?property_id=${selectedPropertyId}&days=${selectedDays}`,
+                  `/inventory/calendar?property_id=${selectedPropertyId}&start_date=${monthStartDate}&days=${monthDayCount}`,
                 ],
               ].map(([icon, label, value]) => (
                 <div
@@ -687,118 +704,144 @@ export function InventoryPage({ propertyId }) {
             </div>
           </div>
 
-          <div className="custom-scrollbar flex-1 overflow-auto bg-slate-50 px-6 py-6 dark:bg-slate-950 lg:px-8">
-            <div className="min-w-max overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-925">
+          <div
+            className="flex-1 overflow-y-auto py-6"
+            style={{
+              background: "var(--soft-surface)",
+            }}
+          >
+            <div
+              ref={calendarScrollerRef}
+              onWheel={handleCalendarWheel}
+              className="custom-scrollbar relative w-full overflow-x-auto overflow-y-visible pr-0"
+              style={{
+                maxWidth: "100%",
+                paddingRight: 0,
+              }}
+            >
               <div
-                className="sticky top-0 z-30 grid"
+                className="min-w-max overflow-visible rounded-xl border shadow-2xl"
                 style={{
-                  backgroundColor: "rgba(248, 250, 252, 0.96)",
-                  gridTemplateColumns: `200px repeat(${calendar.days}, minmax(${dayColumnWidth}px, 1fr))`,
+                  width: `${roomColumnWidth + calendar.days * dayColumnWidth}px`,
+                  borderColor: "var(--soft-border)",
+                  background: "var(--panel-bg)",
                 }}
               >
                 <div
-                  className="sticky left-0 z-20 flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.08)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.24)]"
+                  className="sticky top-0 z-30 grid"
                   style={{
-                    borderRight: "1px solid rgba(148, 163, 184, 0.18)",
-                    backgroundColor: "rgba(248, 250, 252, 0.98)",
+                    backgroundColor: "rgba(248, 250, 252, 0.96)",
+                    gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                   }}
                 >
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                    Room Category
-                  </span>
-                </div>
-                {days.map((day) => (
                   <div
-                    key={day.isoDate}
-                    className="min-w-[48px] p-3 text-center"
+                    className="sticky left-0 z-40 flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.08)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.24)]"
                     style={{
-                      borderRight: "1px solid rgba(148, 163, 184, 0.12)",
-                      backgroundColor: day.weekend
-                        ? "rgba(241, 245, 249, 0.92)"
-                        : "transparent",
+                      borderRight: "1px solid rgba(148, 163, 184, 0.18)",
+                      backgroundColor: "rgba(248, 250, 252, 0.98)",
                     }}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                        {day.today ? "Today" : day.label}
-                      </span>
-                      <span
-                        className="text-lg font-bold"
-                        style={{
-                          color: day.today ? "rgb(15 23 42)" : "rgb(51 65 85)",
-                        }}
-                      >
-                        {day.date.slice(0, 2)}
-                      </span>
-                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      Room Category
+                    </span>
                   </div>
-                ))}
-              </div>
+                  {days.map((day) => (
+                    <div
+                      key={day.isoDate}
+                      className="min-w-[48px] p-3 text-center"
+                      style={{
+                        borderRight: "1px solid rgba(148, 163, 184, 0.12)",
+                        backgroundColor: day.weekend
+                          ? "rgba(241, 245, 249, 0.92)"
+                          : "transparent",
+                      }}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                          {day.label}
+                        </span>
+                        <span
+                          className="mt-1 text-lg font-bold"
+                          style={{
+                            color: day.today ? "rgb(15 23 42)" : "rgb(51 65 85)",
+                          }}
+                        >
+                          {day.date}
+                        </span>
+                        {day.today ? (
+                          <span className="mt-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white dark:bg-slate-100 dark:text-slate-900">
+                            Today
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-              {roomRows.map((room, rowIndex) => {
-                const isDropTargetRoom =
-                  dragState && dragState.targetRoomId === room.room_id;
-                const displayBookings = room.stackedBookings
-                  .filter((booking) => {
-                    if (
-                      !dragState ||
-                      dragState.bookingId !== booking.booking_id
-                    ) {
-                      return true;
-                    }
+                {roomRows.map((room, rowIndex) => {
+                  const isDropTargetRoom =
+                    dragState && dragState.targetRoomId === room.room_id;
+                  const displayBookings = room.stackedBookings
+                    .filter((booking) => {
+                      if (
+                        !dragState ||
+                        dragState.bookingId !== booking.booking_id
+                      ) {
+                        return true;
+                      }
 
-                    return dragState.targetRoomId === room.room_id;
-                  })
-                  .map((booking) =>
-                    dragState?.bookingId === booking.booking_id
-                      ? {
-                          ...booking,
-                          room_id: dragState.targetRoomId,
-                          rate_id: dragState.targetRateId,
-                          left_days: dragState.previewLeftDays,
-                        }
-                      : booking,
+                      return dragState.targetRoomId === room.room_id;
+                    })
+                    .map((booking) =>
+                      dragState?.bookingId === booking.booking_id
+                        ? {
+                            ...booking,
+                            room_id: dragState.targetRoomId,
+                            rate_id: dragState.targetRateId,
+                            left_days: dragState.previewLeftDays,
+                          }
+                        : booking,
+                    );
+
+                  if (
+                    isDropTargetRoom &&
+                    dragState?.booking &&
+                    !displayBookings.some(
+                      (booking) => booking.booking_id === dragState.bookingId,
+                    )
+                  ) {
+                    displayBookings.push({
+                      ...dragState.booking,
+                      room_id: dragState.targetRoomId,
+                      rate_id: dragState.targetRateId,
+                      left_days: dragState.previewLeftDays,
+                    });
+                  }
+
+                  const stackedDisplayBookings =
+                    buildStackedBookings(displayBookings);
+                  const activeLaneCount = stackedDisplayBookings.length
+                    ? Math.max(
+                        ...stackedDisplayBookings.map(
+                          (booking) => booking.laneIndex,
+                        ),
+                      ) + 1
+                    : 1;
+                  const rowHeight = Math.max(
+                    room.rowHeight,
+                    activeLaneCount * 28 + 16,
                   );
 
-                if (
-                  isDropTargetRoom &&
-                  dragState?.booking &&
-                  !displayBookings.some(
-                    (booking) => booking.booking_id === dragState.bookingId,
-                  )
-                ) {
-                  displayBookings.push({
-                    ...dragState.booking,
-                    room_id: dragState.targetRoomId,
-                    rate_id: dragState.targetRateId,
-                    left_days: dragState.previewLeftDays,
-                  });
-                }
-
-                const stackedDisplayBookings =
-                  buildStackedBookings(displayBookings);
-                const activeLaneCount = stackedDisplayBookings.length
-                  ? Math.max(
-                      ...stackedDisplayBookings.map(
-                        (booking) => booking.laneIndex,
-                      ),
-                    ) + 1
-                  : 1;
-                const rowHeight = Math.max(
-                  room.rowHeight,
-                  activeLaneCount * 28 + 16,
-                );
-
-                return (
-                  <div
-                    key={room.room_id}
-                    className="group grid transition-colors"
-                    style={{
-                      gridTemplateColumns: `200px repeat(${calendar.days}, minmax(${dayColumnWidth}px, 1fr))`,
-                    }}
-                  >
+                  return (
                     <div
-                      className="sticky left-0 z-10 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
+                      key={room.room_id}
+                      className="group grid transition-colors"
+                      style={{
+                        gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
+                      }}
+                    >
+                    <div
+                      className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
                       style={{
                         minHeight: `${rowHeight}px`,
                         borderRight: "1px solid rgba(148, 163, 184, 0.18)",
@@ -850,7 +893,7 @@ export function InventoryPage({ propertyId }) {
                       <div
                         className="grid"
                         style={{
-                          gridTemplateColumns: `repeat(${calendar.days}, minmax(${dayColumnWidth}px, 1fr))`,
+                          gridTemplateColumns: `repeat(${calendar.days}, ${dayColumnWidth}px)`,
                           minHeight: `${rowHeight}px`,
                         }}
                       >
@@ -998,47 +1041,11 @@ export function InventoryPage({ propertyId }) {
                         );
                       })}
                     </div>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-
-            <footer className="mt-8 flex flex-wrap items-center justify-between gap-6">
-              <div
-                className="flex items-center gap-6 rounded-full px-6 py-3"
-                style={{
-                  border: "1px solid rgba(148, 163, 184, 0.18)",
-                  backgroundColor: "rgba(255,255,255,0.88)",
-                }}
-              >
-                {[
-                  ["bg-slate-300", "Available"],
-                  ["bg-slate-600", "Booked"],
-                  ["bg-stone-500", "Pending"],
-                  ["bg-zinc-700", "Priority"],
-                ].map(([swatchClass, label]) => (
-                  <div key={label} className="flex items-center gap-2">
-                    <div
-                      className={["h-3 w-3 rounded-full", swatchClass].join(
-                        " ",
-                      )}
-                    />
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      {label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400">
-                <span className="font-mono text-[10px] uppercase tracking-widest">
-                  Neutral Ledger
-                </span>
-                <div className="h-4 w-px bg-slate-300 dark:bg-slate-700" />
-                <span className="font-mono text-[10px] uppercase tracking-widest text-slate-700 dark:text-slate-200">
-                  Inventory Grid
-                </span>
-              </div>
-            </footer>
           </div>
           {calendarError ? (
             <div className="border-t border-rose-100 bg-rose-50 px-6 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/30 lg:px-8">

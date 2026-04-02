@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1/inventory", tags=["inventory"])
 def inventory_calendar(
     property_id: str = Query(...),
     start_date: date | None = Query(None),
-    days: int = Query(14, ge=1, le=30),
+    days: int = Query(14, ge=1, le=31),
     db: Session = Depends(get_db),
 ):
     start = start_date or date.today()

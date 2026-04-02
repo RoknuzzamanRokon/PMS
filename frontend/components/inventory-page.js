@@ -692,6 +692,123 @@ export function InventoryPage({ propertyId }) {
     editForm.check_out_date,
   );
   const isSoftLightTheme = theme === "soft-light";
+  const isLightTheme = theme === "light";
+  const bookingStatusPalette = {
+    CONFIRMED: {
+      label: "Confirmed",
+      dot: isLightTheme
+        ? "bg-fuchsia-500"
+        : isSoftLightTheme
+          ? "bg-fuchsia-300"
+          : "bg-fuchsia-400",
+      legendText: isLightTheme
+        ? "text-fuchsia-700"
+        : isSoftLightTheme
+          ? "text-fuchsia-100"
+          : "text-fuchsia-300",
+      legendBadge: isLightTheme
+        ? "border border-fuchsia-200 bg-fuchsia-50/90 text-fuchsia-700"
+        : isSoftLightTheme
+          ? "border border-fuchsia-200/20 bg-fuchsia-400/10 text-fuchsia-100"
+          : "border border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300",
+      card: isLightTheme
+        ? "border-[rgba(217,70,239,0.18)] bg-[linear-gradient(135deg,rgba(255,250,255,0.98)_0%,rgba(250,240,255,0.96)_100%)] shadow-[0_8px_18px_rgba(192,38,211,0.08)]"
+        : isSoftLightTheme
+          ? "border-[rgba(183,93,165,0.24)] bg-[linear-gradient(135deg,rgba(201,120,184,0.24)_0%,rgba(221,160,210,0.17)_100%)] shadow-[0_8px_18px_rgba(183,93,165,0.12)] backdrop-blur-md"
+          : "border-[rgba(244,114,182,0.18)] bg-[linear-gradient(135deg,rgba(244,114,182,0.18)_0%,rgba(251,207,232,0.10)_100%)] shadow-[0_8px_18px_rgba(244,114,182,0.10)] backdrop-blur-md",
+      title: isLightTheme
+        ? "text-fuchsia-900"
+        : isSoftLightTheme
+          ? "text-[rgba(122,51,108,0.95)]"
+          : "text-fuchsia-100",
+      meta: isLightTheme
+        ? "text-fuchsia-700"
+        : isSoftLightTheme
+          ? "text-[rgba(143,73,129,0.88)]"
+          : "text-fuchsia-200/90",
+      badge: isLightTheme
+        ? "bg-fuchsia-600 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(150,60,132,0.92)] text-white"
+          : "bg-fuchsia-300 text-slate-950",
+    },
+    CHECKED_IN: {
+      label: "Checked-in",
+      dot: isLightTheme
+        ? "bg-violet-500"
+        : isSoftLightTheme
+          ? "bg-violet-300"
+          : "bg-violet-400",
+      legendText: isLightTheme
+        ? "text-violet-700"
+        : isSoftLightTheme
+          ? "text-violet-100"
+          : "text-violet-300",
+      legendBadge: isLightTheme
+        ? "border border-violet-200 bg-violet-50/90 text-violet-700"
+        : isSoftLightTheme
+          ? "border border-violet-200/20 bg-violet-400/10 text-violet-100"
+          : "border border-violet-400/20 bg-violet-400/10 text-violet-300",
+      card: isLightTheme
+        ? "border-[rgba(139,92,246,0.18)] bg-[linear-gradient(135deg,rgba(248,246,255,0.98)_0%,rgba(241,236,255,0.96)_100%)] shadow-[0_8px_18px_rgba(139,92,246,0.08)]"
+        : isSoftLightTheme
+          ? "border-[rgba(168,132,196,0.24)] bg-[linear-gradient(135deg,rgba(196,167,231,0.24)_0%,rgba(220,196,242,0.17)_100%)] shadow-[0_8px_18px_rgba(168,132,196,0.12)] backdrop-blur-md"
+          : "border-[rgba(167,139,250,0.20)] bg-[linear-gradient(135deg,rgba(167,139,250,0.18)_0%,rgba(196,181,253,0.10)_100%)] shadow-[0_8px_18px_rgba(167,139,250,0.10)] backdrop-blur-md",
+      title: isLightTheme
+        ? "text-violet-900"
+        : isSoftLightTheme
+          ? "text-[rgba(88,61,122,0.95)]"
+          : "text-violet-100",
+      meta: isLightTheme
+        ? "text-violet-700"
+        : isSoftLightTheme
+          ? "text-[rgba(107,79,145,0.88)]"
+          : "text-violet-200/90",
+      badge: isLightTheme
+        ? "bg-violet-600 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(109,76,164,0.92)] text-white"
+          : "bg-violet-300 text-slate-950",
+    },
+    PENDING: {
+      label: "Pending",
+      dot: isLightTheme
+        ? "bg-amber-500"
+        : isSoftLightTheme
+          ? "bg-amber-300"
+          : "bg-amber-400",
+      legendText: isLightTheme
+        ? "text-amber-700"
+        : isSoftLightTheme
+          ? "text-amber-100"
+          : "text-amber-300",
+      legendBadge: isLightTheme
+        ? "border border-amber-200 bg-amber-50/90 text-amber-700"
+        : isSoftLightTheme
+          ? "border border-amber-200/20 bg-amber-400/10 text-amber-100"
+          : "border border-amber-400/20 bg-amber-400/10 text-amber-300",
+      card: isLightTheme
+        ? "border-[rgba(245,158,11,0.20)] bg-[linear-gradient(135deg,rgba(255,252,245,0.98)_0%,rgba(255,247,220,0.96)_100%)] shadow-[0_8px_18px_rgba(245,158,11,0.08)]"
+        : isSoftLightTheme
+          ? "border-[rgba(236,153,75,0.24)] bg-[linear-gradient(135deg,rgba(255,205,146,0.22)_0%,rgba(255,228,196,0.16)_100%)] shadow-[0_8px_18px_rgba(236,153,75,0.12)] backdrop-blur-md"
+          : "border-[rgba(251,191,36,0.20)] bg-[linear-gradient(135deg,rgba(251,191,36,0.18)_0%,rgba(253,230,138,0.10)_100%)] shadow-[0_8px_18px_rgba(251,191,36,0.10)] backdrop-blur-md",
+      title: isLightTheme
+        ? "text-amber-900"
+        : isSoftLightTheme
+          ? "text-[rgba(133,84,32,0.95)]"
+          : "text-amber-100",
+      meta: isLightTheme
+        ? "text-amber-700"
+        : isSoftLightTheme
+          ? "text-[rgba(156,101,44,0.88)]"
+          : "text-amber-200/90",
+      badge: isLightTheme
+        ? "bg-amber-500 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(214,136,52,0.94)] text-white"
+          : "bg-amber-300 text-slate-950",
+    },
+  };
 
   function handleCalendarWheel(event) {
     const scroller = calendarScrollerRef.current;
@@ -828,29 +945,26 @@ export function InventoryPage({ propertyId }) {
                   <option value="price-low">Low price</option>
                 </select>
               </label>
-              {[
-                ["slate", "Confirmed"],
-                ["stone", "Checked-in"],
-                ["zinc", "Pending"],
-              ].map(([tone, label]) => (
-                <div key={label} className="flex items-center gap-1.5">
-                  <span
-                    className={`size-2.5 rounded-full ${isSoftLightTheme ? "" : bookingToneClasses[tone].dot}`}
-                    style={
-                      isSoftLightTheme
-                        ? {
-                            backgroundColor:
-                              softLightBookingToneStyles[tone].dot,
-                            boxShadow: "0 0 0 4px rgba(255,255,255,0.14)",
-                          }
-                        : undefined
-                    }
-                  />
-                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    {label}
-                  </span>
-                </div>
-              ))}
+              {["CONFIRMED", "CHECKED_IN", "PENDING"].map((statusKey) => {
+                const statusTone = bookingStatusPalette[statusKey];
+
+                return (
+                  <div
+                    key={statusKey}
+                    className={[
+                      "inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                      statusTone.legendBadge,
+                    ].join(" ")}
+                  >
+                    <span
+                      className={`size-2.5 rounded-full ${statusTone.dot}`}
+                    />
+                    <span className={statusTone.legendText}>
+                      {statusTone.label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -885,14 +999,26 @@ export function InventoryPage({ propertyId }) {
                 <div
                   className="sticky top-0 z-50 grid"
                   style={{
-                    background: isSoftLightTheme
-                      ? "linear-gradient(135deg, rgba(116, 43, 101, 0.82) 0%, rgba(154, 73, 137, 0.78) 55%, rgba(201, 120, 184, 0.72) 100%)"
-                      : "linear-gradient(180deg, rgba(15, 23, 42, 0.84) 0%, rgba(30, 41, 59, 0.78) 100%)",
+                    background: isLightTheme
+                      ? "linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(248,244,248,0.72) 100%)"
+                      : isSoftLightTheme
+                        ? "linear-gradient(135deg, rgba(116, 43, 101, 0.82) 0%, rgba(154, 73, 137, 0.78) 55%, rgba(201, 120, 184, 0.72) 100%)"
+                        : "linear-gradient(180deg, rgba(15, 23, 42, 0.84) 0%, rgba(30, 41, 59, 0.78) 100%)",
 
-                    backdropFilter: "blur(18px) saturate(140%)",
-                    WebkitBackdropFilter: "blur(18px) saturate(140%)",
+                    backdropFilter: isLightTheme
+                      ? "blur(16px) saturate(140%)"
+                      : "blur(18px) saturate(140%)",
+                    WebkitBackdropFilter: isLightTheme
+                      ? "blur(16px) saturate(140%)"
+                      : "blur(18px) saturate(140%)",
 
-                    borderBottom: "1px solid rgba(255,255,255,0.16)",
+                    borderBottom: isLightTheme
+                      ? "1px solid rgba(148, 163, 184, 0.14)"
+                      : "1px solid rgba(255,255,255,0.16)",
+
+                    boxShadow: isLightTheme
+                      ? "0 8px 24px rgba(15, 23, 42, 0.06)"
+                      : "0 10px 28px rgba(2, 6, 23, 0.22)",
 
                     gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                   }}
@@ -900,20 +1026,28 @@ export function InventoryPage({ propertyId }) {
                   <div
                     className="sticky left-0 z-[60] flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.18)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.32)]"
                     style={{
-                      borderRight: "1px solid rgba(255, 255, 255, 0.18)",
+                      borderRight: isLightTheme
+                        ? "1px solid rgba(148, 163, 184, 0.12)"
+                        : "1px solid rgba(255, 255, 255, 0.18)",
 
-                      background: isSoftLightTheme
-                        ? "linear-gradient(135deg, rgba(96, 33, 84, 0.9) 0%, rgba(140, 56, 123, 0.84) 100%)"
-                        : "linear-gradient(180deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.82) 100%)",
+                      background: isLightTheme
+                        ? "linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(245,240,245,0.82) 100%)"
+                        : isSoftLightTheme
+                          ? "linear-gradient(135deg, rgba(96, 33, 84, 0.9) 0%, rgba(140, 56, 123, 0.84) 100%)"
+                          : "linear-gradient(180deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.82) 100%)",
 
-                      backdropFilter: "blur(20px) saturate(145%)",
-                      WebkitBackdropFilter: "blur(20px) saturate(145%)",
+                      backdropFilter: isLightTheme
+                        ? "blur(16px) saturate(140%)"
+                        : "blur(20px) saturate(145%)",
+                      WebkitBackdropFilter: isLightTheme
+                        ? "blur(16px) saturate(140%)"
+                        : "blur(20px) saturate(145%)",
                     }}
                   >
                     <span
                       className={[
                         "text-[10px] font-bold uppercase tracking-widest",
-                        "text-white/90",
+                        isLightTheme ? "text-[#6f2f62]" : "text-white/90",
                       ].join(" ")}
                     >
                       Room Category
@@ -924,28 +1058,48 @@ export function InventoryPage({ propertyId }) {
                       key={day.isoDate}
                       className="min-w-[48px] p-3 text-center"
                       style={{
-                        borderRight: "1px solid rgba(255, 255, 255, 0.1)",
-                        backgroundColor: day.weekend
-                          ? "rgba(255, 255, 255, 0.08)"
-                          : "rgba(255, 255, 255, 0.03)",
+                        borderRight: isLightTheme
+                          ? "1px solid rgba(201, 120, 184, 0.12)"
+                          : "1px solid rgba(255, 255, 255, 0.1)",
+                        backgroundColor: isLightTheme
+                          ? "linear-gradient(135deg, rgba(201,120,184,0.25) 0%, rgba(221,160,210,0.18) 55%, rgba(241,210,235,0.15) 100%)"
+                          : day.weekend
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(255, 255, 255, 0.03)",
                       }}
                     >
                       <div className="flex flex-col items-center">
-                        <span className="font-mono text-[10px] text-white/70">
+                        <span
+                          className={[
+                            "font-mono text-[10px]",
+                            isLightTheme ? "text-[#8b5d86]" : "text-white/70",
+                          ].join(" ")}
+                        >
                           {day.label}
                         </span>
                         <span
                           className="mt-1 text-lg font-bold"
                           style={{
-                            color: day.today
-                              ? "rgb(255 255 255)"
-                              : "rgba(255,255,255,0.92)",
+                            color: isLightTheme
+                              ? day.today
+                                ? "rgb(111 47 98)"
+                                : "rgb(91 33 74)"
+                              : day.today
+                                ? "rgb(255 255 255)"
+                                : "rgba(255,255,255,0.92)",
                           }}
                         >
                           {day.date}
                         </span>
                         {day.today ? (
-                          <span className="mt-1 rounded-full bg-white/18 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                          <span
+                            className={[
+                              "mt-1 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider backdrop-blur-sm",
+                              isLightTheme
+                                ? "bg-white/60 text-[#6f2f62]"
+                                : "bg-white/18 text-white",
+                            ].join(" ")}
+                          >
                             Today
                           </span>
                         ) : null}
@@ -1017,16 +1171,16 @@ export function InventoryPage({ propertyId }) {
                       }}
                     >
                       <div
-                      className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
+                        className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
                       style={{
                         minHeight: `${rowHeight}px`,
-                        borderRight: isSoftLightTheme
-                          ? "1px solid rgba(255, 255, 255, 0.2)"
+                        borderRight: isLightTheme
+                          ? "1px solid rgba(148, 163, 184, 0.14)"
                           : "1px solid rgba(148, 163, 184, 0.18)",
-                        background: isSoftLightTheme
+                        background: isLightTheme
                           ? rowIndex % 2 === 0
-                            ? "linear-gradient(135deg, rgba(201, 120, 184, 0.22) 0%, rgba(255, 255, 255, 0.3) 100%)"
-                            : "linear-gradient(135deg, rgba(183, 93, 165, 0.24) 0%, rgba(250, 232, 245, 0.38) 100%)"
+                            ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,244,248,0.86) 100%)"
+                            : "linear-gradient(180deg, rgba(250,246,250,0.9) 0%, rgba(243,237,243,0.84) 100%)"
                           : rowIndex % 2 === 0
                             ? "rgba(255,255,255,0.96)"
                             : "rgba(248,250,252,0.96)",
@@ -1035,24 +1189,24 @@ export function InventoryPage({ propertyId }) {
                       <span
                         className={[
                           "font-headline font-semibold",
-                          isSoftLightTheme
+                          isLightTheme
                             ? "text-[#6f2f62]"
                             : "text-slate-800 dark:text-slate-100",
                         ].join(" ")}
-                      >
-                        {room.room_name || room.room_id}
-                      </span>
-                      <span
+                        >
+                          {room.room_name || room.room_id}
+                        </span>
+                        <span
                         className={[
                           "mt-1 font-mono text-[10px] uppercase tracking-[0.16em]",
-                          isSoftLightTheme
+                          isLightTheme
                             ? "text-[#9b5b8d]"
                             : "text-slate-400 dark:text-slate-500",
                         ].join(" ")}
-                      >
-                        {room.room_id}
-                      </span>
-                    </div>
+                        >
+                          {room.room_id}
+                        </span>
+                      </div>
 
                       <div
                         className="relative"
@@ -1137,16 +1291,15 @@ export function InventoryPage({ propertyId }) {
 
                         {stackedDisplayBookings.map((displayBooking) => {
                           const tone =
-                            bookingToneClasses[displayBooking.tone] ||
-                            bookingToneClasses.slate;
-                          const softLightTone =
-                            softLightBookingToneStyles[displayBooking.tone] ||
-                            softLightBookingToneStyles.slate;
+                            bookingStatusPalette[
+                              String(
+                                displayBooking.booking_status || "CONFIRMED",
+                              ).toUpperCase()
+                            ] || bookingStatusPalette.CONFIRMED;
                           const [bookingId, bookingStatus] = String(
                             displayBooking.meta || "",
                           ).split(" • ");
 
-                          
                           return (
                             <div
                               key={displayBooking.booking_id}
@@ -1200,47 +1353,22 @@ export function InventoryPage({ propertyId }) {
                                 }}
                                 className={[
                                   "flex h-full cursor-grab items-center gap-2 overflow-hidden rounded-sm border px-2 transition-all hover:scale-[1.01] active:cursor-grabbing",
-                                  isSoftLightTheme ? "" : tone.card,
+                                  tone.card,
                                   savingBookingId ===
                                     displayBooking.booking_id && "opacity-60",
                                 ]
                                   .filter(Boolean)
                                   .join(" ")}
-                                style={
-                                  isSoftLightTheme
-                                    ? {
-                                        background:
-                                          softLightTone.cardBackground,
-                                        borderColor:
-                                          softLightTone.cardBorder,
-                                        boxShadow: softLightTone.cardShadow,
-                                        backdropFilter: "blur(12px)",
-                                        WebkitBackdropFilter: "blur(12px)",
-                                      }
-                                    : undefined
-                                }
                               >
                                 <span
                                   className={[
                                     "truncate text-[9px] font-black uppercase tracking-[0.12em]",
-                                    isSoftLightTheme ? "" : tone.title,
+                                    tone.title,
                                   ].join(" ")}
-                                  style={
-                                    isSoftLightTheme
-                                      ? { color: softLightTone.title }
-                                      : undefined
-                                  }
                                 >
                                   {displayBooking.guest_name}
                                 </span>
-                                <span
-                                  className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400"
-                                  style={
-                                    isSoftLightTheme
-                                      ? { color: softLightTone.meta }
-                                      : undefined
-                                  }
-                                >
+                                <span className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400">
                                   {displayBooking.rate_title ||
                                     displayBooking.rate_id ||
                                     "Rate"}
@@ -1248,32 +1376,16 @@ export function InventoryPage({ propertyId }) {
                                 <span
                                   className={[
                                     "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider",
-                                    isSoftLightTheme ? "" : tone.badge,
+                                    tone.badge,
                                   ].join(" ")}
-                                  style={
-                                    isSoftLightTheme
-                                      ? {
-                                          background:
-                                            softLightTone.badgeBackground,
-                                          color: softLightTone.badgeColor,
-                                          backdropFilter: "blur(10px)",
-                                          WebkitBackdropFilter: "blur(10px)",
-                                        }
-                                      : undefined
-                                  }
                                 >
-                                  {bookingStatus || "CONFIRMED"}
+                                  {tone.label}
                                 </span>
                                 <span
                                   className={[
                                     "shrink-0 text-[8px] font-semibold",
-                                    isSoftLightTheme ? "" : tone.meta,
+                                    tone.meta,
                                   ].join(" ")}
-                                  style={
-                                    isSoftLightTheme
-                                      ? { color: softLightTone.meta }
-                                      : undefined
-                                  }
                                 >
                                   {bookingId || displayBooking.booking_id}
                                 </span>

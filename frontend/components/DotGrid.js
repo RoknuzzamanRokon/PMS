@@ -1,9 +1,6 @@
 "use client";
 import { useRef, useEffect, useCallback, useMemo } from "react";
 import { gsap } from "gsap";
-import { InertiaPlugin } from "gsap/InertiaPlugin";
-
-gsap.registerPlugin(InertiaPlugin);
 
 const throttle = (func, limit) => {
   let lastCall = 0;
@@ -205,15 +202,20 @@ const DotGrid = ({
           const pushX = dot.cx - pr.x + vx * 0.005;
           const pushY = dot.cy - pr.y + vy * 0.005;
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: 0.28,
+            ease: "power2.out",
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
                 ease: "elastic.out(1,0.75)",
+                onComplete: () => {
+                  dot._inertiaApplied = false;
+                },
               });
-              dot._inertiaApplied = false;
             },
           });
         }
@@ -237,15 +239,20 @@ const DotGrid = ({
           const pushX = (dot.cx - cx) * shockStrength * falloff;
           const pushY = (dot.cy - cy) * shockStrength * falloff;
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: 0.3,
+            ease: "power2.out",
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
                 yOffset: 0,
                 duration: returnDuration,
                 ease: "elastic.out(1,0.75)",
+                onComplete: () => {
+                  dot._inertiaApplied = false;
+                },
               });
-              dot._inertiaApplied = false;
             },
           });
         }

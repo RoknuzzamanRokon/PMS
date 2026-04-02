@@ -1,9 +1,6 @@
 "use client";
 import { useRef, useEffect, useCallback, useMemo } from "react";
 import { gsap } from "gsap";
-import { InertiaPlugin } from "gsap/InertiaPlugin";
-
-gsap.registerPlugin(InertiaPlugin);
 
 const throttle = (func, limit) => {
   let lastCall = 0;
@@ -76,8 +73,8 @@ const DotGrid = ({
 
     canvas.width = width * dpr;
     canvas.height = height * dpr;
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    canvas.style.width = `100%`;
+    canvas.style.height = `100%`;
     const ctx = canvas.getContext("2d");
     if (ctx) ctx.scale(dpr, dpr);
 
@@ -189,7 +186,8 @@ const DotGrid = ({
       pr.vy = vy;
       pr.speed = speed;
 
-      const rect = canvasRef.current.getBoundingClientRect();
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
       pr.x = e.clientX - rect.left;
       pr.y = e.clientY - rect.top;
 
@@ -198,10 +196,16 @@ const DotGrid = ({
         if (speed > speedTrigger && dist < proximity && !dot._inertiaApplied) {
           dot._inertiaApplied = true;
           gsap.killTweensOf(dot);
-          const pushX = dot.cx - pr.x + vx * 0.005;
-          const pushY = dot.cy - pr.y + vy * 0.005;
+          
+          // Custom push effect instead of InertiaPlugin
+          const pushX = (dot.cx - pr.x + vx * 0.005) * (1 - dist / proximity);
+          const pushY = (dot.cy - pr.y + vy * 0.005) * (1 - dist / proximity);
+
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: 0.3,
+            ease: "power2.out",
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
@@ -217,7 +221,8 @@ const DotGrid = ({
     };
 
     const onClick = (e) => {
-      const rect = canvasRef.current.getBoundingClientRect();
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
       const cx = e.clientX - rect.left;
       const cy = e.clientY - rect.top;
       for (const dot of dotsRef.current) {
@@ -228,8 +233,12 @@ const DotGrid = ({
           const falloff = Math.max(0, 1 - dist / shockRadius);
           const pushX = (dot.cx - cx) * shockStrength * falloff;
           const pushY = (dot.cy - cy) * shockStrength * falloff;
+          
           gsap.to(dot, {
-            inertia: { xOffset: pushX, yOffset: pushY, resistance },
+            xOffset: pushX,
+            yOffset: pushY,
+            duration: 0.2,
+            ease: "power3.out",
             onComplete: () => {
               gsap.to(dot, {
                 xOffset: 0,
@@ -264,7 +273,7 @@ const DotGrid = ({
 
   return (
     <section
-      className={`p-4 flex items-center justify-center h-full w-full relative ${className}`}
+      className={`flex items-center justify-center h-full w-full relative ${className}`}
       style={style}
     >
       <div ref={wrapperRef} className="w-full h-full relative">

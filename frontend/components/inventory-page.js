@@ -560,13 +560,15 @@ export function InventoryPage({ propertyId }) {
             group.base_rate,
             ...group.rates.map((rate) => Number(rate.base_rate || 0)),
           ),
-          lastUpdatedAt: [
-            group.room_updated_at,
-            ...group.rates.map((rate) => rate.updated_at),
-            ...group.bookings.map((booking) => booking.updated_at),
-          ]
-            .filter(Boolean)
-            .sort((left, right) => new Date(right) - new Date(left))[0] || null,
+          lastUpdatedAt:
+            [
+              group.room_updated_at,
+              ...group.rates.map((rate) => rate.updated_at),
+              ...group.bookings.map((booking) => booking.updated_at),
+            ]
+              .filter(Boolean)
+              .sort((left, right) => new Date(right) - new Date(left))[0] ||
+            null,
           stackedBookings,
           laneCount,
           rowHeight: Math.max(56, laneCount * 28 + 16),
@@ -591,14 +593,15 @@ export function InventoryPage({ propertyId }) {
         );
       });
   }, [calendar.rows, roomSort]);
-  const visibleRoomWindowHeight = useMemo(
-    () =>
-      72 +
-      roomRows
-        .slice(0, visibleRoomCount)
-        .reduce((sum, room) => sum + room.rowHeight, 0),
-    [roomRows],
-  );
+  const visibleRoomWindowHeight = useMemo(() => {
+    const visibleRowsHeight = roomRows
+      .slice(0, visibleRoomCount)
+      .reduce((sum, room) => sum + room.rowHeight, 0);
+    const missingRows = Math.max(visibleRoomCount - roomRows.length, 0);
+
+    return 72 + visibleRowsHeight + missingRows * 56;
+  }, [roomRows]);
+  const placeholderRowCount = Math.max(visibleRoomCount - roomRows.length, 0);
 
   async function openBookingEditor(booking, row) {
     if (!booking) {
@@ -696,6 +699,95 @@ export function InventoryPage({ propertyId }) {
   const isDarkTheme = theme === "dark";
   const isMidnightTheme = theme === "midnight";
 
+  const bookingBlockStyles = {
+    CONFIRMED: {
+      label: "Confirmed",
+      card: isLightTheme
+        ? "border-[rgba(217,70,239,0.28)] bg-[linear-gradient(135deg,rgba(255,250,255,0.96)_0%,rgba(250,240,255,0.92)_100%)] shadow-[0_0_18px_rgba(217,70,239,0.14)]"
+        : isSoftLightTheme
+          ? "border-[rgba(183,93,165,0.30)] bg-[linear-gradient(135deg,rgba(201,120,184,0.24)_0%,rgba(221,160,210,0.18)_100%)] shadow-[0_0_18px_rgba(183,93,165,0.18)] backdrop-blur-md"
+          : isDarkTheme
+            ? "border-[rgba(217,70,239,0.34)] bg-[linear-gradient(135deg,rgba(88,28,135,0.30)_0%,rgba(76,29,149,0.22)_100%)] shadow-[0_0_18px_rgba(217,70,239,0.20)] backdrop-blur-md"
+            : "border-[rgba(217,70,239,0.38)] bg-[linear-gradient(135deg,rgba(88,28,135,0.34)_0%,rgba(59,7,100,0.26)_100%)] shadow-[0_0_22px_rgba(217,70,239,0.24)] backdrop-blur-md",
+
+      title: isLightTheme
+        ? "text-fuchsia-900"
+        : isSoftLightTheme
+          ? "text-[rgba(122,51,108,0.95)]"
+          : "text-fuchsia-100",
+
+      meta: isLightTheme
+        ? "text-fuchsia-700"
+        : isSoftLightTheme
+          ? "text-[rgba(143,73,129,0.88)]"
+          : "text-fuchsia-200/90",
+
+      badge: isLightTheme
+        ? "bg-fuchsia-600 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(150,60,132,0.92)] text-white"
+          : "bg-fuchsia-300 text-slate-950",
+    },
+
+    CHECKED_IN: {
+      label: "Checked-in",
+      card: isLightTheme
+        ? "border-[rgba(139,92,246,0.28)] bg-[linear-gradient(135deg,rgba(248,246,255,0.96)_0%,rgba(241,236,255,0.92)_100%)] shadow-[0_0_18px_rgba(139,92,246,0.14)]"
+        : isSoftLightTheme
+          ? "border-[rgba(168,132,196,0.30)] bg-[linear-gradient(135deg,rgba(196,167,231,0.24)_0%,rgba(220,196,242,0.18)_100%)] shadow-[0_0_18px_rgba(168,132,196,0.18)] backdrop-blur-md"
+          : isDarkTheme
+            ? "border-[rgba(139,92,246,0.34)] bg-[linear-gradient(135deg,rgba(67,56,202,0.28)_0%,rgba(91,33,182,0.22)_100%)] shadow-[0_0_18px_rgba(139,92,246,0.20)] backdrop-blur-md"
+            : "border-[rgba(139,92,246,0.38)] bg-[linear-gradient(135deg,rgba(49,46,129,0.34)_0%,rgba(76,29,149,0.24)_100%)] shadow-[0_0_22px_rgba(139,92,246,0.24)] backdrop-blur-md",
+
+      title: isLightTheme
+        ? "text-violet-900"
+        : isSoftLightTheme
+          ? "text-[rgba(88,61,122,0.95)]"
+          : "text-violet-100",
+
+      meta: isLightTheme
+        ? "text-violet-700"
+        : isSoftLightTheme
+          ? "text-[rgba(107,79,145,0.88)]"
+          : "text-violet-200/90",
+
+      badge: isLightTheme
+        ? "bg-violet-600 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(109,76,164,0.92)] text-white"
+          : "bg-violet-300 text-slate-950",
+    },
+
+    PENDING: {
+      label: "Pending",
+      card: isLightTheme
+        ? "border-[rgba(245,158,11,0.30)] bg-[linear-gradient(135deg,rgba(255,252,245,0.96)_0%,rgba(255,247,220,0.92)_100%)] shadow-[0_0_18px_rgba(245,158,11,0.14)]"
+        : isSoftLightTheme
+          ? "border-[rgba(236,153,75,0.30)] bg-[linear-gradient(135deg,rgba(255,205,146,0.24)_0%,rgba(255,228,196,0.18)_100%)] shadow-[0_0_18px_rgba(236,153,75,0.18)] backdrop-blur-md"
+          : isDarkTheme
+            ? "border-[rgba(245,158,11,0.34)] bg-[linear-gradient(135deg,rgba(146,64,14,0.28)_0%,rgba(120,53,15,0.22)_100%)] shadow-[0_0_18px_rgba(245,158,11,0.20)] backdrop-blur-md"
+            : "border-[rgba(245,158,11,0.38)] bg-[linear-gradient(135deg,rgba(120,53,15,0.34)_0%,rgba(69,26,3,0.24)_100%)] shadow-[0_0_22px_rgba(245,158,11,0.24)] backdrop-blur-md",
+
+      title: isLightTheme
+        ? "text-amber-900"
+        : isSoftLightTheme
+          ? "text-[rgba(133,84,32,0.95)]"
+          : "text-amber-100",
+
+      meta: isLightTheme
+        ? "text-amber-700"
+        : isSoftLightTheme
+          ? "text-[rgba(156,101,44,0.88)]"
+          : "text-amber-200/90",
+
+      badge: isLightTheme
+        ? "bg-amber-500 text-white"
+        : isSoftLightTheme
+          ? "bg-[rgba(214,136,52,0.94)] text-white"
+          : "bg-amber-300 text-slate-950",
+    },
+  };
+
   const calendarThemeStyles = {
     headerRow: {
       background: isLightTheme
@@ -738,14 +830,14 @@ export function InventoryPage({ propertyId }) {
       borderRight: isLightTheme
         ? "1px solid rgba(148,163,184,0.12)"
         : isSoftLightTheme
-          ? "1px solid rgba(255,255,255,0.18)"
+          ? "1px solid rgba(122,51,108,0.18)"
           : isDarkTheme
             ? "1px solid rgba(148,163,184,0.16)"
             : "1px solid rgba(71,85,105,0.24)",
       background: isLightTheme
         ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,240,245,0.86) 100%)"
         : isSoftLightTheme
-          ? "linear-gradient(135deg, rgba(96,33,84,0.90) 0%, rgba(140,56,123,0.84) 100%)"
+          ? "linear-gradient(180deg, rgba(255,244,251,0.92) 0%, rgba(242,219,238,0.88) 100%)"
           : isDarkTheme
             ? "linear-gradient(180deg, rgba(30,41,59,0.92) 0%, rgba(51,65,85,0.86) 100%)"
             : "linear-gradient(180deg, rgba(2,6,23,0.96) 0%, rgba(15,23,42,0.92) 100%)",
@@ -766,14 +858,14 @@ export function InventoryPage({ propertyId }) {
       title: isLightTheme
         ? "text-slate-800"
         : isSoftLightTheme
-          ? "text-white/95"
+          ? "text-[#6f2f62]"
           : isDarkTheme
             ? "text-slate-100"
             : "text-slate-50",
       subtext: isLightTheme
         ? "text-slate-500"
         : isSoftLightTheme
-          ? "text-white/72"
+          ? "text-[#9b5b8d]"
           : isDarkTheme
             ? "text-slate-400"
             : "text-slate-500",
@@ -1193,8 +1285,7 @@ export function InventoryPage({ propertyId }) {
                       calendarThemeStyles.headerRow.backdropFilter,
                     WebkitBackdropFilter:
                       calendarThemeStyles.headerRow.WebkitBackdropFilter,
-                    borderBottom:
-                      calendarThemeStyles.headerRow.borderBottom,
+                    borderBottom: calendarThemeStyles.headerRow.borderBottom,
                     boxShadow: calendarThemeStyles.headerRow.boxShadow,
                     gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                   }}
@@ -1315,6 +1406,7 @@ export function InventoryPage({ propertyId }) {
                       key={room.room_id}
                       className="group grid transition-colors"
                       style={{
+                        marginTop: rowIndex === 0 ? "10px" : "0",
                         gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
                       }}
                     >
@@ -1331,24 +1423,18 @@ export function InventoryPage({ propertyId }) {
                           backdropFilter:
                             calendarThemeStyles.firstColumn.backdropFilter,
                           WebkitBackdropFilter:
-                            calendarThemeStyles.firstColumn.WebkitBackdropFilter,
+                            calendarThemeStyles.firstColumn
+                              .WebkitBackdropFilter,
                         }}
                       >
-                      <span
-                        className={[
-                          "font-headline font-semibold",
-                          calendarThemeStyles.firstColumn.title,
-                        ].join(" ")}
-                        >
-                          {room.room_name || room.room_id}
-                        </span>
                         <span
                           className={[
-                            "mt-1 font-mono text-[10px] uppercase tracking-[0.16em]",
-                            calendarThemeStyles.firstColumn.subtext,
+                            "font-headline text-[18px] font-semibold leading-tight",
+                            calendarThemeStyles.firstColumn.title,
                           ].join(" ")}
+                          title={room.room_name || room.room_id}
                         >
-                          {room.room_id}
+                          {String(room.room_name || room.room_id).slice(0, 15)}
                         </span>
                       </div>
 
@@ -1435,11 +1521,8 @@ export function InventoryPage({ propertyId }) {
 
                         {stackedDisplayBookings.map((displayBooking) => {
                           const tone =
-                            bookingStatusPalette[
-                              String(
-                                displayBooking.booking_status || "CONFIRMED",
-                              ).toUpperCase()
-                            ] || bookingStatusPalette.CONFIRMED;
+                            bookingBlockStyles[displayBooking.booking_status] ||
+                            bookingBlockStyles.CONFIRMED;
                           const [bookingId, bookingStatus] = String(
                             displayBooking.meta || "",
                           ).split(" • ");
@@ -1496,7 +1579,7 @@ export function InventoryPage({ propertyId }) {
                                   openBookingEditor(displayBooking, room);
                                 }}
                                 className={[
-                                  "flex h-full cursor-grab items-center gap-2 overflow-hidden rounded-sm border px-2 transition-all hover:scale-[1.01] active:cursor-grabbing",
+                                  "flex h-full cursor-grab items-center gap-2 overflow-hidden rounded-sm border px-2 transition-all duration-200 hover:scale-[1.01] active:cursor-grabbing",
                                   tone.card,
                                   savingBookingId ===
                                     displayBooking.booking_id && "opacity-60",
@@ -1512,11 +1595,13 @@ export function InventoryPage({ propertyId }) {
                                 >
                                   {displayBooking.guest_name}
                                 </span>
+
                                 <span className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400">
                                   {displayBooking.rate_title ||
                                     displayBooking.rate_id ||
                                     "Rate"}
                                 </span>
+
                                 <span
                                   className={[
                                     "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider",
@@ -1525,6 +1610,7 @@ export function InventoryPage({ propertyId }) {
                                 >
                                   {tone.label}
                                 </span>
+
                                 <span
                                   className={[
                                     "shrink-0 text-[8px] font-semibold",
@@ -1541,6 +1627,62 @@ export function InventoryPage({ propertyId }) {
                     </div>
                   );
                 })}
+                {Array.from({ length: placeholderRowCount }, (_, rowIndex) => (
+                  <div
+                    key={`placeholder-row-${rowIndex}`}
+                    className="grid"
+                    style={{
+                      marginTop:
+                        roomRows.length === 0 && rowIndex === 0 ? "8px" : "0",
+                      gridTemplateColumns: `${roomColumnWidth}px repeat(${calendar.days}, ${dayColumnWidth}px)`,
+                    }}
+                  >
+                    <div
+                      className="sticky left-0 z-20"
+                      style={{
+                        minHeight: "56px",
+                        borderRight:
+                          calendarThemeStyles.firstColumn.borderRight,
+                        background:
+                          (roomRows.length + rowIndex) % 2 === 0
+                            ? calendarThemeStyles.roomCell.evenBg
+                            : calendarThemeStyles.roomCell.oddBg,
+                        backdropFilter:
+                          calendarThemeStyles.firstColumn.backdropFilter,
+                        WebkitBackdropFilter:
+                          calendarThemeStyles.firstColumn.WebkitBackdropFilter,
+                      }}
+                    />
+                    <div
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: `repeat(${calendar.days}, ${dayColumnWidth}px)`,
+                        minHeight: "56px",
+                      }}
+                    >
+                      {days.map((day) => (
+                        <div
+                          key={`placeholder-${rowIndex}-${day.isoDate}`}
+                          className="p-1"
+                          style={{
+                            borderRight: "1px solid rgba(148, 163, 184, 0.12)",
+                          }}
+                        >
+                          <div
+                            className="h-full w-full rounded-sm border"
+                            style={{
+                              minHeight: "48px",
+                              borderColor: "rgba(148, 163, 184, 0.12)",
+                              backgroundColor: day.weekend
+                                ? "rgba(148, 163, 184, 0.04)"
+                                : "rgba(148, 163, 184, 0.02)",
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

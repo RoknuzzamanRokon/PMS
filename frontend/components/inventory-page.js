@@ -12,6 +12,27 @@ const roomColumnWidth = 200;
 const visibleRoomCount = 7;
 
 const bookingToneClasses = {
+  blue: {
+    dot: "bg-slate-500",
+    card: "border-slate-400/40 bg-slate-500/12 shadow-[0_10px_24px_-18px_rgba(100,116,139,0.45)]",
+    title: "text-slate-900 dark:text-slate-100",
+    meta: "text-slate-700 dark:text-slate-300",
+    badge: "bg-slate-700 text-white dark:bg-slate-200 dark:text-slate-900",
+  },
+  green: {
+    dot: "bg-stone-500",
+    card: "border-stone-400/40 bg-stone-500/12 shadow-[0_10px_24px_-18px_rgba(120,113,108,0.40)]",
+    title: "text-stone-900 dark:text-stone-100",
+    meta: "text-stone-700 dark:text-stone-300",
+    badge: "bg-stone-700 text-white dark:bg-stone-200 dark:text-stone-900",
+  },
+  amber: {
+    dot: "bg-zinc-500",
+    card: "border-zinc-400/40 bg-zinc-500/12 shadow-[0_10px_24px_-18px_rgba(113,113,122,0.40)]",
+    title: "text-zinc-900 dark:text-zinc-100",
+    meta: "text-zinc-700 dark:text-zinc-300",
+    badge: "bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900",
+  },
   slate: {
     dot: "bg-slate-500",
     card: "border-slate-400/40 bg-slate-500/12 shadow-[0_10px_24px_-18px_rgba(100,116,139,0.45)]",
@@ -32,6 +53,75 @@ const bookingToneClasses = {
     title: "text-zinc-900 dark:text-zinc-100",
     meta: "text-zinc-700 dark:text-zinc-300",
     badge: "bg-zinc-700 text-white dark:bg-zinc-200 dark:text-zinc-900",
+  },
+};
+
+const softLightBookingToneStyles = {
+  blue: {
+    dot: "rgba(236, 72, 153, 0.72)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(244, 114, 182, 0.22) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(244, 114, 182, 0.28)",
+    cardShadow: "0 14px 28px -22px rgba(190, 24, 93, 0.45)",
+    title: "#7a284f",
+    meta: "#9d4b70",
+    badgeBackground: "rgba(190, 24, 93, 0.18)",
+    badgeColor: "#7a284f",
+  },
+  green: {
+    dot: "rgba(139, 92, 246, 0.74)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(167, 139, 250, 0.24) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(139, 92, 246, 0.3)",
+    cardShadow: "0 14px 28px -22px rgba(109, 40, 217, 0.42)",
+    title: "#5b3695",
+    meta: "#7a57b8",
+    badgeBackground: "rgba(109, 40, 217, 0.18)",
+    badgeColor: "#5b3695",
+  },
+  amber: {
+    dot: "rgba(245, 158, 11, 0.78)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(251, 191, 36, 0.24) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(245, 158, 11, 0.3)",
+    cardShadow: "0 14px 28px -22px rgba(180, 83, 9, 0.42)",
+    title: "#8a5200",
+    meta: "#ab6a10",
+    badgeBackground: "rgba(180, 83, 9, 0.16)",
+    badgeColor: "#8a5200",
+  },
+  slate: {
+    dot: "rgba(236, 72, 153, 0.72)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(244, 114, 182, 0.22) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(244, 114, 182, 0.28)",
+    cardShadow: "0 14px 28px -22px rgba(190, 24, 93, 0.45)",
+    title: "#7a284f",
+    meta: "#9d4b70",
+    badgeBackground: "rgba(190, 24, 93, 0.18)",
+    badgeColor: "#7a284f",
+  },
+  stone: {
+    dot: "rgba(139, 92, 246, 0.74)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(167, 139, 250, 0.24) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(139, 92, 246, 0.3)",
+    cardShadow: "0 14px 28px -22px rgba(109, 40, 217, 0.42)",
+    title: "#5b3695",
+    meta: "#7a57b8",
+    badgeBackground: "rgba(109, 40, 217, 0.18)",
+    badgeColor: "#5b3695",
+  },
+  zinc: {
+    dot: "rgba(245, 158, 11, 0.78)",
+    cardBackground:
+      "linear-gradient(135deg, rgba(251, 191, 36, 0.24) 0%, rgba(255, 255, 255, 0.14) 100%)",
+    cardBorder: "rgba(245, 158, 11, 0.3)",
+    cardShadow: "0 14px 28px -22px rgba(180, 83, 9, 0.42)",
+    title: "#8a5200",
+    meta: "#ab6a10",
+    badgeBackground: "rgba(180, 83, 9, 0.16)",
+    badgeColor: "#8a5200",
   },
 };
 
@@ -745,7 +835,16 @@ export function InventoryPage({ propertyId }) {
               ].map(([tone, label]) => (
                 <div key={label} className="flex items-center gap-1.5">
                   <span
-                    className={`size-2.5 rounded-full ${bookingToneClasses[tone].dot}`}
+                    className={`size-2.5 rounded-full ${isSoftLightTheme ? "" : bookingToneClasses[tone].dot}`}
+                    style={
+                      isSoftLightTheme
+                        ? {
+                            backgroundColor:
+                              softLightBookingToneStyles[tone].dot,
+                            boxShadow: "0 0 0 4px rgba(255,255,255,0.14)",
+                          }
+                        : undefined
+                    }
                   />
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                     {label}
@@ -1040,6 +1139,9 @@ export function InventoryPage({ propertyId }) {
                           const tone =
                             bookingToneClasses[displayBooking.tone] ||
                             bookingToneClasses.slate;
+                          const softLightTone =
+                            softLightBookingToneStyles[displayBooking.tone] ||
+                            softLightBookingToneStyles.slate;
                           const [bookingId, bookingStatus] = String(
                             displayBooking.meta || "",
                           ).split(" • ");
@@ -1098,22 +1200,47 @@ export function InventoryPage({ propertyId }) {
                                 }}
                                 className={[
                                   "flex h-full cursor-grab items-center gap-2 overflow-hidden rounded-sm border px-2 transition-all hover:scale-[1.01] active:cursor-grabbing",
-                                  tone.card,
+                                  isSoftLightTheme ? "" : tone.card,
                                   savingBookingId ===
                                     displayBooking.booking_id && "opacity-60",
                                 ]
                                   .filter(Boolean)
                                   .join(" ")}
+                                style={
+                                  isSoftLightTheme
+                                    ? {
+                                        background:
+                                          softLightTone.cardBackground,
+                                        borderColor:
+                                          softLightTone.cardBorder,
+                                        boxShadow: softLightTone.cardShadow,
+                                        backdropFilter: "blur(12px)",
+                                        WebkitBackdropFilter: "blur(12px)",
+                                      }
+                                    : undefined
+                                }
                               >
                                 <span
                                   className={[
                                     "truncate text-[9px] font-black uppercase tracking-[0.12em]",
-                                    tone.title,
+                                    isSoftLightTheme ? "" : tone.title,
                                   ].join(" ")}
+                                  style={
+                                    isSoftLightTheme
+                                      ? { color: softLightTone.title }
+                                      : undefined
+                                  }
                                 >
                                   {displayBooking.guest_name}
                                 </span>
-                                <span className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400">
+                                <span
+                                  className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400"
+                                  style={
+                                    isSoftLightTheme
+                                      ? { color: softLightTone.meta }
+                                      : undefined
+                                  }
+                                >
                                   {displayBooking.rate_title ||
                                     displayBooking.rate_id ||
                                     "Rate"}
@@ -1121,16 +1248,32 @@ export function InventoryPage({ propertyId }) {
                                 <span
                                   className={[
                                     "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider",
-                                    tone.badge,
+                                    isSoftLightTheme ? "" : tone.badge,
                                   ].join(" ")}
+                                  style={
+                                    isSoftLightTheme
+                                      ? {
+                                          background:
+                                            softLightTone.badgeBackground,
+                                          color: softLightTone.badgeColor,
+                                          backdropFilter: "blur(10px)",
+                                          WebkitBackdropFilter: "blur(10px)",
+                                        }
+                                      : undefined
+                                  }
                                 >
                                   {bookingStatus || "CONFIRMED"}
                                 </span>
                                 <span
                                   className={[
                                     "shrink-0 text-[8px] font-semibold",
-                                    tone.meta,
+                                    isSoftLightTheme ? "" : tone.meta,
                                   ].join(" ")}
+                                  style={
+                                    isSoftLightTheme
+                                      ? { color: softLightTone.meta }
+                                      : undefined
+                                  }
                                 >
                                   {bookingId || displayBooking.booking_id}
                                 </span>

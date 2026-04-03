@@ -102,13 +102,14 @@ export function PmsShell({
           gap={24}
           baseColor="#7f5757"
           activeColor="#ff2929"
-          proximity={130}
-          shockRadius={80}
+          proximity={70}
+          shockRadius={40}
           shockStrength={20}
           resistance={950}
-          returnDuration={0.7}
+          returnDuration={1.7}
         />
       </div>
+
 
       <div
         className="flex grow overflow-hidden pt-[73px] relative"

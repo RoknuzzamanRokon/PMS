@@ -6,9 +6,14 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { navItems, profileImage } from "./data";
 import { ThemeToggle } from "./theme-toggle";
+import { useTheme } from "./theme-provider";
 import DotGrid from "./DotGrid";
 
-function NavLink({ item, active, collapsed }) {
+function NavLink({ item, active, collapsed, theme }) {
+  const isLightTheme = theme === "light";
+  const isSoftLightTheme = theme === "soft-light";
+  const isDarkTheme = theme === "dark";
+
   return (
     <Link
       href={item.href}
@@ -17,7 +22,13 @@ function NavLink({ item, active, collapsed }) {
         collapsed ? "justify-center" : "gap-3",
         active
           ? "bg-primary/10 font-bold text-primary dark:bg-primary/15"
-          : "font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/80",
+          : isLightTheme
+            ? "font-medium text-slate-700 hover:bg-white/80"
+            : isSoftLightTheme
+              ? "font-medium text-[#6f2f62] hover:bg-white/45"
+              : isDarkTheme
+                ? "font-medium text-slate-200 hover:bg-slate-800/80"
+                : "font-medium text-slate-100 hover:bg-slate-800/60",
       ].join(" ")}
       title={collapsed ? item.label : undefined}
     >
@@ -40,8 +51,42 @@ export function PmsShell({
   children,
 }) {
   const pathname = usePathname();
+  const { theme } = useTheme();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const normalizedPathname = pathname?.replace(/\/+$/, "") || "/";
+  const isLightTheme = theme === "light";
+  const isSoftLightTheme = theme === "soft-light";
+  const isDarkTheme = theme === "dark";
+  const sidebarPanelStyle = {
+    background: isLightTheme
+      ? "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(245,247,250,0.90) 100%)"
+      : isSoftLightTheme
+        ? "linear-gradient(180deg, rgba(255,245,251,0.94) 0%, rgba(244,221,238,0.90) 100%)"
+        : isDarkTheme
+          ? "linear-gradient(180deg, rgba(15,23,42,0.90) 0%, rgba(30,41,59,0.94) 100%)"
+          : "linear-gradient(180deg, rgba(2,6,23,0.95) 0%, rgba(15,23,42,0.98) 100%)",
+    borderColor: isLightTheme
+      ? "rgba(148,163,184,0.16)"
+      : isSoftLightTheme
+        ? "rgba(156,77,140,0.18)"
+        : isDarkTheme
+          ? "rgba(148,163,184,0.16)"
+          : "rgba(71,85,105,0.22)",
+    backdropFilter: isLightTheme
+      ? "blur(16px) saturate(135%)"
+      : isSoftLightTheme
+        ? "blur(18px) saturate(140%)"
+        : isDarkTheme
+          ? "blur(18px) saturate(135%)"
+          : "blur(20px) saturate(145%)",
+    WebkitBackdropFilter: isLightTheme
+      ? "blur(16px) saturate(135%)"
+      : isSoftLightTheme
+        ? "blur(18px) saturate(140%)"
+        : isDarkTheme
+          ? "blur(18px) saturate(135%)"
+          : "blur(20px) saturate(145%)",
+  };
 
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
@@ -117,15 +162,30 @@ export function PmsShell({
       >
         <aside
           className={[
-            "theme-panel fixed left-0 top-[73px] z-30 hidden h-[calc(100vh-73px)] shrink-0 flex-col border-r lg:flex",
+            "fixed left-0 top-[73px] z-30 hidden h-[calc(100vh-73px)] shrink-0 flex-col border-r lg:flex",
             sidebarCollapsed ? "w-20" : "w-64",
           ].join(" ")}
+          style={sidebarPanelStyle}
         >
-          <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+          <div
+            className="flex items-center justify-between border-b p-4"
+            style={{ borderColor: sidebarPanelStyle.borderColor }}
+          >
             {!sidebarCollapsed ? (
               <div className="min-w-0">
                 <h1 className="text-base font-bold">Property Workspace</h1>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                <p
+                  className={[
+                    "text-xs font-medium",
+                    isLightTheme
+                      ? "text-slate-500"
+                      : isSoftLightTheme
+                        ? "text-[#8f4b81]"
+                        : isDarkTheme
+                          ? "text-slate-400"
+                          : "text-slate-400",
+                  ].join(" ")}
+                >
                   Select a property to view live details
                 </p>
               </div>
@@ -133,7 +193,16 @@ export function PmsShell({
             <button
               type="button"
               onClick={() => setSidebarCollapsed((current) => !current)}
-              className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+              className={[
+                "inline-flex size-10 items-center justify-center rounded-lg border transition-colors hover:border-primary hover:text-primary",
+                isLightTheme
+                  ? "border-slate-200 text-slate-600"
+                  : isSoftLightTheme
+                    ? "border-[#d9b4d1] text-[#7a3d6c]"
+                    : isDarkTheme
+                      ? "border-slate-700 text-slate-300"
+                      : "border-slate-700 text-slate-200",
+              ].join(" ")}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <span className="material-symbols-outlined text-xl">
@@ -153,20 +222,50 @@ export function PmsShell({
                     (item.href.replace(/\/+$/, "") || "/")
                   }
                   collapsed={sidebarCollapsed}
+                  theme={theme}
                 />
               ))}
               <div className="pb-2 pt-4">
                 {!sidebarCollapsed ? (
-                  <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  <p
+                    className={[
+                      "px-3 text-[10px] font-bold uppercase tracking-widest",
+                      isLightTheme
+                        ? "text-slate-400"
+                        : isSoftLightTheme
+                          ? "text-[#9b5b8d]"
+                          : isDarkTheme
+                            ? "text-slate-500"
+                            : "text-slate-500",
+                    ].join(" ")}
+                  >
                     System
                   </p>
                 ) : (
-                  <div className="mx-auto h-px w-8 bg-slate-300 dark:bg-slate-600" />
+                  <div
+                    className={[
+                      "mx-auto h-px w-8",
+                      isLightTheme
+                        ? "bg-slate-300"
+                        : isSoftLightTheme
+                          ? "bg-[#c797bd]"
+                          : isDarkTheme
+                            ? "bg-slate-600"
+                            : "bg-slate-700",
+                    ].join(" ")}
+                  />
                 )}
               </div>
               <a
                 className={[
-                  "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800/80",
+                  "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium",
+                  isLightTheme
+                    ? "text-slate-700 hover:bg-white/80"
+                    : isSoftLightTheme
+                      ? "text-[#6f2f62] hover:bg-white/45"
+                      : isDarkTheme
+                        ? "text-slate-200 hover:bg-slate-800/80"
+                        : "text-slate-100 hover:bg-slate-800/60",
                   sidebarCollapsed ? "justify-center" : "gap-3",
                 ].join(" ")}
                 href="#"
@@ -230,5 +329,4 @@ export function PmsShell({
     </div>
   );
 }
-
 

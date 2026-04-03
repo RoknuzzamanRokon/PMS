@@ -502,6 +502,7 @@ export function DailyRatesPage({ propertyId }) {
   const [deletingRateId, setDeletingRateId] = useState("");
   const [bulkError, setBulkError] = useState("");
   const [bulkSuccess, setBulkSuccess] = useState("");
+  const [summaryPopover, setSummaryPopover] = useState(null);
   const [availabilityStatuses, setAvailabilityStatuses] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
   const [showRatePlanModal, setShowRatePlanModal] = useState(false);
@@ -514,6 +515,8 @@ export function DailyRatesPage({ propertyId }) {
   const [loadingRatePlanDetails, setLoadingRatePlanDetails] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
+  const matrixRoomColumnWidth = 280;
+  const matrixDayColumnWidth = 120;
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
   const [rateMatrixSearch, setRateMatrixSearch] = useState("");
@@ -527,6 +530,10 @@ export function DailyRatesPage({ propertyId }) {
   const [newRatePlanForm, setNewRatePlanForm] = useState(createRatePlanForm(null));
   const days = useMemo(() => createDays(calendarStartDate, totalDays), [calendarStartDate]);
   const visibleDays = useMemo(() => days.slice(0, range), [days, range]);
+
+  useEffect(() => {
+    setSummaryPopover(null);
+  }, [selectedProperty, calendarStartDate, range]);
   const ratePlanPreview = useMemo(() => {
     const baseRate = parseRateValue(newRatePlanForm.base_rate);
     const taxAndServiceFee = parseRateValue(newRatePlanForm.tax_and_service_fee);
@@ -882,6 +889,105 @@ export function DailyRatesPage({ propertyId }) {
 
   function handleMatrixMouseUp() {
     matrixDragRef.current.active = false;
+  }
+
+  function renderInventoryStyleRateCell(row, cell, index) {
+    const styles = toneClasses[cell.tone] || toneClasses.default;
+    const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
+    const cellAvailability = cell.availability || "";
+    const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
+    const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
+    const availabilityUi = getAvailabilityUiClasses(cellAvailability);
+
+    return (
+      <div
+        key={`${row.code}-inventory-${index}`}
+        className="px-2 py-2"
+        style={{
+          borderRight: "1px solid rgba(148, 163, 184, 0.12)",
+          background:
+            index === selectedDateIndex
+              ? "rgba(15, 23, 42, 0.04)"
+              : index % 2 === 0
+                ? "rgba(255, 255, 255, 0.82)"
+                : "rgba(248, 250, 252, 0.78)",
+        }}
+      >
+        <div
+          className={`${styles.box} ${availabilityUi.box} min-h-[126px] transition-colors`}
+          style={{
+            borderRadius: "12px",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.24)",
+          }}
+        >
+          <span
+            className={[
+              styles.note,
+              cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+              cell.note === "Alt booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+              cell.note === "Processing" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={
+              cell.note === "Booked"
+                ? { backgroundColor: "#4df714" }
+                : cell.note === "Alt booked"
+                  ? { backgroundColor: "#bb8df7" }
+                  : cell.note === "Processing"
+                    ? { backgroundColor: "#f2eb16" }
+                    : undefined
+            }
+          >
+            {cell.note}
+          </span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className={styles.input}
+            value={cellRate}
+            disabled={!apiConnected || !cell.stay_date}
+            onChange={(event) => {
+              updateCell(row.code, cell.stay_date, { base_rate: event.target.value });
+              setPublishError("");
+              setPublishSuccess("");
+            }}
+          />
+          <div
+            className={[
+              "mt-2 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
+              availabilityUi.badge,
+            ].join(" ")}
+          >
+            {availabilityLabel}
+          </div>
+          <select
+            value={cellSelectValue}
+            disabled={!apiConnected || !cell.stay_date}
+            onChange={(event) => {
+              updateCell(row.code, cell.stay_date, { availability: normalizeAvailabilityInput(event.target.value) });
+              setPublishError("");
+              setPublishSuccess("");
+            }}
+            className={[
+              "mt-2 w-full rounded-md border bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider outline-none",
+              availabilityUi.select,
+            ].join(" ")}
+          >
+            {availabilityOptions.map((status) => (
+              <option key={`${row.code}-${cell.stay_date}-${status.value}`} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-medium text-slate-400">
+            <span>{cell.stay_date || "Demo"}</span>
+            <span>{cell.changed ? "Queued" : apiConnected ? "Saved" : "Preview"}</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   function openRatePlanModal(room) {
@@ -1699,16 +1805,32 @@ export function DailyRatesPage({ propertyId }) {
             className="custom-scrollbar cursor-grab select-none overflow-x-auto overflow-y-visible active:cursor-grabbing"
           >
             <div
-              className="min-w-[820px]"
+              className="min-w-max overflow-visible"
               style={{
-                "--rate-days": String(range),
-                width: `${Math.max(range / visibleMatrixDays, 1) * 100}%`,
+                width: `${matrixRoomColumnWidth + visibleDays.length * matrixDayColumnWidth}px`,
               }}
             >
-              <div className="rates-grid sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-              <div className="sticky left-0 z-20 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+              <div
+                className="sticky top-0 z-30 grid"
+                style={{
+                  gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,247,250,0.92) 100%)",
+                  borderBottom: "1px solid rgba(148, 163, 184, 0.16)",
+                  backdropFilter: "blur(14px)",
+                }}
+              >
+              <div
+                className="sticky left-0 z-40 flex min-h-[76px] items-center px-5 py-4 text-left"
+                style={{
+                  borderRight: "1px solid rgba(148, 163, 184, 0.16)",
+                  background:
+                    "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(243,246,249,0.94) 100%)",
+                  boxShadow: "2px 0 10px rgba(15,23,42,0.08)",
+                }}
+              >
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Room Type
+                  Rate Plan
                 </p>
               </div>
               {visibleDays.map((day, index) => {
@@ -1720,30 +1842,51 @@ export function DailyRatesPage({ propertyId }) {
                     type="button"
                     key={day.isoDate}
                     onClick={() => setSelectedDateIndex(index)}
-                    className={[
-                      "border-r border-slate-100 px-3 py-4 text-center transition-colors",
-                      isToday && "bg-primary/[0.07]",
-                      !isToday && weekend && "bg-slate-50/80",
-                      isSelected && "ring-2 ring-inset ring-primary/40",
-                    ].join(" ")}
+                    className="min-w-[48px] p-3 text-center"
+                    style={{
+                      borderRight: "1px solid rgba(148, 163, 184, 0.10)",
+                      backgroundColor: isSelected
+                        ? "rgba(15, 23, 42, 0.06)"
+                        : weekend
+                          ? "rgba(248, 250, 252, 0.88)"
+                          : "transparent",
+                    }}
                   >
-                    <p
-                      className={[
-                        "text-[10px] font-bold uppercase tracking-wider",
-                        isToday ? "text-primary" : "text-slate-400",
-                      ].join(" ")}
-                    >
-                      {isToday ? "Today" : day.shortDay}
-                    </p>
-                    <p className="mt-1 text-sm font-bold text-slate-900">
-                      {day.dayNum} {day.month}
-                    </p>
+                    <div className="flex flex-col items-center">
+                      <span className="font-mono text-[10px] text-slate-500">
+                        {day.shortDay.toUpperCase()}
+                      </span>
+                      <span className="mt-1 text-lg font-bold text-slate-800">
+                        {day.dayNum}
+                      </span>
+                      {isToday ? (
+                        <span className="mt-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white">
+                          Today
+                        </span>
+                      ) : null}
+                    </div>
                   </button>
                 );
               })}
               </div>
-              <div className="rates-grid sticky top-[73px] z-[19] mb-3 border-b border-slate-200 bg-slate-50/95 backdrop-blur">
-              <div className="sticky left-0 z-20 border-r border-slate-200 bg-slate-50 px-5 py-5 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+              <div
+                className="sticky top-[76px] z-20 grid"
+                style={{
+                  gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                  background: "rgba(248, 250, 252, 0.94)",
+                  borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
+                  backdropFilter: "blur(12px)",
+                }}
+              >
+              <div
+                className="sticky left-0 z-30 px-5 py-5"
+                style={{
+                  borderRight: "1px solid rgba(148, 163, 184, 0.16)",
+                  background:
+                    "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.94) 100%)",
+                  boxShadow: "2px 0 10px rgba(15,23,42,0.06)",
+                }}
+              >
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   Hotel Summary
                 </p>
@@ -1755,40 +1898,92 @@ export function DailyRatesPage({ propertyId }) {
               {visibleInventorySummary.map((summary, index) => {
                 const isSelected = index === selectedDateIndex;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={summary.stay_date}
-                    className={[
-                      "border-r border-slate-200 px-4 py-4",
-                      isSelected ? "bg-primary/[0.06]" : "bg-white/80",
-                    ].join(" ")}
+                    className="px-3 py-3"
+                    onClick={(event) => {
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      const popupWidth = 220;
+                      const popupLeft = Math.min(
+                        rect.right + 10,
+                        window.innerWidth - popupWidth - 16,
+                      );
+                      const popupTop = Math.min(
+                        rect.top,
+                        window.innerHeight - 260,
+                      );
+                      setSummaryPopover((current) =>
+                        current?.stayDate === summary.stay_date
+                          ? null
+                          : {
+                              stayDate: summary.stay_date,
+                              left: Math.max(16, popupLeft),
+                              top: Math.max(16, popupTop),
+                              summary,
+                            },
+                      );
+                    }}
+                    style={{
+                      borderRight: "1px solid rgba(148, 163, 184, 0.10)",
+                      backgroundColor: isSelected ? "rgba(15, 23, 42, 0.04)" : "rgba(255,255,255,0.72)",
+                    }}
                   >
                     <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                      <div className="grid grid-cols-2 gap-2.5 text-[10px] font-bold uppercase tracking-wider">
-                        <div className="rounded-lg bg-emerald-50 px-2.5 py-2 text-emerald-700">
-                          <p className="text-[9px] text-emerald-600">Active Rooms</p>
-                          <p className="mt-1 text-sm text-emerald-800">{summary.total_active_room}</p>
-                        </div>
-                        <div className="rounded-lg bg-blue-50 px-2.5 py-2 text-blue-700">
-                          <p className="text-[9px] text-blue-600">Active Rates</p>
-                          <p className="mt-1 text-sm text-blue-800">{summary.total_active_rate}</p>
-                        </div>
-                        <div className="rounded-lg bg-amber-50 px-2.5 py-2 text-amber-700">
-                          <p className="text-[9px] text-amber-600">Booked -</p>
-                          <p className="mt-1 text-sm text-amber-800">{summary.booked_room}</p>
-                        </div>
-                        <div className="rounded-lg bg-rose-50 px-2.5 py-2 text-rose-700">
-                          <p className="text-[9px] text-rose-600">Unava- ilable</p>
-                          <p className="mt-1 text-sm text-rose-800">{summary.unavailable_room}</p>
-                        </div>
-                      </div>
-                      <div className="mt-2.5 rounded-lg bg-slate-100 px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                        Available Rooms: <span className="text-slate-900">{summary.available_room}</span>
+                      <div className="flex min-h-[86px] flex-col items-center justify-center rounded-xl bg-slate-100/80 text-center text-slate-700">
+                        <span className="material-symbols-outlined text-[22px]">sell</span>
+                        <span className="mt-2 text-[22px] font-bold leading-none text-slate-900">
+                          {summary.total_active_rate}
+                        </span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
               </div>
+
+              {summaryPopover ? (
+                <div
+                  className="fixed z-50 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"
+                  style={{
+                    left: `${summaryPopover.left}px`,
+                    top: `${summaryPopover.top}px`,
+                  }}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                      {summaryPopover.stayDate}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSummaryPopover(null)}
+                      className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      ["meeting_room", "Active Rooms", summaryPopover.summary.total_active_room, "bg-emerald-50 text-emerald-700", "text-emerald-800"],
+                      ["sell", "Active Rates", summaryPopover.summary.total_active_rate, "bg-blue-50 text-blue-700", "text-blue-800"],
+                      ["bed", "Booked", summaryPopover.summary.booked_room, "bg-amber-50 text-amber-700", "text-amber-800"],
+                      ["block", "Unavailable", summaryPopover.summary.unavailable_room, "bg-rose-50 text-rose-700", "text-rose-800"],
+                      ["inventory_2", "Available", summaryPopover.summary.available_room, "bg-slate-100 text-slate-700", "text-slate-900"],
+                    ].map(([icon, label, value, toneClass, valueClass], metricIndex) => (
+                      <div
+                        key={`${summaryPopover.stayDate}-${metricIndex}`}
+                        className={`flex min-h-[42px] items-center justify-between rounded-xl px-3 py-2 ${toneClass}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[18px]">{icon}</span>
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em]">{label}</span>
+                        </div>
+                        <span className={`text-[15px] font-bold leading-none ${valueClass}`}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {!filteredAvailableRows.length ? (
                 <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
@@ -1800,9 +1995,27 @@ export function DailyRatesPage({ propertyId }) {
                 </div>
               ) : null}
 
-              {filteredAvailableRows.map((row) => (
-                <div key={row.code} className="rates-grid border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/40">
-                  <div className="sticky left-0 z-10 border-r border-slate-200 bg-white px-5 py-4 shadow-[8px_0_18px_-18px_rgba(15,23,42,0.25)]">
+              {filteredAvailableRows.map((row, rowIndex) => (
+                <div
+                  key={row.code}
+                  className="grid transition-colors"
+                  style={{
+                    gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                  }}
+                >
+                  <div
+                    className="sticky left-0 z-20 flex flex-col justify-center px-5 py-4"
+                    style={{
+                      minHeight: "154px",
+                      borderRight: "1px solid rgba(148, 163, 184, 0.16)",
+                      borderBottom: "1px solid rgba(148, 163, 184, 0.10)",
+                      background:
+                        rowIndex % 2 === 0
+                          ? "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(248,244,248,0.92) 100%)"
+                          : "linear-gradient(135deg, rgba(252,250,252,0.96) 0%, rgba(243,238,243,0.92) 100%)",
+                      boxShadow: "2px 0 10px rgba(15,23,42,0.06)",
+                    }}
+                  >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-slate-900">{row.title}</p>
@@ -1810,7 +2023,7 @@ export function DailyRatesPage({ propertyId }) {
                         {[row.roomLabel, row.code, row.subtitle].filter(Boolean).join(" • ")}
                       </p>
                     </div>
-                    <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600 shadow-sm">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700">
                       {row.occupancy}
                     </span>
                   </div>
@@ -1847,97 +2060,14 @@ export function DailyRatesPage({ propertyId }) {
                   </div>
                   </div>
 
-                  {row.cells.slice(0, range).map((cell, index) => {
-                  const styles = toneClasses[cell.tone] || toneClasses.default;
-                  const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
-                  const cellAvailability = cell.availability || "";
-                  const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
-                  const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
-                  const availabilityUi = getAvailabilityUiClasses(cellAvailability);
-                  return (
-                    <div
-                      key={`${row.code}-${index}`}
-                      className={[
-                        "border-r border-slate-100 px-2 py-3",
-                        index === 0 && "bg-primary/[0.03]",
-                      ]
-                        .filter(Boolean)
-                        .join(" ")}
-                    >
-                      <div className={`${styles.box} ${availabilityUi.box} min-h-[122px] transition-shadow hover:shadow-md`}>
-                        <span
-                          className={[
-                            styles.note,
-                            cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-                            cell.note === "Alt booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-                            cell.note === "Processing" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          style={
-                            cell.note === "Booked"
-                              ? { backgroundColor: "#4df714" }
-                              : cell.note === "Alt booked"
-                                ? { backgroundColor: "#bb8df7" }
-                              : cell.note === "Processing"
-                                ? { backgroundColor: "#f2eb16" }
-                                : undefined
-                          }
-                        >
-                          {cell.note}
-                        </span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className={styles.input}
-                          value={cellRate}
-                          disabled={!apiConnected || !cell.stay_date}
-                          onChange={(event) => {
-                            updateCell(row.code, cell.stay_date, { base_rate: event.target.value });
-                            setPublishError("");
-                            setPublishSuccess("");
-                          }}
-                        />
-                        <div
-                          className={[
-                            "mt-2 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
-                            availabilityUi.badge,
-                          ].join(" ")}
-                        >
-                          {availabilityLabel}
-                        </div>
-                        <select
-                          value={cellSelectValue}
-                          disabled={!apiConnected || !cell.stay_date}
-                          onChange={(event) => {
-                            updateCell(row.code, cell.stay_date, { availability: normalizeAvailabilityInput(event.target.value) });
-                            setPublishError("");
-                            setPublishSuccess("");
-                          }}
-                          className={[
-                            "mt-2 w-full rounded-md border bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider outline-none",
-                            availabilityUi.select,
-                          ].join(" ")}
-                        >
-                          {availabilityOptions.map((status) => (
-                            <option key={status.value} value={status.value}>
-                              {status.label}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-medium text-slate-400">
-                          <span>{cell.stay_date || "Demo"}</span>
-                          <span>{cell.changed ? "Queued" : apiConnected ? "Saved" : "Preview"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                  })}
+                  {row.cells.slice(0, range).map((cell, index) =>
+                    renderInventoryStyleRateCell(row, cell, index),
+                  )}
                 </div>
               ))}
             </div>
           </div>
+
         </div>
       </section>
       {showRatePlanModal ? (

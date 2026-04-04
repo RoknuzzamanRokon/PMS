@@ -876,12 +876,13 @@ export function DailyRatesPage({ propertyId }) {
     async function loadRates() {
       setLoadingRates(true);
       try {
-        const [propertyList, statusList, mealPlanList, bedTypeList] = await Promise.all([
-          fetchJson("/properties"),
-          fetchJson("/rate-plans/availability-statuses").catch(() => []),
-          fetchJson("/feature/meal-plans").catch(() => []),
-          fetchJson("/feature/bed-type").catch(() => []),
-        ]);
+        const [propertyList, statusList, mealPlanList, bedTypeList] =
+          await Promise.all([
+            fetchJson("/properties"),
+            fetchJson("/rate-plans/availability-statuses").catch(() => []),
+            fetchJson("/feature/meal-plans").catch(() => []),
+            fetchJson("/feature/bed-type").catch(() => []),
+          ]);
         if (ignore) {
           return;
         }
@@ -1143,12 +1144,12 @@ export function DailyRatesPage({ propertyId }) {
     if (!resolvedPropertyId) {
       setRows([]);
       setRooms([]);
-        setInventoryDates([]);
-        setPropertyName("Selected Property");
-        setBedTypes([]);
-        setApiConnected(false);
-        return;
-      }
+      setInventoryDates([]);
+      setPropertyName("Selected Property");
+      setBedTypes([]);
+      setApiConnected(false);
+      return;
+    }
 
     const inventoryEndDate =
       days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
@@ -3021,93 +3022,71 @@ export function DailyRatesPage({ propertyId }) {
                       Loading full rate plan details...
                     </p>
                   ) : null}
-                  <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3.5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
                     {(() => {
                       const roomSummary = getRoomSummarySource(
                         selectedRoomSummary,
                         selectedRoomForRatePlan,
                       );
-                      const totalRoomAmount =
-                        Number(roomSummary?.base_rate || 0) +
-                        Number(roomSummary?.tax_and_service_fee || 0) +
-                        Number(roomSummary?.surcharges || 0) +
-                        Number(roomSummary?.mandatory_fee || 0) +
-                        Number(roomSummary?.resort_fee || 0) +
-                        Number(roomSummary?.mandatory_tax || 0);
-
+                      const cur = newRatePlanForm.currency || "USD";
+                      const rows = [
+                        ["Base Rate", roomSummary?.base_rate || 0],
+                        [
+                          "Tax & Service",
+                          roomSummary?.tax_and_service_fee || 0,
+                        ],
+                        ["Surcharges", roomSummary?.surcharges || 0],
+                        ["Mandatory Fee", roomSummary?.mandatory_fee || 0],
+                        ["Resort Fee", roomSummary?.resort_fee || 0],
+                        ["Mandatory Tax", roomSummary?.mandatory_tax || 0],
+                      ];
+                      const total = rows.reduce((s, [, v]) => s + Number(v), 0);
                       return (
                         <>
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                                Room Summary
-                              </p>
-                              <h4 className="mt-1 text-sm font-bold text-slate-900">
-                                {roomSummary?.room_name ||
-                                  roomSummary?.room_id ||
-                                  "Selected Room"}
-                              </h4>
-                              <p className="mt-0.5 text-[11px] text-slate-500">
-                                {[
-                                  roomSummary?.room_id,
-                                  roomSummary?.room_name_lang,
-                                  roomSummary?.room_status,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" • ")}
-                              </p>
-                            </div>
-                            <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                                Total Room Amount
-                              </p>
-                              <p className="mt-1 text-lg font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency || "USD",
-                                  totalRoomAmount,
-                                )}
-                              </p>
-                            </div>
-                          </div>
+                          <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Room Summary
+                          </h2>
+                          <h4 className="mt-1 text-base font-bold text-slate-900 dark:text-slate-100">
+                            {roomSummary?.room_name ||
+                              roomSummary?.room_id ||
+                              "Selected Room"}
+                          </h4>
+                          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                            {[
+                              roomSummary?.room_id,
+                              roomSummary?.room_name_lang,
+                              roomSummary?.room_status,
+                            ]
+                              .filter(Boolean)
+                              .join(" • ")}
+                          </p>
                           {loadingRoomSummary ? (
-                            <p className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-500 shadow-sm">
-                              Loading room summary from `/rooms/
-                              {selectedRoomForRatePlan?.room_id}`...
+                            <p className="mt-2 text-[11px] text-slate-400">
+                              Loading room data...
                             </p>
                           ) : null}
-                          <div className="mt-2.5 grid gap-2 md:grid-cols-6">
-                            {[
-                              ["Base Rate --", roomSummary?.base_rate || 0],
-                              [
-                                "Tax & Service",
-                                roomSummary?.tax_and_service_fee || 0,
-                              ],
-                              ["Surcharges --", roomSummary?.surcharges || 0],
-                              [
-                                "Mandatory Fee",
-                                roomSummary?.mandatory_fee || 0,
-                              ],
-                              ["Resort Fee", roomSummary?.resort_fee || 0],
-                              [
-                                "Mandatory Tax",
-                                roomSummary?.mandatory_tax || 0,
-                              ],
-                            ].map(([label, value]) => (
+                          <div className="mt-3 space-y-1.5">
+                            {rows.map(([label, value]) => (
                               <div
                                 key={label}
-                                className="rounded-xl bg-white px-2.5 py-2 shadow-sm"
+                                className="flex items-center justify-between text-sm"
                               >
-                                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                <span className="text-slate-500 dark:text-slate-400">
                                   {label}
-                                </p>
-                                <p className="mt-0.5 text-xs font-bold text-slate-900">
-                                  {formatMoneyWithCurrency(
-                                    newRatePlanForm.currency || "USD",
-                                    value,
-                                  )}
-                                </p>
+                                </span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {formatMoneyWithCurrency(cur, value)}
+                                </span>
                               </div>
                             ))}
+                          </div>
+                          <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 dark:border-slate-700">
+                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                              Total Room Amount
+                            </h3>
+                            <span className="text-base font-black text-slate-900 dark:text-slate-100">
+                              {formatMoneyWithCurrency(cur, total)}
+                            </span>
                           </div>
                         </>
                       );
@@ -3308,214 +3287,171 @@ export function DailyRatesPage({ propertyId }) {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
                     {ratePlanModalError ? (
-                      <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                      <p className="mb-4 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
                         {ratePlanModalError}
                       </p>
                     ) : null}
                     {ratePlanModalSuccess ? (
-                      <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                      <p className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
                         {ratePlanModalSuccess}
                       </p>
                     ) : null}
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                      <div className="flex flex-wrap items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Preview
-                          </p>
-                          <h4 className="mt-2 text-lg font-bold text-slate-900">
-                            {String(
-                              newRatePlanForm.title || "Untitled Rate Plan",
-                            )
-                              .match(/.{1,20}/g)
-                              ?.map((chunk, index) => (
-                                <span key={`${chunk}-${index}`}>
-                                  {chunk}
-                                  <br />
-                                </span>
-                              ))}
-                          </h4>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {[
-                              newRatePlanForm.room_id ||
-                                selectedRoomForRatePlan?.room_id,
-                              newRatePlanForm.meal_plan || "Meal plan pending",
-                              newRatePlanForm.bed_type || "Bed type pending",
-                            ]
-                              .filter(Boolean)
-                              .join(" • ")}
-                          </p>
-                        </div>
-                        <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Subtotal Price
-                          </p>
-                          <p className="mt-2 text-2xl font-bold text-slate-900">
-                            {formatMoneyWithCurrency(
-                              newRatePlanForm.currency,
-                              ratePlanPreview.subtotal,
-                            )}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Base + tax/service + surcharges + mandatory fees
-                          </p>
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Preview
+                        </p>
+                        <h4 className="mt-2 text-lg font-bold text-slate-900">
+                          {String(newRatePlanForm.title || "Untitled Rate Plan")
+                            .match(/.{1,20}/g)
+                            ?.map((chunk, index) => (
+                              <span key={`${chunk}-${index}`}>
+                                {chunk}
+                                <br />
+                              </span>
+                            ))}
+                        </h4>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {[
+                            newRatePlanForm.room_id ||
+                              selectedRoomForRatePlan?.room_id,
+                            newRatePlanForm.meal_plan || "Meal plan pending",
+                            newRatePlanForm.bed_type || "Bed type pending",
+                          ]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </p>
+                      </div>
+                      <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Subtotal Price
+                        </p>
+                        <p className="mt-2 text-2xl font-bold text-slate-900">
+                          {formatMoneyWithCurrency(
+                            newRatePlanForm.currency,
+                            ratePlanPreview.subtotal,
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Base + tax/service + surcharges + mandatory fees
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Price Breakdown
+                        </p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-600">
+                          <div className="flex items-center justify-between">
+                            <span>Base rate</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.baseRate,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Tax & service</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.taxAndServiceFee,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Surcharges</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.surcharges,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Mandatory fee</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.mandatoryFee,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Resort fee</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.resortFee,
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span>Mandatory tax</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                ratePlanPreview.mandatoryTax,
+                              )}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl bg-white p-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Price Breakdown
-                          </p>
-                          <div className="mt-3 space-y-2 text-sm text-slate-600">
-                            <div className="flex items-center justify-between">
-                              <span>Base rate</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.baseRate,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Tax & service</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.taxAndServiceFee,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Surcharges</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.surcharges,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Mandatory fee</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.mandatoryFee,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Resort fee</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.resortFee,
-                                )}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span>Mandatory tax</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  ratePlanPreview.mandatoryTax,
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl bg-white p-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Inventory Snapshot
-                          </p>
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {[
-                              ["Total", ratePlanPreview.totalInventory],
-                              ["Available", ratePlanPreview.availableInventory],
-                              ["Sold", ratePlanPreview.soldInventory],
-                            ].map(([label, value]) => (
-                              <div
-                                key={label}
-                                className="rounded-xl bg-slate-50 px-3 py-3 text-center"
+                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Flags & Policy
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {[
+                            newRatePlanForm.status ? "Active" : "Inactive",
+                            newRatePlanForm.is_refundable
+                              ? "Refundable"
+                              : "Non-refundable",
+                            newRatePlanForm.closed_to_arrival ? "CTA" : null,
+                            newRatePlanForm.closed_to_departure ? "CTD" : null,
+                            newRatePlanForm.stop_sell ? "Stop Sell" : null,
+                          ]
+                            .filter(Boolean)
+                            .map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700"
                               >
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                  {label}
-                                </p>
-                                <p className="mt-1 text-base font-bold text-slate-900">
-                                  {value}
-                                </p>
-                              </div>
+                                {tag}
+                              </span>
                             ))}
-                          </div>
-                          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                            Stay window:{" "}
-                            <span className="font-bold text-slate-900">
-                              {ratePlanPreview.minStay}
-                            </span>{" "}
-                            to{" "}
-                            <span className="font-bold text-slate-900">
-                              {ratePlanPreview.maxStay}
-                            </span>{" "}
-                            nights
-                          </div>
                         </div>
-
-                        <div className="rounded-2xl bg-white p-4 shadow-sm">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                            Flags & Policy
+                        <div className="mt-4 space-y-2 text-sm text-slate-600">
+                          <p>
+                            Cancellation:{" "}
+                            <span className="font-bold text-slate-900">
+                              {newRatePlanForm.cancellation_policy || "Not set"}
+                            </span>
                           </p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {[
-                              newRatePlanForm.status ? "Active" : "Inactive",
-                              newRatePlanForm.is_refundable
-                                ? "Refundable"
-                                : "Non-refundable",
-                              newRatePlanForm.closed_to_arrival ? "CTA" : null,
-                              newRatePlanForm.closed_to_departure
-                                ? "CTD"
-                                : null,
-                              newRatePlanForm.stop_sell ? "Stop Sell" : null,
-                            ]
-                              .filter(Boolean)
-                              .map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                          </div>
-                          <div className="mt-4 space-y-2 text-sm text-slate-600">
-                            <p>
-                              Cancellation:{" "}
-                              <span className="font-bold text-slate-900">
-                                {newRatePlanForm.cancellation_policy ||
-                                  "Not set"}
-                              </span>
-                            </p>
-                            <p>
-                              Extra adult:{" "}
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  newRatePlanForm.extra_adult_rate,
-                                )}
-                              </span>
-                            </p>
-                            <p>
-                              Extra child:{" "}
-                              <span className="font-bold text-slate-900">
-                                {formatMoneyWithCurrency(
-                                  newRatePlanForm.currency,
-                                  newRatePlanForm.extra_child_rate,
-                                )}
-                              </span>
-                            </p>
-                          </div>
+                          <p>
+                            Extra adult:{" "}
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                newRatePlanForm.extra_adult_rate,
+                              )}
+                            </span>
+                          </p>
+                          <p>
+                            Extra child:{" "}
+                            <span className="font-bold text-slate-900">
+                              {formatMoneyWithCurrency(
+                                newRatePlanForm.currency,
+                                newRatePlanForm.extra_child_rate,
+                              )}
+                            </span>
+                          </p>
                         </div>
                       </div>
                     </div>

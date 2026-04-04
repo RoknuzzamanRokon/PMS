@@ -209,6 +209,16 @@ function getBackendRoomStatusBadge(roomStatus) {
   }
 }
 
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 export function RoomsManagementPage({ propertyId }) {
   const router = useRouter();
   const selectedPropertyId = propertyId || "";
@@ -413,6 +423,13 @@ export function RoomsManagementPage({ propertyId }) {
     router.push(`/inventory?property_id=${encodeURIComponent(selectedPropertyId)}`);
   }
 
+  function closeActiveRoomView() {
+    setActiveRoomId("");
+    setActiveRoomDetail(null);
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+  }
+
   function handleSaveImageDraft(event) {
     event.preventDefault();
 
@@ -514,23 +531,16 @@ export function RoomsManagementPage({ propertyId }) {
     setRoomDetailSuccess("");
 
     try {
-      const updatedRoom = await fetchJson(`/rooms/${activeCategory.room_id}`, {
+      await fetchJson(`/rooms/${activeCategory.room_id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          room_name: roomEditorForm.room_name.trim(),
-          room_name_lang: roomEditorForm.room_name_lang.trim() || roomEditorForm.room_name.trim(),
           room_status: roomEditorForm.room_status.trim() || "PROCESSING",
-          base_rate: numberValue(roomEditorForm.base_rate),
-          tax_and_service_fee: numberValue(roomEditorForm.tax_and_service_fee),
-          surcharges: numberValue(roomEditorForm.surcharges),
-          mandatory_fee: numberValue(roomEditorForm.mandatory_fee),
-          resort_fee: numberValue(roomEditorForm.resort_fee),
-          mandatory_tax: numberValue(roomEditorForm.mandatory_tax),
         }),
       });
 
-      applyRoomDetailToEditors(updatedRoom, activeCategory);
-      setRoomDetailSuccess(`Saved changes for ${updatedRoom.room_id}.`);
+      const refreshedRoom = await fetchJson(`/rooms/${activeCategory.room_id}`);
+      applyRoomDetailToEditors(refreshedRoom, activeCategory);
+      setRoomDetailSuccess(`Saved changes for ${refreshedRoom.room_id}.`);
       await loadOverview();
     } catch (error) {
       setRoomDetailError(error.message || "Could not save room changes.");
@@ -1186,6 +1196,25 @@ export function RoomsManagementPage({ propertyId }) {
       {activeCategory ? (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
           <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            {(() => {
+              const statusBadge = getBackendRoomStatusBadge(
+                roomEditorForm.room_status || activeCategory.room_status || activeCategory.status || "PROCESSING",
+              );
+              const invoiceRows = [
+                ["Base Rate", roomEditorForm.base_rate],
+                ["Tax & Service Fee", roomEditorForm.tax_and_service_fee],
+                ["Surcharges", roomEditorForm.surcharges],
+                ["Mandatory Fee", roomEditorForm.mandatory_fee],
+                ["Resort Fee", roomEditorForm.resort_fee],
+                ["Mandatory Tax", roomEditorForm.mandatory_tax],
+              ];
+              const totalAmount = invoiceRows.reduce(
+                (sum, [, value]) => sum + numberValue(value),
+                0,
+              );
+
+              return (
+                <>
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-700">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Room View</p>
@@ -1198,12 +1227,7 @@ export function RoomsManagementPage({ propertyId }) {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setActiveRoomId("");
-                  setActiveRoomDetail(null);
-                  setRoomDetailError("");
-                  setRoomDetailSuccess("");
-                }}
+                onClick={closeActiveRoomView}
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
               >
                 <span className="material-symbols-outlined text-base">close</span>
@@ -1211,141 +1235,120 @@ export function RoomsManagementPage({ propertyId }) {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Room ID</p>
-                <p className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">{activeCategory.room_id}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Property</p>
-                <p className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">{data.property.property_id}</p>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Current Status</p>
-                <p className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">
-                  {roomEditorForm.room_status || activeCategory.room_status || activeCategory.status || "PROCESSING"}
-                </p>
-              </div>
-            </div>
+            <form onSubmit={handleSaveRoomDetail} className="mt-6 space-y-5">
+              <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-amber-50 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-5 dark:border-slate-700">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-400">
+                      Room Invoice
+                    </p>
+                    <p className="mt-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {roomEditorForm.room_name || activeCategory.room_name}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {roomEditorForm.room_name_lang || activeRoomDetail?.room_name_lang || activeCategory.room_name}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${statusBadge.className}`}>
+                      {statusBadge.label}
+                    </span>
+                    <p className="mt-3 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-400">
+                      Total Amount
+                    </p>
+                    <p className="mt-1 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                      {formatCurrency(totalAmount)}
+                    </p>
+                  </div>
+                </div>
 
-            <form onSubmit={handleSaveRoomDetail} className="mt-6 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Room Name
-                  <input
-                    type="text"
-                    value={roomEditorForm.room_name}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, room_name: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Display Name
-                  <input
-                    type="text"
-                    value={roomEditorForm.room_name_lang}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, room_name_lang: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Room Status
-                  <select
-                    value={roomEditorForm.room_status}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, room_status: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  >
-                    {["PROCESSING", "LIVE", "BLOCKED", "MAINTENANCE", "INACTIVE"].map((statusOption) => (
-                      <option key={statusOption} value={statusOption}>
-                        {statusOption}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Base Rate
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.base_rate}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, base_rate: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Tax & Service Fee
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.tax_and_service_fee}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, tax_and_service_fee: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Surcharges
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.surcharges}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, surcharges: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Mandatory Fee
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.mandatory_fee}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, mandatory_fee: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Resort Fee
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.resort_fee}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, resort_fee: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Mandatory Tax
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={roomEditorForm.mandatory_tax}
-                    onChange={(event) =>
-                      setRoomEditorForm((current) => ({ ...current, mandatory_tax: event.target.value }))
-                    }
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  />
-                </label>
+                <div className="px-5 py-5">
+                  <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:border-slate-700 dark:bg-slate-900/60">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+                      Invoice
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">Name :</span>{" "}
+                        {roomEditorForm.room_name || activeCategory.room_name}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">Display Name :</span>{" "}
+                        {roomEditorForm.room_name_lang || activeRoomDetail?.room_name_lang || "-"}
+                      </p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
+                        <span className="font-bold text-slate-900 dark:text-slate-100">Room ID :</span>{" "}
+                        {activeCategory.room_id}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 px-5 pb-5">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/90 dark:border-slate-700 dark:bg-slate-900/60">
+                    <div className="grid grid-cols-[1fr_auto] bg-slate-100 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      <span>Charge Head</span>
+                      <span>Amount</span>
+                    </div>
+                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {invoiceRows.map(([label, value]) => (
+                        <div
+                          key={label}
+                          className="grid grid-cols-[1fr_auto] items-center px-4 py-3 text-sm"
+                        >
+                          <span className="font-medium text-slate-600 dark:text-slate-300">{label}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
+                            {formatCurrency(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4 dark:border-primary/20 dark:bg-primary/10">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-primary/80">
+                      Room Status
+                    </p>
+                    <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/70">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                          Current Status
+                        </p>
+                        <p className="mt-2 text-base font-bold text-slate-900 dark:text-slate-100">
+                          {statusBadge.label}
+                        </p>
+                      </div>
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] ${statusBadge.className}`}>
+                        {statusBadge.label}
+                      </span>
+                    </div>
+                    <label className="mt-4 flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Select Status
+                      <select
+                        value={roomEditorForm.room_status}
+                        onChange={(event) =>
+                          setRoomEditorForm((current) => ({ ...current, room_status: event.target.value }))
+                        }
+                        className="rounded-2xl border border-primary/20 bg-white px-4 py-3 font-semibold text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:bg-slate-900 dark:text-slate-100"
+                      >
+                        {["PROCESSING", "LIVE", "BLOCKED", "MAINTENANCE", "INACTIVE"].map((statusOption) => (
+                          <option key={statusOption} value={statusOption}>
+                            {statusOption}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
+                        Total Amount
+                      </p>
+                      <p className="mt-2 text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
+                        {formatCurrency(totalAmount)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {loadingRoomDetail ? (
@@ -1364,28 +1367,33 @@ export function RoomsManagementPage({ propertyId }) {
                 </p>
               ) : null}
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex flex-wrap justify-end gap-3 pt-1">
                 <button
                   type="button"
-                  onClick={() => {
-                    setActiveRoomId("");
-                    setActiveRoomDetail(null);
-                    setRoomDetailError("");
-                    setRoomDetailSuccess("");
-                  }}
+                  onClick={closeActiveRoomView}
                   className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
                 >
                   Close
                 </button>
                 <button
+                  type="button"
+                  onClick={() => setRoomDetailSuccess("Edit Info flow is reserved for full room editing. Room View currently allows status updates only.")}
+                  className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
+                >
+                  Edit Info
+                </button>
+                <button
                   type="submit"
                   disabled={savingRoomDetail || loadingRoomDetail}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {savingRoomDetail ? "Saving..." : "Save Room Changes"}
                 </button>
               </div>
             </form>
+                </>
+              );
+            })()}
           </div>
         </div>
       ) : null}

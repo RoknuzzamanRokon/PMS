@@ -3,11 +3,22 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
-const totalDays = 30;
-const visibleMatrixDays = 7;
-const unavailableStatuses = ["UNAVAILABLE", "BOOKED", "PROSSING", "AB-UNAVAILABLE", "CTA", "CTD", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED"];
+const visibleMatrixDays = 21;
+const unavailableStatuses = [
+  "UNAVAILABLE",
+  "BOOKED",
+  "PROSSING",
+  "AB-UNAVAILABLE",
+  "CTA",
+  "CTD",
+  "STOP_SELL",
+  "OUT_OF_ORDER",
+  "OUT_OF_SERVICE",
+  "OVERBOOKED",
+];
 
 const fallbackRows = [
   {
@@ -96,7 +107,11 @@ function createDays(startDate, total) {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     return {
-      isoDate: toIsoDateFromParts(date.getFullYear(), date.getMonth(), date.getDate()),
+      isoDate: toIsoDateFromParts(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+      ),
       shortDay: date.toLocaleDateString("en-US", { weekday: "short" }),
       dayNum: String(date.getDate()).padStart(2, "0"),
       month: date.toLocaleDateString("en-US", { month: "short" }),
@@ -105,7 +120,16 @@ function createDays(startDate, total) {
 }
 
 function getTone(item, index) {
-  if (["UNAVAILABLE", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(item.availability)) {
+  if (
+    [
+      "UNAVAILABLE",
+      "STOP_SELL",
+      "OUT_OF_ORDER",
+      "OUT_OF_SERVICE",
+      "OVERBOOKED",
+      "AB-UNAVAILABLE",
+    ].includes(item.availability)
+  ) {
     return "disabled";
   }
   if (index === 0) {
@@ -118,10 +142,19 @@ function getTone(item, index) {
 }
 
 function isUnavailableAvailability(value) {
-  return !value || unavailableStatuses.includes(String(value || "").toUpperCase());
+  return (
+    !value || unavailableStatuses.includes(String(value || "").toUpperCase())
+  );
 }
 
 function getAvailabilityDisplayLabel(value) {
+  const normalized = String(value || "").toUpperCase();
+  if (normalized === "BOOKED" || normalized === "AB-UNAVAILABLE") {
+    return "BOOKED";
+  }
+  if (normalized === "PROSSING") {
+    return "PROCESSING";
+  }
   return isUnavailableAvailability(value) ? "UNAVAILABLE" : "AVAILABLE";
 }
 
@@ -193,6 +226,16 @@ function toIsoDateFromParts(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+function getMonthStartIsoDate(value = new Date()) {
+  const date = new Date(value);
+  return toIsoDateFromParts(date.getFullYear(), date.getMonth(), 1);
+}
+
+function getDaysInMonth(value = new Date()) {
+  const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+}
+
 function parseRateValue(value) {
   const numeric = Number(String(value).replace(/[^0-9.-]/g, ""));
   return Number.isFinite(numeric) ? numeric : 0;
@@ -201,6 +244,14 @@ function parseRateValue(value) {
 function formatRateValue(value) {
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric.toFixed(2) : "0.00";
+}
+
+function formatDisplayRateValue(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "0";
+  }
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2);
 }
 
 function formatMoneyWithCurrency(currency, value) {
@@ -310,13 +361,22 @@ function createRatePlanFormFromDetails(room, ratePlan) {
   };
 }
 
-function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, inventoryRows = []) {
+function buildRowsFromApi(
+  rooms,
+  ratePlans,
+  calendarByRateId,
+  startDate,
+  total,
+  inventoryRows = [],
+) {
   if (!ratePlans.length) {
     return [];
   }
 
   const roomMap = new Map(rooms.map((room) => [room.room_id, room]));
-  const bookingByRoomId = new Map((inventoryRows || []).map((row) => [row.room_id, row.booking || null]));
+  const bookingByRoomId = new Map(
+    (inventoryRows || []).map((row) => [row.room_id, row.booking || null]),
+  );
   const start = startDate ? new Date(startDate) : new Date();
 
   return ratePlans.map((ratePlan) => {
@@ -342,13 +402,19 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
         booking?.rate_id === ratePlan.rate_id &&
         stayDate >= booking.check_in_date &&
         stayDate < booking.check_out_date;
-      const fallbackBookingStatus = String(booking?.booking_status || "").toUpperCase();
-      const availability = item?.availability || (fallbackBooked
-        ? ["CONFIRMED", "CHECKED_IN"].includes(fallbackBookingStatus)
-          ? "BOOKED"
-          : "PROSSING"
-        : "");
-      const baseRate = formatRateValue(item?.base_rate ?? ratePlan.base_rate ?? 0);
+      const fallbackBookingStatus = String(
+        booking?.booking_status || "",
+      ).toUpperCase();
+      const availability =
+        item?.availability ||
+        (fallbackBooked
+          ? ["CONFIRMED", "CHECKED_IN"].includes(fallbackBookingStatus)
+            ? "BOOKED"
+            : "PROSSING"
+          : "");
+      const baseRate = formatRateValue(
+        item?.base_rate ?? ratePlan.base_rate ?? 0,
+      );
       const tax = formatRateValue(item?.tax ?? 0);
       return {
         stay_date: stayDate,
@@ -367,7 +433,9 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
     return {
       roomId: ratePlan.room_id,
       title: ratePlan.title || room?.room_name || ratePlan.rate_id,
-      roomLabel: room?.room_name ? `${room.room_name} • ${room.room_id}` : room?.room_id || ratePlan.room_id,
+      roomLabel: room?.room_name
+        ? `${room.room_name} • ${room.room_id}`
+        : room?.room_id || ratePlan.room_id,
       code: ratePlan.rate_id,
       subtitle: `${ratePlan.available_inventory} available`,
       occupancy: `${occupancyPercent}%`,
@@ -380,10 +448,20 @@ function buildRowsFromApi(rooms, ratePlans, calendarByRateId, startDate, total, 
   });
 }
 
-function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventoryRows = []) {
-  const liveRooms = (rooms || []).filter((room) => String(room.room_status || "").toUpperCase() === "LIVE");
+function buildHotelSummaryFallback(
+  rooms,
+  ratePlans,
+  startDate,
+  total,
+  inventoryRows = [],
+) {
+  const liveRooms = (rooms || []).filter(
+    (room) => String(room.room_status || "").toUpperCase() === "LIVE",
+  );
   const liveRoomIds = new Set(liveRooms.map((room) => room.room_id));
-  const rowsByRoomId = new Map((inventoryRows || []).map((row) => [row.room_id, row]));
+  const rowsByRoomId = new Map(
+    (inventoryRows || []).map((row) => [row.room_id, row]),
+  );
   const days = createDays(startDate, total);
 
   return days.map((day) => {
@@ -394,7 +472,10 @@ function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventory
       if (!booking?.check_in_date || !booking?.check_out_date) {
         continue;
       }
-      if (day.isoDate >= booking.check_in_date && day.isoDate < booking.check_out_date) {
+      if (
+        day.isoDate >= booking.check_in_date &&
+        day.isoDate < booking.check_out_date
+      ) {
         bookedRoomIds.add(room.room_id);
       }
     }
@@ -407,11 +488,19 @@ function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventory
         if (ratePlan.status === false || ratePlan.status === 0) {
           return false;
         }
-        if (ratePlan.stop_sell || ratePlan.closed_to_arrival || ratePlan.closed_to_departure) {
+        if (
+          ratePlan.stop_sell ||
+          ratePlan.closed_to_arrival ||
+          ratePlan.closed_to_departure
+        ) {
           return false;
         }
-        const calendarItem = (ratePlan.calendar || []).find((item) => item.stay_date === day.isoDate);
-        return calendarItem && !isUnavailableAvailability(calendarItem.availability);
+        const calendarItem = (ratePlan.calendar || []).find(
+          (item) => item.stay_date === day.isoDate,
+        );
+        return (
+          calendarItem && !isUnavailableAvailability(calendarItem.availability)
+        );
       })
       .map((ratePlan) => ratePlan.rate_id);
 
@@ -433,7 +522,9 @@ function buildHotelSummaryFallback(rooms, ratePlans, startDate, total, inventory
 }
 
 function normalizeAvailableDatesResponse(payload) {
-  const availability = Array.isArray(payload?.availability) ? payload.availability : [];
+  const availability = Array.isArray(payload?.availability)
+    ? payload.availability
+    : [];
 
   return availability.map((entry) => {
     const rooms = Array.isArray(entry?.rooms) ? entry.rooms : [];
@@ -470,14 +561,19 @@ function StatCard({ stat }) {
           {stat.icon}
         </span>
       </div>
-      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stat.value}</p>
-      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{stat.note}</p>
+      <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+        {stat.value}
+      </p>
+      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+        {stat.note}
+      </p>
     </article>
   );
 }
 
 export function DailyRatesPage({ propertyId }) {
   const router = useRouter();
+  const { theme } = useTheme();
   const matrixScrollRef = useRef(null);
   const matrixDragRef = useRef({
     active: false,
@@ -486,14 +582,16 @@ export function DailyRatesPage({ propertyId }) {
   });
   const hasSelectedProperty = Boolean(propertyId);
   const liveRoomStatus = "LIVE";
-  const [range, setRange] = useState(7);
+  const [range, setRange] = useState(21);
   const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(propertyId || "");
   const [rows, setRows] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [propertyName, setPropertyName] = useState("Selected Property");
-  const [calendarStartDate, setCalendarStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [calendarStartDate, setCalendarStartDate] = useState(() =>
+    getMonthStartIsoDate(),
+  );
   const [apiConnected, setApiConnected] = useState(false);
   const [loadingRates, setLoadingRates] = useState(false);
   const [publishError, setPublishError] = useState("");
@@ -503,6 +601,7 @@ export function DailyRatesPage({ propertyId }) {
   const [bulkError, setBulkError] = useState("");
   const [bulkSuccess, setBulkSuccess] = useState("");
   const [summaryPopover, setSummaryPopover] = useState(null);
+  const [cellPopover, setCellPopover] = useState(null);
   const [availabilityStatuses, setAvailabilityStatuses] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
   const [showRatePlanModal, setShowRatePlanModal] = useState(false);
@@ -515,8 +614,8 @@ export function DailyRatesPage({ propertyId }) {
   const [loadingRatePlanDetails, setLoadingRatePlanDetails] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
-  const matrixRoomColumnWidth = 280;
-  const matrixDayColumnWidth = 120;
+  const matrixRoomColumnWidth = 200;
+  const matrixDayColumnWidth = 72;
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
   const [rateMatrixSearch, setRateMatrixSearch] = useState("");
@@ -527,16 +626,203 @@ export function DailyRatesPage({ propertyId }) {
     base_rate: "",
     availability: "",
   });
-  const [newRatePlanForm, setNewRatePlanForm] = useState(createRatePlanForm(null));
-  const days = useMemo(() => createDays(calendarStartDate, totalDays), [calendarStartDate]);
-  const visibleDays = useMemo(() => days.slice(0, range), [days, range]);
+  const [newRatePlanForm, setNewRatePlanForm] = useState(
+    createRatePlanForm(null),
+  );
+  const isLightTheme = theme === "light";
+  const isSoftLightTheme = theme === "soft-light";
+  const isDarkTheme = theme === "dark";
+  const isMidnightTheme = theme === "midnight";
+  const matrixThemeStyles = {
+    panel: {
+      borderColor: "var(--soft-border)",
+      background: "var(--panel-bg)",
+      boxShadow: isMidnightTheme
+        ? "0 18px 40px rgba(2,6,23,0.28)"
+        : isDarkTheme
+          ? "0 14px 32px rgba(2,6,23,0.22)"
+          : isSoftLightTheme
+            ? "0 12px 30px rgba(120,63,109,0.14)"
+            : "0 10px 24px rgba(15,23,42,0.08)",
+    },
+    headerRow: {
+      background: isLightTheme
+        ? "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,247,250,0.92) 100%)"
+        : isSoftLightTheme
+          ? "linear-gradient(135deg, rgba(116,43,101,0.82) 0%, rgba(154,73,137,0.78) 55%, rgba(201,120,184,0.72) 100%)"
+          : isDarkTheme
+            ? "linear-gradient(180deg, rgba(30,41,59,0.90) 0%, rgba(51,65,85,0.84) 100%)"
+            : "linear-gradient(180deg, rgba(2,6,23,0.96) 0%, rgba(15,23,42,0.92) 100%)",
+      borderBottom: isSoftLightTheme
+        ? "1px solid rgba(255,255,255,0.16)"
+        : isDarkTheme || isMidnightTheme
+          ? "1px solid rgba(71,85,105,0.24)"
+          : "1px solid rgba(148,163,184,0.16)",
+      textClass:
+        isSoftLightTheme || isDarkTheme || isMidnightTheme
+          ? "text-white"
+          : "text-slate-800",
+      labelClass:
+        isSoftLightTheme || isDarkTheme || isMidnightTheme
+          ? "text-white/70"
+          : "text-slate-500",
+      todayBadgeClass: isSoftLightTheme
+        ? "bg-white/18 text-white"
+        : isDarkTheme || isMidnightTheme
+          ? "bg-slate-100/12 text-slate-100"
+          : "bg-slate-900 text-white",
+    },
+    subHeader: {
+      background: isSoftLightTheme
+        ? "rgba(255,240,248,0.76)"
+        : isDarkTheme
+          ? "rgba(30,41,59,0.84)"
+          : isMidnightTheme
+            ? "rgba(15,23,42,0.88)"
+            : "rgba(248,250,252,0.94)",
+      stickyBackground: isSoftLightTheme
+        ? "linear-gradient(180deg, rgba(255,245,250,0.96) 0%, rgba(250,233,245,0.92) 100%)"
+        : isDarkTheme
+          ? "linear-gradient(180deg, rgba(30,41,59,0.96) 0%, rgba(51,65,85,0.92) 100%)"
+          : isMidnightTheme
+            ? "linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(15,23,42,0.94) 100%)"
+            : "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.94) 100%)",
+      textClass:
+        isSoftLightTheme || isDarkTheme || isMidnightTheme
+          ? "text-white"
+          : "text-slate-900",
+      subtextClass:
+        isSoftLightTheme || isDarkTheme || isMidnightTheme
+          ? "text-white/70"
+          : "text-slate-500",
+    },
+    firstColumn: {
+      evenBg: isSoftLightTheme
+        ? "linear-gradient(135deg, rgba(255,244,251,0.96) 0%, rgba(242,219,238,0.90) 100%)"
+        : isDarkTheme
+          ? "linear-gradient(135deg, rgba(51,65,85,0.84) 0%, rgba(30,41,59,0.90) 100%)"
+          : isMidnightTheme
+            ? "linear-gradient(135deg, rgba(15,23,42,0.94) 0%, rgba(2,6,23,0.98) 100%)"
+            : "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(248,244,248,0.92) 100%)",
+      oddBg: isSoftLightTheme
+        ? "linear-gradient(135deg, rgba(252,235,245,0.96) 0%, rgba(245,223,238,0.90) 100%)"
+        : isDarkTheme
+          ? "linear-gradient(135deg, rgba(30,41,59,0.92) 0%, rgba(15,23,42,0.96) 100%)"
+          : isMidnightTheme
+            ? "linear-gradient(135deg, rgba(2,6,23,0.98) 0%, rgba(1,4,18,1) 100%)"
+            : "linear-gradient(135deg, rgba(252,250,252,0.96) 0%, rgba(243,238,243,0.92) 100%)",
+      titleClass: isSoftLightTheme
+        ? "text-[#6f2f62]"
+        : isDarkTheme || isMidnightTheme
+          ? "text-slate-100"
+          : "text-slate-900",
+    },
+    card: {
+      background: isSoftLightTheme
+        ? "rgba(255,255,255,0.84)"
+        : isDarkTheme
+          ? "rgba(15,23,42,0.84)"
+          : isMidnightTheme
+            ? "rgba(2,6,23,0.88)"
+            : "rgba(255,255,255,0.94)",
+      borderColor:
+        isDarkTheme || isMidnightTheme
+          ? "rgba(71,85,105,0.28)"
+          : "rgba(148,163,184,0.16)",
+      textClass:
+        isDarkTheme || isMidnightTheme ? "text-slate-100" : "text-slate-900",
+      mutedClass:
+        isDarkTheme || isMidnightTheme ? "text-slate-300" : "text-slate-400",
+      popupBackground: isSoftLightTheme
+        ? "rgba(255,249,252,0.94)"
+        : isDarkTheme
+          ? "rgba(15,23,42,0.96)"
+          : isMidnightTheme
+            ? "rgba(2,6,23,0.98)"
+            : "rgba(255,255,255,0.96)",
+    },
+  };
+  const totalDays = useMemo(
+    () => getDaysInMonth(calendarStartDate),
+    [calendarStartDate],
+  );
+  const days = useMemo(
+    () => createDays(calendarStartDate, totalDays),
+    [calendarStartDate, totalDays],
+  );
+  const visibleDays = days;
 
   useEffect(() => {
     setSummaryPopover(null);
+    setCellPopover(null);
   }, [selectedProperty, calendarStartDate, range]);
+
+  // Track anchor visibility — close popover when anchor scrolls out of view
+  useEffect(() => {
+    const anchors = [summaryPopover?.anchorEl, cellPopover?.anchorEl].filter(
+      Boolean,
+    );
+
+    if (!anchors.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) {
+            setSummaryPopover((c) => (c?.anchorEl === entry.target ? null : c));
+            setCellPopover((c) => (c?.anchorEl === entry.target ? null : c));
+          }
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    for (const el of anchors) observer.observe(el);
+    return () => observer.disconnect();
+  }, [summaryPopover?.anchorEl, cellPopover?.anchorEl]);
+
+  // Reposition popovers on scroll/resize
+  useEffect(() => {
+    function reposition() {
+      setSummaryPopover((current) => {
+        if (!current?.anchorEl) return current;
+        const rect = current.anchorEl.getBoundingClientRect();
+        const popupWidth = 220;
+        const left = Math.max(
+          16,
+          Math.min(rect.right + 10, window.innerWidth - popupWidth - 16),
+        );
+        const top = Math.max(16, Math.min(rect.top, window.innerHeight - 260));
+        return { ...current, left, top };
+      });
+      setCellPopover((current) => {
+        if (!current?.anchorEl) return current;
+        const rect = current.anchorEl.getBoundingClientRect();
+        const popupWidth = 240;
+        const left = Math.max(
+          16,
+          Math.min(rect.right + 10, window.innerWidth - popupWidth - 16),
+        );
+        const top = Math.max(16, Math.min(rect.top, window.innerHeight - 240));
+        return { ...current, left, top };
+      });
+    }
+
+    window.addEventListener("scroll", reposition, {
+      passive: true,
+      capture: true,
+    });
+    window.addEventListener("resize", reposition);
+    return () => {
+      window.removeEventListener("scroll", reposition, { capture: true });
+      window.removeEventListener("resize", reposition);
+    };
+  }, []);
   const ratePlanPreview = useMemo(() => {
     const baseRate = parseRateValue(newRatePlanForm.base_rate);
-    const taxAndServiceFee = parseRateValue(newRatePlanForm.tax_and_service_fee);
+    const taxAndServiceFee = parseRateValue(
+      newRatePlanForm.tax_and_service_fee,
+    );
     const surcharges = parseRateValue(newRatePlanForm.surcharges);
     const mandatoryFee = parseRateValue(newRatePlanForm.mandatory_fee);
     const resortFee = parseRateValue(newRatePlanForm.resort_fee);
@@ -558,7 +844,9 @@ export function DailyRatesPage({ propertyId }) {
       mandatoryTax,
       subtotal,
       totalInventory: parseIntegerValue(newRatePlanForm.total_inventory),
-      availableInventory: parseIntegerValue(newRatePlanForm.available_inventory),
+      availableInventory: parseIntegerValue(
+        newRatePlanForm.available_inventory,
+      ),
       soldInventory: parseIntegerValue(newRatePlanForm.sold_inventory),
       minStay: parseIntegerValue(newRatePlanForm.min_stay),
       maxStay: parseIntegerValue(newRatePlanForm.max_stay),
@@ -570,7 +858,9 @@ export function DailyRatesPage({ propertyId }) {
   }, [propertyId]);
 
   useEffect(() => {
-    setSelectedDateIndex((current) => Math.min(current, Math.max(range - 1, 0)));
+    setSelectedDateIndex((current) =>
+      Math.min(current, Math.max(range - 1, 0)),
+    );
   }, [range, calendarStartDate]);
 
   useEffect(() => {
@@ -611,28 +901,33 @@ export function DailyRatesPage({ propertyId }) {
           setSelectedProperty(resolvedPropertyId);
         }
 
-        const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
-        const [data, inventoryData, inventoryBoardData, availableDatesData] = await Promise.all([
-          fetchJson(
-            `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
-          ),
-          fetchJson(
-            `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
-          ).catch(() => ({ dates: [] })),
-          fetchJson(
-            `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-          ).catch(() => ({ rows: [] })),
-          fetchJson(
-            `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-          ).catch(() => ({ property: null, availability: [] })),
-        ]);
+        const inventoryEndDate =
+          days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+        const [data, inventoryData, inventoryBoardData, availableDatesData] =
+          await Promise.all([
+            fetchJson(
+              `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
+            ),
+            fetchJson(
+              `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
+            ).catch(() => ({ dates: [] })),
+            fetchJson(
+              `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+            ).catch(() => ({ rows: [] })),
+            fetchJson(
+              `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+            ).catch(() => ({ property: null, availability: [] })),
+          ]);
 
         if (ignore) {
           return;
         }
 
         const calendarByRateId = Object.fromEntries(
-          (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
+          (data.rate_plans || []).map((ratePlan) => [
+            ratePlan.rate_id,
+            ratePlan.calendar || [],
+          ]),
         );
 
         setPropertyName(data.property?.name || resolvedPropertyId);
@@ -647,15 +942,16 @@ export function DailyRatesPage({ propertyId }) {
             inventoryBoardData?.rows || [],
           ),
         );
-        const nextInventoryDates = Array.isArray(inventoryData?.dates) && inventoryData.dates.length
-          ? inventoryData.dates
-          : buildHotelSummaryFallback(
-              data.rooms || [],
-              data.rate_plans || [],
-              calendarStartDate,
-              range,
-              inventoryBoardData?.rows || [],
-            );
+        const nextInventoryDates =
+          Array.isArray(inventoryData?.dates) && inventoryData.dates.length
+            ? inventoryData.dates
+            : buildHotelSummaryFallback(
+                data.rooms || [],
+                data.rate_plans || [],
+                calendarStartDate,
+                range,
+                inventoryBoardData?.rows || [],
+              );
         setInventoryDates(nextInventoryDates);
         setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
         setApiConnected(true);
@@ -698,14 +994,21 @@ export function DailyRatesPage({ propertyId }) {
   }, [rows, calendarStartDate]);
 
   const pendingChanges = useMemo(
-    () => rows.reduce((count, row) => count + row.cells.filter((cell) => cell.changed).length, 0),
+    () =>
+      rows.reduce(
+        (count, row) => count + row.cells.filter((cell) => cell.changed).length,
+        0,
+      ),
     [rows],
   );
   const liveRoomIds = useMemo(
     () =>
       new Set(
         rooms
-          .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
+          .filter(
+            (room) =>
+              String(room.room_status || "").toUpperCase() === liveRoomStatus,
+          )
           .map((room) => room.room_id),
       ),
     [rooms, liveRoomStatus],
@@ -727,13 +1030,19 @@ export function DailyRatesPage({ propertyId }) {
   }, [availableRows, rateMatrixSearch]);
   const roomList = useMemo(() => {
     return rooms
-      .filter((room) => String(room.room_status || "").toUpperCase() === liveRoomStatus)
+      .filter(
+        (room) =>
+          String(room.room_status || "").toUpperCase() === liveRoomStatus,
+      )
       .map((room) => {
-        const linkedRatePlans = rows.filter((row) => row.roomId === room.room_id);
+        const linkedRatePlans = rows.filter(
+          (row) => row.roomId === room.room_id,
+        );
         return {
           ...room,
           linked_rate_plan_count: linkedRatePlans.length,
-          active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell).length,
+          active_rate_plan_count: linkedRatePlans.filter((row) => !row.stopSell)
+            .length,
           preview_rate_plan: linkedRatePlans[0] || null,
           linked_rate_plans: linkedRatePlans,
         };
@@ -748,7 +1057,9 @@ export function DailyRatesPage({ propertyId }) {
 
     return filteredAvailableRows.reduce(
       (summary, row) => {
-        const cell = row.cells.find((item) => item.stay_date === selectedStayDate);
+        const cell = row.cells.find(
+          (item) => item.stay_date === selectedStayDate,
+        );
         if (!cell) {
           return summary;
         }
@@ -759,7 +1070,16 @@ export function DailyRatesPage({ propertyId }) {
         if (["BOOKED", "PROSSING", "CTA", "CTD"].includes(cell.availability)) {
           summary.booked += 1;
         }
-        if (["UNAVAILABLE", "STOP_SELL", "OUT_OF_ORDER", "OUT_OF_SERVICE", "OVERBOOKED", "AB-UNAVAILABLE"].includes(cell.availability)) {
+        if (
+          [
+            "UNAVAILABLE",
+            "STOP_SELL",
+            "OUT_OF_ORDER",
+            "OUT_OF_SERVICE",
+            "OVERBOOKED",
+            "AB-UNAVAILABLE",
+          ].includes(cell.availability)
+        ) {
           summary.blocked += 1;
         }
         return summary;
@@ -792,19 +1112,23 @@ export function DailyRatesPage({ propertyId }) {
 
     const start = new Date(calendarStartDate);
     const next = new Date(value);
-    const diff = Math.floor((next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = Math.floor(
+      (next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
-    if (diff >= 0 && diff < range) {
-      setSelectedDateIndex(diff);
+    if (diff >= 0 && diff < totalDays) {
+      setSelectedDateIndex(Math.min(diff, range - 1));
       return;
     }
 
-    setCalendarStartDate(value);
+    // jump to the 1st of the selected date's month
+    setCalendarStartDate(getMonthStartIsoDate(next));
     setSelectedDateIndex(0);
   }
 
   async function refreshDailyRates(propertyIdOverride) {
-    const resolvedPropertyId = propertyIdOverride || selectedProperty || propertyId || "";
+    const resolvedPropertyId =
+      propertyIdOverride || selectedProperty || propertyId || "";
     if (!resolvedPropertyId) {
       setRows([]);
       setRooms([]);
@@ -814,23 +1138,28 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
-    const inventoryEndDate = days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
-    const [data, inventoryData, inventoryBoardData, availableDatesData] = await Promise.all([
-      fetchJson(
-        `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
-      ),
-      fetchJson(
-        `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
-      ).catch(() => ({ dates: [] })),
-      fetchJson(
-        `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-      ).catch(() => ({ rows: [] })),
-      fetchJson(
-        `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
-      ).catch(() => ({ property: null, availability: [] })),
-    ]);
+    const inventoryEndDate =
+      days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+    const [data, inventoryData, inventoryBoardData, availableDatesData] =
+      await Promise.all([
+        fetchJson(
+          `/rate-plans/daily-rates?property_id=${encodeURIComponent(resolvedPropertyId)}&days=${totalDays}&start_date=${calendarStartDate}`,
+        ),
+        fetchJson(
+          `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
+        ).catch(() => ({ dates: [] })),
+        fetchJson(
+          `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+        ).catch(() => ({ rows: [] })),
+        fetchJson(
+          `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+        ).catch(() => ({ property: null, availability: [] })),
+      ]);
     const calendarByRateId = Object.fromEntries(
-      (data.rate_plans || []).map((ratePlan) => [ratePlan.rate_id, ratePlan.calendar || []]),
+      (data.rate_plans || []).map((ratePlan) => [
+        ratePlan.rate_id,
+        ratePlan.calendar || [],
+      ]),
     );
     setPropertyName(data.property?.name || resolvedPropertyId);
     setRooms(data.rooms || []);
@@ -844,15 +1173,16 @@ export function DailyRatesPage({ propertyId }) {
         inventoryBoardData?.rows || [],
       ),
     );
-    const nextInventoryDates = Array.isArray(inventoryData?.dates) && inventoryData.dates.length
-      ? inventoryData.dates
-      : buildHotelSummaryFallback(
-          data.rooms || [],
-          data.rate_plans || [],
-          calendarStartDate,
-          range,
-          inventoryBoardData?.rows || [],
-        );
+    const nextInventoryDates =
+      Array.isArray(inventoryData?.dates) && inventoryData.dates.length
+        ? inventoryData.dates
+        : buildHotelSummaryFallback(
+            data.rooms || [],
+            data.rate_plans || [],
+            calendarStartDate,
+            range,
+            inventoryBoardData?.rows || [],
+          );
     setInventoryDates(nextInventoryDates);
     setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
     setApiConnected(true);
@@ -892,100 +1222,165 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   function renderInventoryStyleRateCell(row, cell, index) {
-    const styles = toneClasses[cell.tone] || toneClasses.default;
-    const cellRate = cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
+    const cellRate =
+      cell.base_rate ?? formatRateValue(parseRateValue(cell.value));
     const cellAvailability = cell.availability || "";
-    const cellSelectValue = getAvailabilitySelectValue(cellAvailability);
     const availabilityLabel = getAvailabilityDisplayLabel(cellAvailability);
-    const availabilityUi = getAvailabilityUiClasses(cellAvailability);
+    const isUnavailable = isUnavailableAvailability(cellAvailability);
+    const isAvailable = !isUnavailable && Boolean(cellAvailability);
+    const isSelected = index === selectedDateIndex;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isPast = new Date(cell.stay_date + "T00:00:00") < today;
+    const isWeekend = (() => {
+      const d = new Date(cell.stay_date + "T00:00:00");
+      const day = d.getDay();
+      return day === 0 || day === 6;
+    })();
+
+    const cellBg = isSelected
+      ? isSoftLightTheme
+        ? "rgba(116,43,101,0.10)"
+        : isDarkTheme || isMidnightTheme
+          ? "rgba(99,102,241,0.10)"
+          : "rgba(15,23,42,0.06)"
+      : isWeekend
+        ? matrixThemeStyles.subHeader.background
+        : "transparent";
+
+    const innerBorderColor = isPast
+      ? "rgba(148,163,184,0.12)"
+      : isUnavailable
+        ? "rgba(244,63,94,0.30)"
+        : isAvailable
+          ? "rgba(16,185,129,0.36)"
+          : "rgba(148,163,184,0.18)";
+
+    const innerBg = isPast
+      ? isDarkTheme || isMidnightTheme
+        ? "linear-gradient(135deg,rgba(148,163,184,0.05) 0%,rgba(15,23,42,0.02) 100%)"
+        : "linear-gradient(135deg,rgba(148,163,184,0.08) 0%,rgba(255,255,255,0.04) 100%)"
+      : isUnavailable
+        ? isSoftLightTheme
+          ? "linear-gradient(135deg,rgba(255,200,210,0.28) 0%,rgba(255,255,255,0.10) 100%)"
+          : isDarkTheme || isMidnightTheme
+            ? "linear-gradient(135deg,rgba(244,63,94,0.18) 0%,rgba(15,23,42,0.06) 100%)"
+            : "linear-gradient(135deg,rgba(255,228,230,0.60) 0%,rgba(255,255,255,0.40) 100%)"
+        : isAvailable
+          ? isSoftLightTheme
+            ? "linear-gradient(135deg,rgba(16,185,129,0.18) 0%,rgba(255,255,255,0.10) 100%)"
+            : isDarkTheme || isMidnightTheme
+              ? "linear-gradient(135deg,rgba(16,185,129,0.16) 0%,rgba(15,23,42,0.06) 100%)"
+              : "linear-gradient(135deg,rgba(209,250,229,0.60) 0%,rgba(255,255,255,0.40) 100%)"
+          : isSoftLightTheme
+            ? "linear-gradient(135deg,rgba(255,255,255,0.06) 0%,rgba(255,255,255,0.02) 100%)"
+            : isDarkTheme || isMidnightTheme
+              ? "linear-gradient(135deg,rgba(148,163,184,0.08) 0%,rgba(15,23,42,0.04) 100%)"
+              : "linear-gradient(135deg,rgba(248,250,252,0.80) 0%,rgba(255,255,255,0.60) 100%)";
+
+    const rateTextColor = isPast
+      ? isDarkTheme || isMidnightTheme
+        ? "#475569"
+        : "#cbd5e1"
+      : isUnavailable
+        ? isSoftLightTheme
+          ? "#b45563"
+          : isDarkTheme || isMidnightTheme
+            ? "#fca5a5"
+            : "#e11d48"
+        : isAvailable
+          ? isSoftLightTheme
+            ? "#065f46"
+            : isDarkTheme || isMidnightTheme
+              ? "#6ee7b7"
+              : "#059669"
+          : isSoftLightTheme
+            ? "#6f2f62"
+            : isDarkTheme || isMidnightTheme
+              ? "#e2e8f0"
+              : "#0f172a";
 
     return (
       <div
-        key={`${row.code}-inventory-${index}`}
-        className="px-2 py-2"
+        key={`${row.code}-cell-${index}`}
+        className="p-1"
         style={{
-          borderRight: "1px solid rgba(148, 163, 184, 0.12)",
-          background:
-            index === selectedDateIndex
-              ? "rgba(15, 23, 42, 0.04)"
-              : index % 2 === 0
-                ? "rgba(255, 255, 255, 0.82)"
-                : "rgba(248, 250, 252, 0.78)",
+          borderRight: "1px solid rgba(148,163,184,0.12)",
+          background: cellBg,
+          opacity: isPast ? 0.45 : 1,
+          pointerEvents: isPast ? "none" : "auto",
         }}
       >
-        <div
-          className={`${styles.box} ${availabilityUi.box} min-h-[126px] transition-colors`}
+        <button
+          type="button"
+          disabled={isPast}
+          className="flex h-full w-full flex-col items-center justify-center rounded-sm border transition-all duration-150 hover:scale-[1.02] hover:brightness-105 disabled:cursor-not-allowed"
           style={{
-            borderRadius: "12px",
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.24)",
+            minHeight: "64px",
+            borderColor: innerBorderColor,
+            background: innerBg,
+            boxShadow: isSelected
+              ? "0 0 0 1px rgba(99,102,241,0.18), 0 0 0 3px rgba(99,102,241,0.08)"
+              : "0 0 0 1px rgba(255,255,255,0.10)",
+          }}
+          onClick={(event) => {
+            const anchor = event.currentTarget;
+            const rect = anchor.getBoundingClientRect();
+            const popupWidth = 240;
+            const left = Math.max(
+              16,
+              Math.min(rect.right + 10, window.innerWidth - popupWidth - 16),
+            );
+            const top = Math.max(
+              16,
+              Math.min(rect.top, window.innerHeight - 240),
+            );
+            setSummaryPopover(null);
+            setCellPopover((current) =>
+              current?.rateId === row.code &&
+              current?.stayDate === cell.stay_date
+                ? null
+                : {
+                    anchorEl: anchor,
+                    rateId: row.code,
+                    stayDate: cell.stay_date,
+                    left,
+                    top,
+                    rowTitle: row.title,
+                    cellRate,
+                    cellAvailability,
+                    availabilityLabel,
+                  },
+            );
           }}
         >
           <span
-            className={[
-              styles.note,
-              cell.note === "Booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-              cell.note === "Alt booked" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-              cell.note === "Processing" && "inline-flex rounded px-1.5 py-0.5 text-slate-900",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            style={
-              cell.note === "Booked"
-                ? { backgroundColor: "#4df714" }
-                : cell.note === "Alt booked"
-                  ? { backgroundColor: "#bb8df7" }
-                  : cell.note === "Processing"
-                    ? { backgroundColor: "#f2eb16" }
-                    : undefined
-            }
+            className="text-[11px] font-bold leading-none"
+            style={{ color: rateTextColor }}
           >
-            {cell.note}
+            {formatDisplayRateValue(cellRate)}
           </span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            className={styles.input}
-            value={cellRate}
-            disabled={!apiConnected || !cell.stay_date}
-            onChange={(event) => {
-              updateCell(row.code, cell.stay_date, { base_rate: event.target.value });
-              setPublishError("");
-              setPublishSuccess("");
-            }}
-          />
-          <div
-            className={[
-              "mt-2 rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider",
-              availabilityUi.badge,
-            ].join(" ")}
-          >
-            {availabilityLabel}
-          </div>
-          <select
-            value={cellSelectValue}
-            disabled={!apiConnected || !cell.stay_date}
-            onChange={(event) => {
-              updateCell(row.code, cell.stay_date, { availability: normalizeAvailabilityInput(event.target.value) });
-              setPublishError("");
-              setPublishSuccess("");
-            }}
-            className={[
-              "mt-2 w-full rounded-md border bg-white px-2 py-1 text-[10px] font-bold uppercase tracking-wider outline-none",
-              availabilityUi.select,
-            ].join(" ")}
-          >
-            {availabilityOptions.map((status) => (
-              <option key={`${row.code}-${cell.stay_date}-${status.value}`} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
-          <div className="mt-2 flex items-center justify-between border-t border-slate-100 pt-2 text-[10px] font-medium text-slate-400">
-            <span>{cell.stay_date || "Demo"}</span>
-            <span>{cell.changed ? "Queued" : apiConnected ? "Saved" : "Preview"}</span>
-          </div>
-        </div>
+          {cellAvailability ? (
+            <span
+              className="mt-1 text-[8px] font-bold uppercase tracking-wider"
+              style={{
+                color: isUnavailable
+                  ? isSoftLightTheme
+                    ? "#b45563"
+                    : isDarkTheme || isMidnightTheme
+                      ? "#fca5a5"
+                      : "#e11d48"
+                  : isSoftLightTheme
+                    ? "#065f46"
+                    : isDarkTheme || isMidnightTheme
+                      ? "#6ee7b7"
+                      : "#059669",
+              }}
+            >
+              {isUnavailable ? "N/A" : "OK"}
+            </span>
+          ) : null}
+        </button>
       </div>
     );
   }
@@ -1047,10 +1442,14 @@ export function DailyRatesPage({ propertyId }) {
     closeActiveRoomPlansModal();
 
     try {
-      const ratePlan = await fetchJson(`/rate-plans/${encodeURIComponent(plan.code)}`);
+      const ratePlan = await fetchJson(
+        `/rate-plans/${encodeURIComponent(plan.code)}`,
+      );
       setNewRatePlanForm(createRatePlanFormFromDetails(room, ratePlan));
     } catch (error) {
-      setRatePlanModalError(error.message || `Could not load rate plan ${plan.code}.`);
+      setRatePlanModalError(
+        error.message || `Could not load rate plan ${plan.code}.`,
+      );
     } finally {
       setLoadingRatePlanDetails(false);
     }
@@ -1064,7 +1463,10 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
-    if (String(selectedRoomForRatePlan?.room_status || "").toUpperCase() !== liveRoomStatus) {
+    if (
+      String(selectedRoomForRatePlan?.room_status || "").toUpperCase() !==
+      liveRoomStatus
+    ) {
       setRatePlanModalError("Rate plans can be created only for live rooms.");
       return;
     }
@@ -1075,12 +1477,19 @@ export function DailyRatesPage({ propertyId }) {
 
     try {
       const isEditMode = ratePlanModalMode === "edit" && editingRatePlanId;
-      await fetchJson(isEditMode ? `/rate-plans/${encodeURIComponent(editingRatePlanId)}` : "/rate-plans", {
-        method: isEditMode ? "PATCH" : "POST",
-        body: JSON.stringify(createRatePlanPayload(newRatePlanForm)),
-      });
+      await fetchJson(
+        isEditMode
+          ? `/rate-plans/${encodeURIComponent(editingRatePlanId)}`
+          : "/rate-plans",
+        {
+          method: isEditMode ? "PATCH" : "POST",
+          body: JSON.stringify(createRatePlanPayload(newRatePlanForm)),
+        },
+      );
 
-      await refreshDailyRates(newRatePlanForm.room_id ? selectedProperty : undefined);
+      await refreshDailyRates(
+        newRatePlanForm.room_id ? selectedProperty : undefined,
+      );
       setRoomListMessage(
         isEditMode
           ? `Updated rate plan ${editingRatePlanId}.`
@@ -1089,7 +1498,10 @@ export function DailyRatesPage({ propertyId }) {
       closeRatePlanModal();
     } catch (error) {
       setRatePlanModalError(
-        error.message || (ratePlanModalMode === "edit" ? "Could not update the rate plan." : "Could not create the rate plan."),
+        error.message ||
+          (ratePlanModalMode === "edit"
+            ? "Could not update the rate plan."
+            : "Could not create the rate plan."),
       );
     } finally {
       setSavingNewRatePlan(false);
@@ -1124,7 +1536,9 @@ export function DailyRatesPage({ propertyId }) {
       await refreshDailyRates(selectedProperty || propertyId || "");
       setPublishSuccess(`Removed rate plan ${row.code}.`);
     } catch (error) {
-      setPublishError(error.message || `Could not remove rate plan ${row.code}.`);
+      setPublishError(
+        error.message || `Could not remove rate plan ${row.code}.`,
+      );
     } finally {
       setDeletingRateId("");
     }
@@ -1159,7 +1573,13 @@ export function DailyRatesPage({ propertyId }) {
                 nextBaseRate !== formatRateValue(nextCell.original_base_rate) ||
                 nextAvailability !== nextCell.original_availability,
               note: getCellNote(nextAvailability, index),
-              tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
+              tone: getTone(
+                {
+                  availability: nextAvailability,
+                  base_rate: Number(nextBaseRate),
+                },
+                index,
+              ),
             };
           }),
         };
@@ -1169,8 +1589,15 @@ export function DailyRatesPage({ propertyId }) {
 
   function shiftCalendar(daysToShift) {
     const current = new Date(calendarStartDate);
-    current.setDate(current.getDate() + daysToShift);
-    setCalendarStartDate(current.toISOString().slice(0, 10));
+    // shift by months: positive = next month, negative = prev month
+    const months = daysToShift > 0 ? 1 : -1;
+    const next = new Date(
+      current.getFullYear(),
+      current.getMonth() + months,
+      1,
+    );
+    setCalendarStartDate(getMonthStartIsoDate(next));
+    setSelectedDateIndex(0);
   }
 
   function applyBulkChanges(event) {
@@ -1206,7 +1633,10 @@ export function DailyRatesPage({ propertyId }) {
         return {
           ...row,
           cells: row.cells.map((cell, index) => {
-            if (cell.stay_date < bulkForm.start_date || cell.stay_date > bulkForm.end_date) {
+            if (
+              cell.stay_date < bulkForm.start_date ||
+              cell.stay_date > bulkForm.end_date
+            ) {
               return cell;
             }
 
@@ -1224,7 +1654,13 @@ export function DailyRatesPage({ propertyId }) {
                 nextBaseRate !== formatRateValue(cell.original_base_rate) ||
                 nextAvailability !== cell.original_availability,
               note: getCellNote(nextAvailability, index),
-              tone: getTone({ availability: nextAvailability, base_rate: Number(nextBaseRate) }, index),
+              tone: getTone(
+                {
+                  availability: nextAvailability,
+                  base_rate: Number(nextBaseRate),
+                },
+                index,
+              ),
             };
           }),
         };
@@ -1232,7 +1668,11 @@ export function DailyRatesPage({ propertyId }) {
     );
 
     setBulkError("");
-    setBulkSuccess(updatedCount ? `Queued ${updatedCount} calendar cells for update.` : "No cells matched the selected range.");
+    setBulkSuccess(
+      updatedCount
+        ? `Queued ${updatedCount} calendar cells for update.`
+        : "No cells matched the selected range.",
+    );
     setPublishSuccess("");
   }
 
@@ -1275,7 +1715,9 @@ export function DailyRatesPage({ propertyId }) {
         ),
       );
 
-      setPublishSuccess(`Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`);
+      setPublishSuccess(
+        `Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`,
+      );
 
       await refreshDailyRates(selectedProperty || propertyId || "");
     } catch (error) {
@@ -1286,13 +1728,22 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   const summaryStats = useMemo(() => {
-    const visibleRows = availableRows.length ? availableRows : apiConnected ? [] : fallbackRows;
-    const allCells = visibleRows.flatMap((row) => row.cells.slice(0, range));
+    const visibleRows = availableRows.length
+      ? availableRows
+      : apiConnected
+        ? []
+        : fallbackRows;
+    const allCells = visibleRows.flatMap((row) =>
+      row.cells.slice(0, totalDays),
+    );
     const numericRates = allCells
-      .map((cell) => Number(cell.base_rate ?? String(cell.value).replace(/[^0-9.]/g, "")))
+      .map((cell) =>
+        Number(cell.base_rate ?? String(cell.value).replace(/[^0-9.]/g, "")),
+      )
       .filter((value) => !Number.isNaN(value) && value > 0);
     const adr = numericRates.length
-      ? numericRates.reduce((sum, value) => sum + value, 0) / numericRates.length
+      ? numericRates.reduce((sum, value) => sum + value, 0) /
+        numericRates.length
       : 0;
 
     return [
@@ -1346,7 +1797,14 @@ export function DailyRatesPage({ propertyId }) {
       //   ],
       // },
     ],
-    [apiConnected, availableRows.length, calendarStartDate, properties.length, rooms.length, selectedProperty],
+    [
+      apiConnected,
+      availableRows.length,
+      calendarStartDate,
+      properties.length,
+      rooms.length,
+      selectedProperty,
+    ],
   );
 
   const availabilityOptions = useMemo(() => {
@@ -1378,7 +1836,10 @@ export function DailyRatesPage({ propertyId }) {
       searchPlaceholder="Search rooms or guests..."
       sidebarMetricLabel="Rate Plans Loaded"
       sidebarMetricValue={`${availableRows.length}`}
-      sidebarMetricProgress={Math.max(20, Math.min(100, availableRows.length * 20))}
+      sidebarMetricProgress={Math.max(
+        20,
+        Math.min(100, availableRows.length * 20),
+      )}
     >
       {!hasSelectedProperty ? (
         <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
@@ -1389,66 +1850,68 @@ export function DailyRatesPage({ propertyId }) {
             Select a property first
           </h3>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-            Open daily rates with a `property_id` to view and manage rate plans for a property.
+            Open daily rates with a `property_id` to view and manage rate plans
+            for a property.
           </p>
           <div className="mt-6 flex justify-center">
             <a
               href="/properties"
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
             >
-              <span className="material-symbols-outlined text-base">arrow_back</span>
+              <span className="material-symbols-outlined text-base">
+                arrow_back
+              </span>
               Go to Properties
             </a>
           </div>
         </section>
       ) : (
-      <>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-2">
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-            <span className="material-symbols-outlined text-base">sell</span>
-            Revenue Control Desk
+        <>
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-col gap-2">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                <span className="material-symbols-outlined text-base">
+                  sell
+                </span>
+                Revenue Control Desk
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight">
+                Daily Rates &amp; Yield
+              </h2>
+              <p className="max-w-3xl text-sm text-slate-500">
+                This screen now consumes a property-level FastAPI daily-rates
+                feed and shows all rooms with their linked rate plans.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <span
+                className={[
+                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-semibold transition-all",
+                  pendingChanges > 0
+                    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700/40 dark:bg-amber-900/20 dark:text-amber-300"
+                    : "border-emerald-200 bg-emerald-50 text-emerald-700",
+                ].join(" ")}
+              >
+                <span className="material-symbols-outlined text-base">
+                  {apiConnected ? "hub" : "cloud_off"}
+                </span>
+                {loadingRates
+                  ? "Refreshing..."
+                  : apiConnected
+                    ? "FastAPI Live"
+                    : "Fallback Mode"}
+              </span>
+            </div>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">Daily Rates &amp; Yield</h2>
-          <p className="max-w-3xl text-sm text-slate-500">
-            This screen now consumes a property-level FastAPI daily-rates feed and
-            shows all rooms with their linked rate plans.
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <div
-            className={[
-              "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
-              apiConnected
-                ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border border-amber-200 bg-amber-50 text-amber-700",
-            ].join(" ")}
-          >
-            <span className="material-symbols-outlined text-base">
-              {apiConnected ? "hub" : "cloud_off"}
-            </span>
-            {loadingRates ? "Refreshing..." : apiConnected ? "FastAPI Live" : "Fallback Mode"}
-          </div>
-          <button
-            type="button"
-            onClick={publishChanges}
-            disabled={publishing || !pendingChanges}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined">publish</span>
-            {publishing ? "Publishing..." : `Publish Changes${pendingChanges ? ` (${pendingChanges})` : ""}`}
-          </button>
-        </div>
-      </div>
 
-      <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {summaryStats.map((stat) => (
-          <StatCard key={stat.label} stat={stat} />
-        ))}
-      </section>
+          <section className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {summaryStats.map((stat) => (
+              <StatCard key={stat.label} stat={stat} />
+            ))}
+          </section>
 
-      <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
-        {/* <div className="grid gap-4">
+          <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
+            {/* <div className="grid gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
               <div className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600">
@@ -1573,958 +2036,1582 @@ export function DailyRatesPage({ propertyId }) {
           </div>
         </div> */}
 
-        <div className="grid gap-4">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Active Room List</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Only live rooms are shown here and only live rooms can receive rate plans.
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                {roomList.length} rooms
-              </div>
-            </div>
-            {roomListMessage ? (
-              <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                {roomListMessage}
-              </p>
-            ) : null}
-            <div className="mt-4 space-y-3">
-              {roomList.map((room) => (
-                <div
-                  key={room.room_id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900">{room.room_name}</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {[room.room_id, `$${Number(room.base_rate || 0).toFixed(2)}`, `${room.linked_rate_plan_count} plans`].join(" • ")}
+            <div className="grid gap-4 md:grid-cols-2 md:items-start">
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900">
+                      Active Room List
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Only live rooms are shown here and only live rooms can
+                      receive rate plans.
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openActiveRoomPlansModal(room)}
-                      className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm transition-opacity hover:opacity-85 dark:bg-emerald-500/15 dark:text-emerald-300"
-                    >
-                      Active {room.active_rate_plan_count}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openRatePlanModal(room)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
-                    >
-                      <span className="material-symbols-outlined text-base">edit_square</span>
-                      Edit
-                    </button>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                    {roomList.length} rooms
                   </div>
                 </div>
-              ))}
-              {!roomList.length ? (
-                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
-                  No live rooms found for this property.
-                </div>
-              ) : null}
-            </div>
-          </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="text-base font-bold text-slate-900">Bulk Editor</h3>
-            <p className="mt-1 text-sm text-slate-500">
-              Queue a date-range update for one rate plan, then publish all pending changes.
-            </p>
-            <form onSubmit={applyBulkChanges} className="mt-4 space-y-3">
-              <label className="block">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate Plan</span>
-                <select
-                  value={bulkForm.rate_id}
-                  onChange={(event) => {
-                    setBulkForm((current) => ({ ...current, rate_id: event.target.value }));
-                    setBulkError("");
-                    setBulkSuccess("");
-                  }}
-                  className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                >
-                  <option value="">Select rate plan</option>
-                  {availableRows.map((row) => (
-                    <option key={row.code} value={row.code}>
-                      {row.code} - {row.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Start Date</span>
-                  <input
-                    type="date"
-                    value={bulkForm.start_date}
-                    onChange={(event) => setBulkForm((current) => ({ ...current, start_date: event.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">End Date</span>
-                  <input
-                    type="date"
-                    value={bulkForm.end_date}
-                    onChange={(event) => setBulkForm((current) => ({ ...current, end_date: event.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Base Rate</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={bulkForm.base_rate}
-                    onChange={(event) => setBulkForm((current) => ({ ...current, base_rate: event.target.value }))}
-                    placeholder="Leave blank to keep"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Availability</span>
-                  <select
-                    value={bulkForm.availability}
-                    onChange={(event) => setBulkForm((current) => ({ ...current, availability: event.target.value }))}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  >
-                    <option value="">Keep existing</option>
-                    {availabilityOptions.map((status) => (
-                      <option key={status.value} value={status.value}>
-                        {status.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <button
-                type="submit"
-                disabled={!apiConnected || !availableRows.length}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
-              >
-                {/* <span className="material-symbols-outlined text-base">calendar_edit</span> */}
-                Apply To Range
-              </button>
-            </form>
-            {bulkError ? <p className="mt-3 text-sm font-medium text-rose-600">{bulkError}</p> : null}
-            {bulkSuccess ? <p className="mt-3 text-sm font-medium text-emerald-600">{bulkSuccess}</p> : null}
-          </article>
-          {insightCards.map((card) => (
-            <article
-              key={card.title}
-              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <h3 className="text-base font-bold text-slate-900">{card.title}</h3>
-              <div className="mt-4 space-y-3">
-                {card.items.map((item) => (
-                  <div key={item} className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-5 py-4">
-          <div className="flex min-w-0 flex-col">
-            <h3 className="text-lg font-bold text-slate-900">Rate Matrix</h3>
-                <p className="text-sm text-slate-500">
-              Edit live-room rates day by day, or queue bulk changes from the editor.
-                </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-              {[7, 15, 30].map((size) => (
-                <button
-                  key={size}
-                  type="button"
-                  onClick={() => {
-                    setRange(size);
-                    setSelectedDateIndex(0);
-                  }}
-                  className={[
-                    "rounded-lg px-3 py-2 text-sm transition-all",
-                    range === size
-                      ? "bg-slate-900 font-bold text-white shadow-sm"
-                      : "font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-900",
-                  ].join(" ")}
-                >
-                  {size} Days
-                </button>
-              ))}
-            </div>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
-              <span className="material-symbols-outlined text-base text-slate-400">calendar_month</span>
-              <input
-                type="date"
-                value={selectedStayDate}
-                onChange={(event) => handleSelectedDateChange(event.target.value)}
-                className="bg-transparent text-slate-900 outline-none"
-              />
-            </label>
-            <label className="flex min-w-[250px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm">
-              <span className="material-symbols-outlined text-base text-slate-400">search</span>
-              <input
-                type="text"
-                value={rateMatrixSearch}
-                onChange={(event) => setRateMatrixSearch(event.target.value)}
-                placeholder="Search rate ID, room name, or room ID"
-                className="w-full bg-transparent text-slate-900 outline-none"
-              />
-            </label>
-          </div>
-        </div>
-        {publishError ? (
-          <div className="border-b border-rose-100 bg-rose-50 px-5 py-3 text-sm font-medium text-rose-700">
-            {publishError}
-          </div>
-        ) : null}
-        {publishSuccess ? (
-          <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-700">
-            {publishSuccess}
-          </div>
-        ) : null}
-
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div
-            ref={matrixScrollRef}
-            onMouseDown={handleMatrixMouseDown}
-            onMouseMove={handleMatrixMouseMove}
-            onMouseUp={handleMatrixMouseUp}
-            onMouseLeave={handleMatrixMouseUp}
-            className="custom-scrollbar cursor-grab select-none overflow-x-auto overflow-y-visible active:cursor-grabbing"
-          >
-            <div
-              className="min-w-max overflow-visible"
-              style={{
-                width: `${matrixRoomColumnWidth + visibleDays.length * matrixDayColumnWidth}px`,
-              }}
-            >
-              <div
-                className="sticky top-0 z-30 grid"
-                style={{
-                  gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
-                  background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(244,247,250,0.92) 100%)",
-                  borderBottom: "1px solid rgba(148, 163, 184, 0.16)",
-                  backdropFilter: "blur(14px)",
-                }}
-              >
-              <div
-                className="sticky left-0 z-40 flex min-h-[76px] items-center px-5 py-4 text-left"
-                style={{
-                  borderRight: "1px solid rgba(148, 163, 184, 0.16)",
-                  background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(243,246,249,0.94) 100%)",
-                  boxShadow: "2px 0 10px rgba(15,23,42,0.08)",
-                }}
-              >
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Rate Plan
-                </p>
-              </div>
-              {visibleDays.map((day, index) => {
-                const isToday = index === 0;
-                const isSelected = index === selectedDateIndex;
-                const weekend = day.shortDay === "Sat" || day.shortDay === "Sun";
-                return (
-                  <button
-                    type="button"
-                    key={day.isoDate}
-                    onClick={() => setSelectedDateIndex(index)}
-                    className="min-w-[48px] p-3 text-center"
-                    style={{
-                      borderRight: "1px solid rgba(148, 163, 184, 0.10)",
-                      backgroundColor: isSelected
-                        ? "rgba(15, 23, 42, 0.06)"
-                        : weekend
-                          ? "rgba(248, 250, 252, 0.88)"
-                          : "transparent",
-                    }}
-                  >
-                    <div className="flex flex-col items-center">
-                      <span className="font-mono text-[10px] text-slate-500">
-                        {day.shortDay.toUpperCase()}
-                      </span>
-                      <span className="mt-1 text-lg font-bold text-slate-800">
-                        {day.dayNum}
-                      </span>
-                      {isToday ? (
-                        <span className="mt-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white">
-                          Today
-                        </span>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-              </div>
-              <div
-                className="sticky top-[76px] z-20 grid"
-                style={{
-                  gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
-                  background: "rgba(248, 250, 252, 0.94)",
-                  borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
-                  backdropFilter: "blur(12px)",
-                }}
-              >
-              <div
-                className="sticky left-0 z-30 px-5 py-5"
-                style={{
-                  borderRight: "1px solid rgba(148, 163, 184, 0.16)",
-                  background:
-                    "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.94) 100%)",
-                  boxShadow: "2px 0 10px rgba(15,23,42,0.06)",
-                }}
-              >
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Hotel Summary
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">{propertyName}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Current live-room availability by date
-                </p>
-              </div>
-              {visibleInventorySummary.map((summary, index) => {
-                const isSelected = index === selectedDateIndex;
-                return (
-                  <button
-                    type="button"
-                    key={summary.stay_date}
-                    className="px-3 py-3"
-                    onClick={(event) => {
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      const popupWidth = 220;
-                      const popupLeft = Math.min(
-                        rect.right + 10,
-                        window.innerWidth - popupWidth - 16,
-                      );
-                      const popupTop = Math.min(
-                        rect.top,
-                        window.innerHeight - 260,
-                      );
-                      setSummaryPopover((current) =>
-                        current?.stayDate === summary.stay_date
-                          ? null
-                          : {
-                              stayDate: summary.stay_date,
-                              left: Math.max(16, popupLeft),
-                              top: Math.max(16, popupTop),
-                              summary,
-                            },
-                      );
-                    }}
-                    style={{
-                      borderRight: "1px solid rgba(148, 163, 184, 0.10)",
-                      backgroundColor: isSelected ? "rgba(15, 23, 42, 0.04)" : "rgba(255,255,255,0.72)",
-                    }}
-                  >
-                    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
-                      <div className="flex min-h-[86px] flex-col items-center justify-center rounded-xl bg-slate-100/80 text-center text-slate-700">
-                        <span className="material-symbols-outlined text-[22px]">sell</span>
-                        <span className="mt-2 text-[22px] font-bold leading-none text-slate-900">
-                          {summary.total_active_rate}
-                        </span>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-              </div>
-
-              {summaryPopover ? (
-                <div
-                  className="fixed z-50 w-[220px] rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl backdrop-blur"
-                  style={{
-                    left: `${summaryPopover.left}px`,
-                    top: `${summaryPopover.top}px`,
-                  }}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                      {summaryPopover.stayDate}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSummaryPopover(null)}
-                      className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                    >
-                      <span className="material-symbols-outlined text-sm">close</span>
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {[
-                      ["meeting_room", "Active Rooms", summaryPopover.summary.total_active_room, "bg-emerald-50 text-emerald-700", "text-emerald-800"],
-                      ["sell", "Active Rates", summaryPopover.summary.total_active_rate, "bg-blue-50 text-blue-700", "text-blue-800"],
-                      ["bed", "Booked", summaryPopover.summary.booked_room, "bg-amber-50 text-amber-700", "text-amber-800"],
-                      ["block", "Unavailable", summaryPopover.summary.unavailable_room, "bg-rose-50 text-rose-700", "text-rose-800"],
-                      ["inventory_2", "Available", summaryPopover.summary.available_room, "bg-slate-100 text-slate-700", "text-slate-900"],
-                    ].map(([icon, label, value, toneClass, valueClass], metricIndex) => (
-                      <div
-                        key={`${summaryPopover.stayDate}-${metricIndex}`}
-                        className={`flex min-h-[42px] items-center justify-between rounded-xl px-3 py-2 ${toneClass}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[18px]">{icon}</span>
-                          <span className="text-[10px] font-bold uppercase tracking-[0.14em]">{label}</span>
-                        </div>
-                        <span className={`text-[15px] font-bold leading-none ${valueClass}`}>{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {!filteredAvailableRows.length ? (
-                <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
-                  {rateMatrixSearch.trim()
-                    ? "No rate plans matched that search."
-                    : apiConnected
-                    ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
-                    : "Backend offline. Start the API to load editable daily rates."}
-                </div>
-              ) : null}
-
-              {filteredAvailableRows.map((row, rowIndex) => (
-                <div
-                  key={row.code}
-                  className="grid transition-colors"
-                  style={{
-                    gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
-                  }}
-                >
-                  <div
-                    className="sticky left-0 z-20 flex flex-col justify-center px-5 py-4"
-                    style={{
-                      minHeight: "154px",
-                      borderRight: "1px solid rgba(148, 163, 184, 0.16)",
-                      borderBottom: "1px solid rgba(148, 163, 184, 0.10)",
-                      background:
-                        rowIndex % 2 === 0
-                          ? "linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(248,244,248,0.92) 100%)"
-                          : "linear-gradient(135deg, rgba(252,250,252,0.96) 0%, rgba(243,238,243,0.92) 100%)",
-                      boxShadow: "2px 0 10px rgba(15,23,42,0.06)",
-                    }}
-                  >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{row.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {[row.roomLabel, row.code, row.subtitle].filter(Boolean).join(" • ")}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700">
-                      {row.occupancy}
-                    </span>
-                  </div>
-                  <p className="mt-3 line-clamp-2 text-xs font-medium text-slate-500">
-                    {row.strategy}
+                {roomListMessage ? (
+                  <p className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                    {roomListMessage}
                   </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {row.stopSell ? (
-                      <span className="rounded-full bg-rose-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-700">
-                        Stop Sell
-                      </span>
-                    ) : null}
-                    {row.cta ? (
-                      <span className="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700">
-                        CTA
-                      </span>
-                    ) : null}
-                    {row.ctd ? (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">
-                        CTD
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRatePlan(row)}
-                      disabled={!apiConnected || publishing || deletingRateId === row.code}
-                      className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold uppercase tracking-wider text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                ) : null}
+                <div className="mt-4 space-y-3">
+                  {roomList.map((room) => (
+                    <div
+                      key={room.room_id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
                     >
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                      {deletingRateId === row.code ? "Removing..." : "Remove Plan"}
-                    </button>
-                  </div>
-                  </div>
-
-                  {row.cells.slice(0, range).map((cell, index) =>
-                    renderInventoryStyleRateCell(row, cell, index),
-                  )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900">
+                          {room.room_name}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {[
+                            room.room_id,
+                            `$${Number(room.base_rate || 0).toFixed(2)}`,
+                            `${room.linked_rate_plan_count} plans`,
+                          ].join(" • ")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openActiveRoomPlansModal(room)}
+                          className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 shadow-sm transition-opacity hover:opacity-85 dark:bg-emerald-500/15 dark:text-emerald-300"
+                        >
+                          Active {room.active_rate_plan_count}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openRatePlanModal(room)}
+                          className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                        >
+                          <span className="material-symbols-outlined text-base">
+                            edit_square
+                          </span>
+                          Edit
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!roomList.length ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 px-4 py-5 text-sm text-slate-500">
+                      No live rooms found for this property.
+                    </div>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-      </section>
-      {showRatePlanModal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plan</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-900">
-                  {ratePlanModalMode === "edit" ? "Edit Rate Plan for" : "Add Rate Plan for"}{" "}
-                  {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id}
+              </article>
+              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-base font-bold text-slate-900">
+                  Bulk Editor
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
-                  {ratePlanModalMode === "edit"
-                    ? "Update the full rate plan details directly from the daily-rates workspace."
-                    : "Create a new rate plan directly from the daily-rates workspace."}
+                  Queue a date-range update for one rate plan, then publish all
+                  pending changes.
                 </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeRatePlanModal}
-                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <form onSubmit={handleSubmitRatePlan} className="mt-6 space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Room ID</span>
-                  <input
-                    value={newRatePlanForm.room_id}
-                    readOnly
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate ID</span>
-                  <input
-                    value={newRatePlanForm.rate_id || (ratePlanModalMode === "edit" ? editingRatePlanId : "Auto-generated")}
-                    readOnly
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                  />
-                </label>
-              </div>
-              {loadingRatePlanDetails ? (
-                <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
-                  Loading full rate plan details...
-                </p>
-              ) : null}
-              <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3.5 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Room Summary</p>
-                    <h4 className="mt-1 text-sm font-bold text-slate-900">
-                      {selectedRoomForRatePlan?.room_name || selectedRoomForRatePlan?.room_id || "Selected Room"}
-                    </h4>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
-                      {[
-                        selectedRoomForRatePlan?.room_id,
-                        selectedRoomForRatePlan?.room_name_lang,
-                        selectedRoomForRatePlan?.room_status,
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Total Room Amount</p>
-                    <p className="mt-1 text-lg font-bold text-slate-900">
-                      {formatMoneyWithCurrency(
-                        newRatePlanForm.currency || "USD",
-                        Number(selectedRoomForRatePlan?.base_rate || 0) +
-                          Number(selectedRoomForRatePlan?.tax_and_service_fee || 0) +
-                          Number(selectedRoomForRatePlan?.surcharges || 0) +
-                          Number(selectedRoomForRatePlan?.mandatory_fee || 0) +
-                          Number(selectedRoomForRatePlan?.resort_fee || 0) +
-                          Number(selectedRoomForRatePlan?.mandatory_tax || 0),
-                      )}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-2.5 grid gap-2 md:grid-cols-6">
-                  {[
-                    ["Base Rate --", selectedRoomForRatePlan?.base_rate || 0],
-                    ["Tax & Service", selectedRoomForRatePlan?.tax_and_service_fee || 0],
-                    ["Surcharges --", selectedRoomForRatePlan?.surcharges || 0],
-                    ["Mandatory Fee", selectedRoomForRatePlan?.mandatory_fee || 0],
-                    ["Resort Fee", selectedRoomForRatePlan?.resort_fee || 0],
-                    ["Mandatory Tax", selectedRoomForRatePlan?.mandatory_tax || 0],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-xl bg-white px-2.5 py-2 shadow-sm">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</p>
-                      <p className="mt-0.5 text-xs font-bold text-slate-900">
-                        {formatMoneyWithCurrency(newRatePlanForm.currency || "USD", value)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Rate Details</p>
-                <div className="mt-4 space-y-4">
-                  <div className="grid gap-4 md:grid-cols-1">
+                <form onSubmit={applyBulkChanges} className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Rate Plan
+                    </span>
+                    <select
+                      value={bulkForm.rate_id}
+                      onChange={(event) => {
+                        setBulkForm((current) => ({
+                          ...current,
+                          rate_id: event.target.value,
+                        }));
+                        setBulkError("");
+                        setBulkSuccess("");
+                      }}
+                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                    >
+                      <option value="">Select rate plan</option>
+                      {availableRows.map((row) => (
+                        <option key={row.code} value={row.code}>
+                          {row.code} - {row.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid gap-3 md:grid-cols-2">
                     <label className="block">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Title</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Start Date
+                      </span>
                       <input
-                        value={newRatePlanForm.title}
-                        onChange={(event) => setNewRatePlanForm((current) => ({ ...current, title: event.target.value }))}
+                        type="date"
+                        value={bulkForm.start_date}
+                        onChange={(event) =>
+                          setBulkForm((current) => ({
+                            ...current,
+                            start_date: event.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        End Date
+                      </span>
+                      <input
+                        type="date"
+                        value={bulkForm.end_date}
+                        onChange={(event) =>
+                          setBulkForm((current) => ({
+                            ...current,
+                            end_date: event.target.value,
+                          }))
+                        }
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                       />
                     </label>
                   </div>
-                  <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Description</span>
-                    <textarea
-                      value={newRatePlanForm.description}
-                      onChange={(event) => setNewRatePlanForm((current) => ({ ...current, description: event.target.value }))}
-                      rows={3}
-                      className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                    />
-                  </label>
-                  <div className="grid gap-4 md:grid-cols-4">
+                  <div className="grid gap-3 md:grid-cols-2">
                     <label className="block">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Meal Plan</span>
-                      <select
-                        value={newRatePlanForm.meal_plan}
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Base Rate
+                      </span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={bulkForm.base_rate}
                         onChange={(event) =>
-                          setNewRatePlanForm((current) => ({ ...current, meal_plan: event.target.value }))
+                          setBulkForm((current) => ({
+                            ...current,
+                            base_rate: event.target.value,
+                          }))
+                        }
+                        placeholder="Leave blank to keep"
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Availability
+                      </span>
+                      <select
+                        value={bulkForm.availability}
+                        onChange={(event) =>
+                          setBulkForm((current) => ({
+                            ...current,
+                            availability: event.target.value,
+                          }))
                         }
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                       >
-                        {mealPlanOptions.map((mealPlan) => (
-                          <option key={mealPlan.value} value={mealPlan.value}>
-                            {mealPlan.label}
+                        <option value="">Keep existing</option>
+                        {availabilityOptions.map((status) => (
+                          <option key={status.value} value={status.value}>
+                            {status.label}
                           </option>
                         ))}
                       </select>
                     </label>
-                    {[
-                      ["bed_type", "Bed Type"],
-                      ["currency", "Currency"],
-                      ["cancellation_policy", "Cancellation"],
-                    ].map(([field, label]) => (
-                      <label key={field} className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                        <input
-                          value={newRatePlanForm[field]}
-                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                        />
-                      </label>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!apiConnected || !availableRows.length}
+                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  >
+                    {/* <span className="material-symbols-outlined text-base">calendar_edit</span> */}
+                    Apply To Range
+                  </button>
+                </form>
+                {bulkError ? (
+                  <p className="mt-3 text-sm font-medium text-rose-600">
+                    {bulkError}
+                  </p>
+                ) : null}
+                {bulkSuccess ? (
+                  <p className="mt-3 text-sm font-medium text-emerald-600">
+                    {bulkSuccess}
+                  </p>
+                ) : null}
+              </article>
+              {insightCards.map((card) => (
+                <article
+                  key={card.title}
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+                  <h3 className="text-base font-bold text-slate-900">
+                    {card.title}
+                  </h3>
+                  <div className="mt-4 space-y-3">
+                    {card.items.map((item) => (
+                      <div
+                        key={item}
+                        className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                      >
+                        {item}
+                      </div>
                     ))}
                   </div>
-                  <div className="grid gap-4 md:grid-cols-4">
-                    {[
-                      ["base_rate", "Base Rate"],
-                      ["tax_and_service_fee", "Tax & Service"],
-                      ["surcharges", "Surcharges"],
-                      ["mandatory_fee", "Mandatory Fee"],
-                      ["resort_fee", "Resort Fee"],
-                      ["mandatory_tax", "Mandatory Tax"],
-                      ["extra_adult_rate", "Extra Adult"],
-                      ["extra_child_rate", "Extra Child"],
-                    ].map(([field, label]) => (
-                      <label key={field} className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newRatePlanForm[field]}
-                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-4">
-                    {[
-                      ["min_stay", "Min Stay"],
-                      ["max_stay", "Max Stay"],
-                      ["total_inventory", "Total Inventory"],
-                      ["available_inventory", "Available"],
-                      ["sold_inventory", "Sold"],
-                    ].map(([field, label]) => (
-                      <label key={field} className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={newRatePlanForm[field]}
-                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.value }))}
-                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-5">
-                    {[
-                      ["is_refundable", "Refund able"],
-                      ["status", "Active"],
-                      ["closed_to_arrival", "CTA"],
-                      ["closed_to_departure", "CTD"],
-                      ["stop_sell", "Stop Sell"],
-                    ].map(([field, label]) => (
-                      <label key={field} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(newRatePlanForm[field])}
-                          onChange={(event) => setNewRatePlanForm((current) => ({ ...current, [field]: event.target.checked }))}
-                          className="size-4 rounded border-slate-300"
-                        />
-                        <span>{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-              {ratePlanModalError ? (
-                <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                  {ratePlanModalError}
-                </p>
-              ) : null}
-              {ratePlanModalSuccess ? (
-                <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                  {ratePlanModalSuccess}
-                </p>
-              ) : null}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Preview</p>
-                    <h4 className="mt-2 text-lg font-bold text-slate-900">
-                      {String(newRatePlanForm.title || "Untitled Rate Plan")
-                        .match(/.{1,20}/g)
-                        ?.map((chunk, index) => (
-                          <span key={`${chunk}-${index}`}>
-                            {chunk}
-                            <br />
-                          </span>
-                        ))}
-                    </h4>
-                    <p className="mt-1 text-sm text-slate-500">
-                      {[
-                        newRatePlanForm.room_id || selectedRoomForRatePlan?.room_id,
-                        newRatePlanForm.meal_plan || "Meal plan pending",
-                        newRatePlanForm.bed_type || "Bed type pending",
-                      ]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                  <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Subtotal Price</p>
-                    <p className="mt-2 text-2xl font-bold text-slate-900">
-                      {formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.subtotal)}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Base + tax/service + surcharges + mandatory fees
-                    </p>
-                  </div>
-                </div>
+                </article>
+              ))}
+            </div>
+          </section>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-2xl bg-white p-4 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Price Breakdown</p>
-                    <div className="mt-3 space-y-2 text-sm text-slate-600">
-                      <div className="flex items-center justify-between">
-                        <span>Base rate</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.baseRate)}</span>
+          <section
+            className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border"
+            style={matrixThemeStyles.panel}
+          >
+            <div
+              className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-4"
+              style={{
+                borderColor: "var(--soft-border)",
+                background:
+                  "color-mix(in srgb, var(--panel-bg) 82%, transparent)",
+              }}
+            >
+              <div className="flex min-w-0 flex-col">
+                <h3
+                  className={`text-lg font-bold ${matrixThemeStyles.card.textClass}`}
+                >
+                  Rate Matrix
+                </h3>
+                <p
+                  className={`text-sm ${matrixThemeStyles.subHeader.subtextClass}`}
+                >
+                  Edit live-room rates day by day, or queue bulk changes from
+                  the editor.
+                </p>
+              </div>
+              <div
+                className="flex items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
+                style={{
+                  borderColor: "var(--soft-border)",
+                  background:
+                    "color-mix(in srgb, var(--panel-bg) 90%, transparent)",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => shiftCalendar(-1)}
+                  className={`rounded-lg px-2 py-1 text-sm font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${matrixThemeStyles.subHeader.subtextClass}`}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    chevron_left
+                  </span>
+                </button>
+                <span
+                  className={`min-w-[120px] text-center text-sm font-bold ${matrixThemeStyles.card.textClass}`}
+                >
+                  {new Date(calendarStartDate + "T00:00:00").toLocaleDateString(
+                    "en-US",
+                    { month: "long", year: "numeric" },
+                  )}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => shiftCalendar(1)}
+                  className={`rounded-lg px-2 py-1 text-sm font-semibold transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 ${matrixThemeStyles.subHeader.subtextClass}`}
+                >
+                  <span className="material-symbols-outlined text-base">
+                    chevron_right
+                  </span>
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm ${matrixThemeStyles.subHeader.subtextClass}`}
+                  style={{
+                    borderColor: "var(--soft-border)",
+                    background:
+                      "color-mix(in srgb, var(--panel-bg) 90%, transparent)",
+                  }}
+                >
+                  <span className="material-symbols-outlined text-base text-slate-400">
+                    calendar_month
+                  </span>
+                  <input
+                    type="date"
+                    value={selectedStayDate}
+                    onChange={(event) =>
+                      handleSelectedDateChange(event.target.value)
+                    }
+                    className={`bg-transparent outline-none ${matrixThemeStyles.card.textClass}`}
+                  />
+                </label>
+                <label
+                  className={`flex min-w-[250px] items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm ${matrixThemeStyles.subHeader.subtextClass}`}
+                  style={{
+                    borderColor: "var(--soft-border)",
+                    background:
+                      "color-mix(in srgb, var(--panel-bg) 90%, transparent)",
+                  }}
+                >
+                  <span className="material-symbols-outlined text-base text-slate-400">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    value={rateMatrixSearch}
+                    onChange={(event) =>
+                      setRateMatrixSearch(event.target.value)
+                    }
+                    placeholder="Search rate ID, room name, or room ID"
+                    className={`w-full bg-transparent outline-none ${matrixThemeStyles.card.textClass}`}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div
+                ref={matrixScrollRef}
+                onMouseDown={handleMatrixMouseDown}
+                onMouseMove={handleMatrixMouseMove}
+                onMouseUp={handleMatrixMouseUp}
+                onMouseLeave={handleMatrixMouseUp}
+                className="custom-scrollbar cursor-grab select-none overflow-x-auto overflow-y-visible active:cursor-grabbing"
+              >
+                <div
+                  className="min-w-max overflow-visible"
+                  style={{
+                    width: `${matrixRoomColumnWidth + visibleDays.length * matrixDayColumnWidth}px`,
+                  }}
+                >
+                  <div
+                    className="sticky top-0 z-30 grid"
+                    style={{
+                      gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                      background: matrixThemeStyles.headerRow.background,
+                      borderBottom: matrixThemeStyles.headerRow.borderBottom,
+                      backdropFilter: "blur(14px)",
+                    }}
+                  >
+                    <div
+                      className="sticky left-0 z-40 flex min-h-[76px] items-center px-5 py-4 text-left"
+                      style={{
+                        borderRight: "1px solid rgba(148, 163, 184, 0.16)",
+                        background: matrixThemeStyles.headerRow.background,
+                        boxShadow: "2px 0 10px rgba(15,23,42,0.08)",
+                      }}
+                    >
+                      <p
+                        className={`text-xs font-bold uppercase tracking-wider ${matrixThemeStyles.headerRow.labelClass}`}
+                      >
+                        Rate Plan
+                      </p>
+                    </div>
+                    {visibleDays.map((day, index) => {
+                      const isToday = index === 0;
+                      const isSelected = index === selectedDateIndex;
+                      const weekend =
+                        day.shortDay === "Sat" || day.shortDay === "Sun";
+                      const isFirstOfMonth = day.dayNum === "01";
+                      return (
+                        <button
+                          type="button"
+                          key={day.isoDate}
+                          onClick={() => setSelectedDateIndex(index)}
+                          className="min-w-[48px] p-2 text-center"
+                          style={{
+                            borderRight: "1px solid rgba(148, 163, 184, 0.10)",
+                            backgroundColor: isSelected
+                              ? isSoftLightTheme
+                                ? "rgba(116,43,101,0.12)"
+                                : isDarkTheme || isMidnightTheme
+                                  ? "rgba(99,102,241,0.10)"
+                                  : "rgba(15, 23, 42, 0.06)"
+                              : weekend
+                                ? isSoftLightTheme
+                                  ? "rgba(255,255,255,0.08)"
+                                  : isDarkTheme || isMidnightTheme
+                                    ? "rgba(255,255,255,0.06)"
+                                    : "rgba(248, 250, 252, 0.88)"
+                                : "transparent",
+                          }}
+                        >
+                          <div className="flex flex-col items-center">
+                            <span
+                              className={`font-mono text-[10px] ${matrixThemeStyles.headerRow.labelClass}`}
+                            >
+                              {day.shortDay.toUpperCase()}
+                            </span>
+                            <span
+                              className={`mt-0.5 text-base font-bold ${matrixThemeStyles.headerRow.textClass}`}
+                            >
+                              {day.dayNum}
+                            </span>
+                            {isFirstOfMonth ? (
+                              <span
+                                className={`mt-0.5 text-[8px] font-bold uppercase tracking-wider ${matrixThemeStyles.headerRow.labelClass}`}
+                              >
+                                {day.month}
+                              </span>
+                            ) : isToday ? (
+                              <span
+                                className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider ${matrixThemeStyles.headerRow.todayBadgeClass}`}
+                              >
+                                Today
+                              </span>
+                            ) : null}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div
+                    className="sticky top-[76px] z-20 grid"
+                    style={{
+                      gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                      background: matrixThemeStyles.subHeader.background,
+                      borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
+                      backdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <div
+                      className="sticky left-0 z-30 px-5 py-5"
+                      style={{
+                        borderRight: "1px solid rgba(148, 163, 184, 0.16)",
+                        background:
+                          matrixThemeStyles.subHeader.stickyBackground,
+                        boxShadow: "2px 0 10px rgba(15,23,42,0.06)",
+                      }}
+                    >
+                      <p
+                        className={`text-xs font-bold uppercase tracking-wider ${matrixThemeStyles.subHeader.subtextClass}`}
+                      >
+                        Hotel Summary
+                      </p>
+                      <p
+                        className={`mt-1 text-sm font-bold ${matrixThemeStyles.subHeader.textClass}`}
+                      >
+                        {propertyName}
+                      </p>
+                      <p
+                        className={`mt-1 text-xs ${matrixThemeStyles.subHeader.subtextClass}`}
+                      >
+                        Current live-room availability by date
+                      </p>
+                    </div>
+                    {visibleInventorySummary.map((summary, index) => {
+                      const isSelected = index === selectedDateIndex;
+                      return (
+                        <button
+                          type="button"
+                          key={summary.stay_date}
+                          className="p-1"
+                          onClick={(event) => {
+                            const anchor = event.currentTarget;
+                            const rect = anchor.getBoundingClientRect();
+                            const popupWidth = 220;
+                            const left = Math.max(
+                              16,
+                              Math.min(
+                                rect.right + 10,
+                                window.innerWidth - popupWidth - 16,
+                              ),
+                            );
+                            const top = Math.max(
+                              16,
+                              Math.min(rect.top, window.innerHeight - 260),
+                            );
+                            setSummaryPopover((current) =>
+                              current?.stayDate === summary.stay_date
+                                ? null
+                                : {
+                                    anchorEl: anchor,
+                                    stayDate: summary.stay_date,
+                                    left,
+                                    top,
+                                    summary,
+                                  },
+                            );
+                          }}
+                          style={{
+                            borderRight: "1px solid rgba(148, 163, 184, 0.10)",
+                            backgroundColor: isSelected
+                              ? isSoftLightTheme
+                                ? "rgba(116,43,101,0.08)"
+                                : isDarkTheme || isMidnightTheme
+                                  ? "rgba(99,102,241,0.08)"
+                                  : "rgba(15, 23, 42, 0.04)"
+                              : "transparent",
+                          }}
+                        >
+                          <div
+                            className="flex flex-col items-center justify-center rounded-sm border py-2"
+                            style={{
+                              minHeight: "52px",
+                              borderColor: matrixThemeStyles.card.borderColor,
+                              background: matrixThemeStyles.card.background,
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[14px] text-slate-400">
+                              sell
+                            </span>
+                            <span
+                              className={`mt-0.5 text-[13px] font-bold leading-none ${matrixThemeStyles.card.textClass}`}
+                            >
+                              {summary.total_active_rate}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {summaryPopover ? (
+                    <div
+                      className="fixed z-50 w-[220px] rounded-2xl border p-3 shadow-xl backdrop-blur"
+                      style={{
+                        left: `${summaryPopover.left}px`,
+                        top: `${summaryPopover.top}px`,
+                        borderColor: "var(--soft-border)",
+                        background: matrixThemeStyles.card.popupBackground,
+                      }}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span
+                          className={`text-[10px] font-bold uppercase tracking-[0.16em] ${matrixThemeStyles.card.mutedClass}`}
+                        >
+                          {summaryPopover.stayDate}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSummaryPopover(null)}
+                          className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            close
+                          </span>
+                        </button>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span>Tax & service</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.taxAndServiceFee)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Surcharges</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.surcharges)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Mandatory fee</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.mandatoryFee)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Resort fee</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.resortFee)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span>Mandatory tax</span>
-                        <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, ratePlanPreview.mandatoryTax)}</span>
+                      <div className="flex flex-col gap-2">
+                        {[
+                          [
+                            "meeting_room",
+                            "Active Rooms",
+                            summaryPopover.summary.total_active_room,
+                            "bg-emerald-50 text-emerald-700",
+                            "text-emerald-800",
+                          ],
+                          [
+                            "sell",
+                            "Active Rates",
+                            summaryPopover.summary.total_active_rate,
+                            "bg-blue-50 text-blue-700",
+                            "text-blue-800",
+                          ],
+                          [
+                            "bed",
+                            "Booked",
+                            summaryPopover.summary.booked_room,
+                            "bg-amber-50 text-amber-700",
+                            "text-amber-800",
+                          ],
+                          [
+                            "block",
+                            "Unavailable",
+                            summaryPopover.summary.unavailable_room,
+                            "bg-rose-50 text-rose-700",
+                            "text-rose-800",
+                          ],
+                          [
+                            "inventory_2",
+                            "Available",
+                            summaryPopover.summary.available_room,
+                            "bg-slate-100 text-slate-700",
+                            "text-slate-900",
+                          ],
+                        ].map(
+                          (
+                            [icon, label, value, toneClass, valueClass],
+                            metricIndex,
+                          ) => (
+                            <div
+                              key={`${summaryPopover.stayDate}-${metricIndex}`}
+                              className={`flex min-h-[42px] items-center justify-between rounded-xl px-3 py-2 ${toneClass}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[18px]">
+                                  {icon}
+                                </span>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
+                                  {label}
+                                </span>
+                              </div>
+                              <span
+                                className={`text-[15px] font-bold leading-none ${valueClass}`}
+                              >
+                                {value}
+                              </span>
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
-                  </div>
+                  ) : null}
 
-                  <div className="rounded-2xl bg-white p-4 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Inventory Snapshot</p>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
+                  {cellPopover ? (
+                    <div
+                      className="fixed z-50 w-[240px] rounded-2xl border p-3 shadow-xl backdrop-blur"
+                      style={{
+                        left: `${cellPopover.left}px`,
+                        top: `${cellPopover.top}px`,
+                        borderColor: "var(--soft-border)",
+                        background: matrixThemeStyles.card.popupBackground,
+                      }}
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                            {cellPopover.stayDate}
+                          </div>
+                          <div
+                            className={`mt-1 text-sm font-bold ${matrixThemeStyles.card.textClass}`}
+                          >
+                            {cellPopover.rowTitle}
+                          </div>
+                          {(() => {
+                            const t = new Date();
+                            t.setHours(0, 0, 0, 0);
+                            return (
+                              new Date(cellPopover.stayDate + "T00:00:00") < t
+                            );
+                          })() && (
+                            <div className="mt-1 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                              Past — read only
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setCellPopover(null)}
+                          className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            close
+                          </span>
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        <label className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                            Current Status
+                          </span>
+                          <select
+                            value={getAvailabilitySelectValue(
+                              cellPopover.cellAvailability,
+                            )}
+                            disabled={
+                              !apiConnected ||
+                              !cellPopover.stayDate ||
+                              (() => {
+                                const t = new Date();
+                                t.setHours(0, 0, 0, 0);
+                                return (
+                                  new Date(cellPopover.stayDate + "T00:00:00") <
+                                  t
+                                );
+                              })()
+                            }
+                            onChange={(event) => {
+                              updateCell(
+                                cellPopover.rateId,
+                                cellPopover.stayDate,
+                                {
+                                  availability: normalizeAvailabilityInput(
+                                    event.target.value,
+                                  ),
+                                },
+                              );
+                              setCellPopover((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      cellAvailability: event.target.value,
+                                      availabilityLabel:
+                                        getAvailabilityDisplayLabel(
+                                          event.target.value,
+                                        ),
+                                    }
+                                  : current,
+                              );
+                              setPublishError("");
+                              setPublishSuccess("");
+                            }}
+                            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm font-semibold outline-none"
+                            style={{
+                              borderColor: "var(--soft-border)",
+                              background:
+                                "color-mix(in srgb, var(--panel-bg) 88%, transparent)",
+                              color:
+                                isDarkTheme || isMidnightTheme
+                                  ? "#e2e8f0"
+                                  : "#334155",
+                            }}
+                          >
+                            {availabilityOptions.map((status) => (
+                              <option
+                                key={`popover-${cellPopover.rateId}-${status.value}`}
+                                value={status.value}
+                              >
+                                {status.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                            Current Rate
+                          </span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={cellPopover.cellRate}
+                            disabled={
+                              !apiConnected ||
+                              !cellPopover.stayDate ||
+                              (() => {
+                                const t = new Date();
+                                t.setHours(0, 0, 0, 0);
+                                return (
+                                  new Date(cellPopover.stayDate + "T00:00:00") <
+                                  t
+                                );
+                              })()
+                            }
+                            onChange={(event) => {
+                              updateCell(
+                                cellPopover.rateId,
+                                cellPopover.stayDate,
+                                {
+                                  base_rate: event.target.value,
+                                },
+                              );
+                              setCellPopover((current) =>
+                                current
+                                  ? { ...current, cellRate: event.target.value }
+                                  : current,
+                              );
+                              setPublishError("");
+                              setPublishSuccess("");
+                            }}
+                            className="mt-1 w-full rounded-xl border px-3 py-2 text-sm font-semibold outline-none"
+                            style={{
+                              borderColor: "var(--soft-border)",
+                              background:
+                                "color-mix(in srgb, var(--panel-bg) 88%, transparent)",
+                              color:
+                                isDarkTheme || isMidnightTheme
+                                  ? "#f8fafc"
+                                  : "#0f172a",
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {!filteredAvailableRows.length ? (
+                    <div className="px-5 py-10 text-center text-sm font-medium text-slate-500">
+                      {rateMatrixSearch.trim()
+                        ? "No rate plans matched that search."
+                        : apiConnected
+                          ? `No live-room rate plans found for ${selectedProperty || "this property"}.`
+                          : "Backend offline. Start the API to load editable daily rates."}
+                    </div>
+                  ) : null}
+
+                  {filteredAvailableRows.map((row, rowIndex) => (
+                    <div
+                      key={row.code}
+                      className="grid transition-colors"
+                      style={{
+                        gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                      }}
+                    >
+                      <div
+                        className="sticky left-0 z-20 flex flex-col justify-center px-4 py-3 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
+                        style={{
+                          minHeight: "72px",
+                          borderRight: "1px solid rgba(148,163,184,0.16)",
+                          borderBottom: "1px solid rgba(148, 163, 184, 0.10)",
+                          background:
+                            rowIndex % 2 === 0
+                              ? matrixThemeStyles.firstColumn.evenBg
+                              : matrixThemeStyles.firstColumn.oddBg,
+                          backdropFilter: "blur(16px) saturate(140%)",
+                          WebkitBackdropFilter: "blur(16px) saturate(140%)",
+                        }}
+                      >
+                        <span
+                          className={`font-headline text-[15px] font-semibold leading-tight ${matrixThemeStyles.firstColumn.titleClass}`}
+                          title={row.title}
+                        >
+                          {String(row.title).slice(0, 18)}
+                        </span>
+                        <span
+                          className={`mt-0.5 text-[11px] ${matrixThemeStyles.subHeader.subtextClass}`}
+                          title={row.roomLabel}
+                        >
+                          {String(row.roomLabel || row.code).slice(0, 22)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveRatePlan(row)}
+                          disabled={
+                            !apiConnected ||
+                            publishing ||
+                            deletingRateId === row.code
+                          }
+                          className="mt-2 inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-400"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">
+                            delete
+                          </span>
+                          {deletingRateId === row.code
+                            ? "Removing..."
+                            : "Remove"}
+                        </button>
+                      </div>
+
+                      {row.cells
+                        .slice(0, totalDays)
+                        .map((cell, index) =>
+                          renderInventoryStyleRateCell(row, cell, index),
+                        )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+          {showRatePlanModal ? (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                      Rate Plan
+                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-slate-900">
+                      {ratePlanModalMode === "edit"
+                        ? "Edit Rate Plan for"
+                        : "Add Rate Plan for"}{" "}
+                      {selectedRoomForRatePlan?.room_name ||
+                        selectedRoomForRatePlan?.room_id}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {ratePlanModalMode === "edit"
+                        ? "Update the full rate plan details directly from the daily-rates workspace."
+                        : "Create a new rate plan directly from the daily-rates workspace."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeRatePlanModal}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
+                <form
+                  onSubmit={handleSubmitRatePlan}
+                  className="mt-6 space-y-4"
+                >
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Room ID
+                      </span>
+                      <input
+                        value={newRatePlanForm.room_id}
+                        readOnly
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Rate ID
+                      </span>
+                      <input
+                        value={
+                          newRatePlanForm.rate_id ||
+                          (ratePlanModalMode === "edit"
+                            ? editingRatePlanId
+                            : "Auto-generated")
+                        }
+                        readOnly
+                        className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                      />
+                    </label>
+                  </div>
+                  {loadingRatePlanDetails ? (
+                    <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                      Loading full rate plan details...
+                    </p>
+                  ) : null}
+                  <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3.5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Room Summary
+                        </p>
+                        <h4 className="mt-1 text-sm font-bold text-slate-900">
+                          {selectedRoomForRatePlan?.room_name ||
+                            selectedRoomForRatePlan?.room_id ||
+                            "Selected Room"}
+                        </h4>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {[
+                            selectedRoomForRatePlan?.room_id,
+                            selectedRoomForRatePlan?.room_name_lang,
+                            selectedRoomForRatePlan?.room_status,
+                          ]
+                            .filter(Boolean)
+                            .join(" • ")}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                          Total Room Amount
+                        </p>
+                        <p className="mt-1 text-lg font-bold text-slate-900">
+                          {formatMoneyWithCurrency(
+                            newRatePlanForm.currency || "USD",
+                            Number(selectedRoomForRatePlan?.base_rate || 0) +
+                              Number(
+                                selectedRoomForRatePlan?.tax_and_service_fee ||
+                                  0,
+                              ) +
+                              Number(selectedRoomForRatePlan?.surcharges || 0) +
+                              Number(
+                                selectedRoomForRatePlan?.mandatory_fee || 0,
+                              ) +
+                              Number(selectedRoomForRatePlan?.resort_fee || 0) +
+                              Number(
+                                selectedRoomForRatePlan?.mandatory_tax || 0,
+                              ),
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-2.5 grid gap-2 md:grid-cols-6">
                       {[
-                        ["Total", ratePlanPreview.totalInventory],
-                        ["Available", ratePlanPreview.availableInventory],
-                        ["Sold", ratePlanPreview.soldInventory],
+                        [
+                          "Base Rate --",
+                          selectedRoomForRatePlan?.base_rate || 0,
+                        ],
+                        [
+                          "Tax & Service",
+                          selectedRoomForRatePlan?.tax_and_service_fee || 0,
+                        ],
+                        [
+                          "Surcharges --",
+                          selectedRoomForRatePlan?.surcharges || 0,
+                        ],
+                        [
+                          "Mandatory Fee",
+                          selectedRoomForRatePlan?.mandatory_fee || 0,
+                        ],
+                        [
+                          "Resort Fee",
+                          selectedRoomForRatePlan?.resort_fee || 0,
+                        ],
+                        [
+                          "Mandatory Tax",
+                          selectedRoomForRatePlan?.mandatory_tax || 0,
+                        ],
                       ].map(([label, value]) => (
-                        <div key={label} className="rounded-xl bg-slate-50 px-3 py-3 text-center">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-                          <p className="mt-1 text-base font-bold text-slate-900">{value}</p>
+                        <div
+                          key={label}
+                          className="rounded-xl bg-white px-2.5 py-2 shadow-sm"
+                        >
+                          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                            {label}
+                          </p>
+                          <p className="mt-0.5 text-xs font-bold text-slate-900">
+                            {formatMoneyWithCurrency(
+                              newRatePlanForm.currency || "USD",
+                              value,
+                            )}
+                          </p>
                         </div>
                       ))}
                     </div>
-                    <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                      Stay window: <span className="font-bold text-slate-900">{ratePlanPreview.minStay}</span> to{" "}
-                      <span className="font-bold text-slate-900">{ratePlanPreview.maxStay}</span> nights
-                    </div>
                   </div>
-
-                  <div className="rounded-2xl bg-white p-4 shadow-sm">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Flags & Policy</p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[
-                        newRatePlanForm.status ? "Active" : "Inactive",
-                        newRatePlanForm.is_refundable ? "Refundable" : "Non-refundable",
-                        newRatePlanForm.closed_to_arrival ? "CTA" : null,
-                        newRatePlanForm.closed_to_departure ? "CTD" : null,
-                        newRatePlanForm.stop_sell ? "Stop Sell" : null,
-                      ]
-                        .filter(Boolean)
-                        .map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700"
-                          >
-                            {tag}
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                      Rate Details
+                    </p>
+                    <div className="mt-4 space-y-4">
+                      <div className="grid gap-4 md:grid-cols-1">
+                        <label className="block">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Title
                           </span>
+                          <input
+                            value={newRatePlanForm.title}
+                            onChange={(event) =>
+                              setNewRatePlanForm((current) => ({
+                                ...current,
+                                title: event.target.value,
+                              }))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                          />
+                        </label>
+                      </div>
+                      <label className="block">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Description
+                        </span>
+                        <textarea
+                          value={newRatePlanForm.description}
+                          onChange={(event) =>
+                            setNewRatePlanForm((current) => ({
+                              ...current,
+                              description: event.target.value,
+                            }))
+                          }
+                          rows={3}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                        />
+                      </label>
+                      <div className="grid gap-4 md:grid-cols-4">
+                        <label className="block">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Meal Plan
+                          </span>
+                          <select
+                            value={newRatePlanForm.meal_plan}
+                            onChange={(event) =>
+                              setNewRatePlanForm((current) => ({
+                                ...current,
+                                meal_plan: event.target.value,
+                              }))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                          >
+                            {mealPlanOptions.map((mealPlan) => (
+                              <option
+                                key={mealPlan.value}
+                                value={mealPlan.value}
+                              >
+                                {mealPlan.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        {[
+                          ["bed_type", "Bed Type"],
+                          ["currency", "Currency"],
+                          ["cancellation_policy", "Cancellation"],
+                        ].map(([field, label]) => (
+                          <label key={field} className="block">
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                              {label}
+                            </span>
+                            <input
+                              value={newRatePlanForm[field]}
+                              onChange={(event) =>
+                                setNewRatePlanForm((current) => ({
+                                  ...current,
+                                  [field]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                            />
+                          </label>
                         ))}
-                    </div>
-                    <div className="mt-4 space-y-2 text-sm text-slate-600">
-                      <p>
-                        Cancellation: <span className="font-bold text-slate-900">{newRatePlanForm.cancellation_policy || "Not set"}</span>
-                      </p>
-                      <p>
-                        Extra adult: <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, newRatePlanForm.extra_adult_rate)}</span>
-                      </p>
-                      <p>
-                        Extra child: <span className="font-bold text-slate-900">{formatMoneyWithCurrency(newRatePlanForm.currency, newRatePlanForm.extra_child_rate)}</span>
-                      </p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-4">
+                        {[
+                          ["base_rate", "Base Rate"],
+                          ["tax_and_service_fee", "Tax & Service"],
+                          ["surcharges", "Surcharges"],
+                          ["mandatory_fee", "Mandatory Fee"],
+                          ["resort_fee", "Resort Fee"],
+                          ["mandatory_tax", "Mandatory Tax"],
+                          ["extra_adult_rate", "Extra Adult"],
+                          ["extra_child_rate", "Extra Child"],
+                        ].map(([field, label]) => (
+                          <label key={field} className="block">
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                              {label}
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={newRatePlanForm[field]}
+                              onChange={(event) =>
+                                setNewRatePlanForm((current) => ({
+                                  ...current,
+                                  [field]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-4">
+                        {[
+                          ["min_stay", "Min Stay"],
+                          ["max_stay", "Max Stay"],
+                          ["total_inventory", "Total Inventory"],
+                          ["available_inventory", "Available"],
+                          ["sold_inventory", "Sold"],
+                        ].map(([field, label]) => (
+                          <label key={field} className="block">
+                            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                              {label}
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={newRatePlanForm[field]}
+                              onChange={(event) =>
+                                setNewRatePlanForm((current) => ({
+                                  ...current,
+                                  [field]: event.target.value,
+                                }))
+                              }
+                              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-5">
+                        {[
+                          ["is_refundable", "Refund able"],
+                          ["status", "Active"],
+                          ["closed_to_arrival", "CTA"],
+                          ["closed_to_departure", "CTD"],
+                          ["stop_sell", "Stop Sell"],
+                        ].map(([field, label]) => (
+                          <label
+                            key={field}
+                            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(newRatePlanForm[field])}
+                              onChange={(event) =>
+                                setNewRatePlanForm((current) => ({
+                                  ...current,
+                                  [field]: event.target.checked,
+                                }))
+                              }
+                              className="size-4 rounded border-slate-300"
+                            />
+                            <span>{label}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    {ratePlanModalError ? (
+                      <p className="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+                        {ratePlanModalError}
+                      </p>
+                    ) : null}
+                    {ratePlanModalSuccess ? (
+                      <p className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                        {ratePlanModalSuccess}
+                      </p>
+                    ) : null}
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Preview
+                          </p>
+                          <h4 className="mt-2 text-lg font-bold text-slate-900">
+                            {String(
+                              newRatePlanForm.title || "Untitled Rate Plan",
+                            )
+                              .match(/.{1,20}/g)
+                              ?.map((chunk, index) => (
+                                <span key={`${chunk}-${index}`}>
+                                  {chunk}
+                                  <br />
+                                </span>
+                              ))}
+                          </h4>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {[
+                              newRatePlanForm.room_id ||
+                                selectedRoomForRatePlan?.room_id,
+                              newRatePlanForm.meal_plan || "Meal plan pending",
+                              newRatePlanForm.bed_type || "Bed type pending",
+                            ]
+                              .filter(Boolean)
+                              .join(" • ")}
+                          </p>
+                        </div>
+                        <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Subtotal Price
+                          </p>
+                          <p className="mt-2 text-2xl font-bold text-slate-900">
+                            {formatMoneyWithCurrency(
+                              newRatePlanForm.currency,
+                              ratePlanPreview.subtotal,
+                            )}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Base + tax/service + surcharges + mandatory fees
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Price Breakdown
+                          </p>
+                          <div className="mt-3 space-y-2 text-sm text-slate-600">
+                            <div className="flex items-center justify-between">
+                              <span>Base rate</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.baseRate,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Tax & service</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.taxAndServiceFee,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Surcharges</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.surcharges,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Mandatory fee</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.mandatoryFee,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Resort fee</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.resortFee,
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span>Mandatory tax</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  ratePlanPreview.mandatoryTax,
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Inventory Snapshot
+                          </p>
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {[
+                              ["Total", ratePlanPreview.totalInventory],
+                              ["Available", ratePlanPreview.availableInventory],
+                              ["Sold", ratePlanPreview.soldInventory],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl bg-slate-50 px-3 py-3 text-center"
+                              >
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                  {label}
+                                </p>
+                                <p className="mt-1 text-base font-bold text-slate-900">
+                                  {value}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3 rounded-xl bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                            Stay window:{" "}
+                            <span className="font-bold text-slate-900">
+                              {ratePlanPreview.minStay}
+                            </span>{" "}
+                            to{" "}
+                            <span className="font-bold text-slate-900">
+                              {ratePlanPreview.maxStay}
+                            </span>{" "}
+                            nights
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                            Flags & Policy
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {[
+                              newRatePlanForm.status ? "Active" : "Inactive",
+                              newRatePlanForm.is_refundable
+                                ? "Refundable"
+                                : "Non-refundable",
+                              newRatePlanForm.closed_to_arrival ? "CTA" : null,
+                              newRatePlanForm.closed_to_departure
+                                ? "CTD"
+                                : null,
+                              newRatePlanForm.stop_sell ? "Stop Sell" : null,
+                            ]
+                              .filter(Boolean)
+                              .map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-700"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                          </div>
+                          <div className="mt-4 space-y-2 text-sm text-slate-600">
+                            <p>
+                              Cancellation:{" "}
+                              <span className="font-bold text-slate-900">
+                                {newRatePlanForm.cancellation_policy ||
+                                  "Not set"}
+                              </span>
+                            </p>
+                            <p>
+                              Extra adult:{" "}
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  newRatePlanForm.extra_adult_rate,
+                                )}
+                              </span>
+                            </p>
+                            <p>
+                              Extra child:{" "}
+                              <span className="font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency,
+                                  newRatePlanForm.extra_child_rate,
+                                )}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={closeRatePlanModal}
+                        className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-900"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingNewRatePlan || loadingRatePlanDetails}
+                        className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {savingNewRatePlan
+                          ? "Saving..."
+                          : ratePlanModalMode === "edit"
+                            ? "Save Rate Plan"
+                            : "Create Rate Plan"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeRatePlanModal}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:text-slate-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingNewRatePlan || loadingRatePlanDetails}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {savingNewRatePlan ? "Saving..." : ratePlanModalMode === "edit" ? "Save Rate Plan" : "Create Rate Plan"}
-                </button>
-              </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-      {activeRoomPlansModal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">Rate Plan List</p>
-                <h3 className="mt-2 text-2xl font-bold text-slate-900">
-                  {activeRoomPlansModal.room_name} · {activeRoomPlansModal.room_id}
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  All linked rate plans for this live room.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeActiveRoomPlansModal}
-                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
             </div>
-
-            <div className="mt-6 space-y-4">
-              {(activeRoomPlansModal.linked_rate_plans || []).map((plan) => (
-                <button
-                  type="button"
-                  key={plan.code}
-                  onClick={() => openEditRatePlanModal(activeRoomPlansModal, plan)}
-                  className="block w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-base font-bold text-slate-900">{plan.title}</h4>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {[plan.code, plan.roomLabel, plan.strategy].filter(Boolean).join(" • ")}
-                      </p>
-                    </div>
-                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                      {plan.stopSell ? "Stopped" : "Active"}
-                    </span>
+          ) : null}
+          {activeRoomPlansModal ? (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                      Rate Plan List
+                    </p>
+                    <h3 className="mt-2 text-2xl font-bold text-slate-900">
+                      {activeRoomPlansModal.room_name} ·{" "}
+                      {activeRoomPlansModal.room_id}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      All linked rate plans for this live room.
+                    </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={closeActiveRoomPlansModal}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900"
+                  >
+                    <span className="material-symbols-outlined">close</span>
+                  </button>
+                </div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-xl bg-white px-3 py-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate ID</p>
-                      <p className="mt-1 text-sm font-bold text-slate-900">{plan.code}</p>
-                    </div>
-                    <div className="rounded-xl bg-white px-3 py-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base Rate</p>
-                      <p className="mt-1 text-sm font-bold text-slate-900">
-                        {plan.cells?.[0]?.currency || "USD"} {plan.cells?.[0]?.base_rate || "0.00"}
-                      </p>
-                    </div>
-                    {/* <div className="rounded-xl bg-white px-3 py-3">
+                <div className="mt-6 space-y-4">
+                  {(activeRoomPlansModal.linked_rate_plans || []).map(
+                    (plan) => (
+                      <button
+                        type="button"
+                        key={plan.code}
+                        onClick={() =>
+                          openEditRatePlanModal(activeRoomPlansModal, plan)
+                        }
+                        className="block w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <h4 className="text-base font-bold text-slate-900">
+                              {plan.title}
+                            </h4>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {[plan.code, plan.roomLabel, plan.strategy]
+                                .filter(Boolean)
+                                .join(" • ")}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                            {plan.stopSell ? "Stopped" : "Active"}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                          <div className="rounded-xl bg-white px-3 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Rate ID
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">
+                              {plan.code}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-white px-3 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Base Rate
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">
+                              {plan.cells?.[0]?.currency || "USD"}{" "}
+                              {plan.cells?.[0]?.base_rate || "0.00"}
+                            </p>
+                          </div>
+                          {/* <div className="rounded-xl bg-white px-3 py-3">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy</p>
                       <p className="mt-1 text-sm font-bold text-slate-900">{plan.occupancy}</p>
                     </div> */}
-                    <div className="rounded-xl bg-white px-3 py-3">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Flags</p>
-                      <p className="mt-1 text-sm font-bold text-slate-900">
-                        {[plan.stopSell && "Stop Sell", plan.cta && "CTA", plan.ctd && "CTD"].filter(Boolean).join(", ") || "None"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 text-xs font-semibold text-slate-500">
-                    <span>Click this rate plan to edit all fields.</span>
-                    <span className="inline-flex items-center gap-1 text-slate-900">
-                      <span className="material-symbols-outlined text-sm">edit_square</span>
-                      Edit full plan
-                    </span>
-                  </div>
-                </button>
-              ))}
+                          <div className="rounded-xl bg-white px-3 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              Flags
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">
+                              {[
+                                plan.stopSell && "Stop Sell",
+                                plan.cta && "CTA",
+                                plan.ctd && "CTD",
+                              ]
+                                .filter(Boolean)
+                                .join(", ") || "None"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-3 text-xs font-semibold text-slate-500">
+                          <span>Click this rate plan to edit all fields.</span>
+                          <span className="inline-flex items-center gap-1 text-slate-900">
+                            <span className="material-symbols-outlined text-sm">
+                              edit_square
+                            </span>
+                            Edit full plan
+                          </span>
+                        </div>
+                      </button>
+                    ),
+                  )}
 
-              {!activeRoomPlansModal.linked_rate_plans?.length ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
-                  No rate plans linked to this room yet.
+                  {!activeRoomPlansModal.linked_rate_plans?.length ? (
+                    <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
+                      No rate plans linked to this room yet.
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
+              </div>
             </div>
-          </div>
-        </div>
-      ) : null}
-      </>
+          ) : null}
+        </>
       )}
+
+      {/* Floating publish button — fixed below navbar, animates in when there are pending changes */}
+      <div
+        className="pointer-events-none fixed right-6 z-[90] transition-all duration-500 ease-out"
+        style={{ top: "85px" }}
+      >
+        <div
+          className={[
+            "pointer-events-auto flex flex-col items-end gap-2 transition-all duration-500",
+            pendingChanges > 0
+              ? "translate-y-0 opacity-100"
+              : "-translate-y-4 opacity-0",
+          ].join(" ")}
+        >
+          {/* pulse ring */}
+          {pendingChanges > 0 && !publishing && (
+            <span className="absolute -inset-1 animate-ping rounded-2xl bg-primary/30" />
+          )}
+          <button
+            type="button"
+            onClick={publishChanges}
+            disabled={publishing || !pendingChanges}
+            className="relative flex items-center gap-2.5 rounded-2xl bg-primary px-5 py-3 text-sm font-bold text-white shadow-2xl shadow-primary/40 transition-all hover:scale-105 hover:shadow-primary/60 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span
+              className={[
+                "material-symbols-outlined text-lg",
+                publishing ? "animate-spin" : "",
+              ].join(" ")}
+            >
+              {publishing ? "progress_activity" : "publish"}
+            </span>
+            <span>{publishing ? "Publishing..." : `Publish Changes`}</span>
+            {pendingChanges > 0 && !publishing && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-black text-primary">
+                {pendingChanges}
+              </span>
+            )}
+          </button>
+          {publishError && (
+            <div className="max-w-[260px] rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 shadow-lg dark:border-rose-800/40 dark:bg-rose-950/40 dark:text-rose-300">
+              {publishError}
+            </div>
+          )}
+          {publishSuccess && (
+            <div className="max-w-[260px] rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 shadow-lg dark:border-emerald-800/40 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {publishSuccess}
+            </div>
+          )}
+        </div>
+      </div>
     </PmsShell>
   );
 }

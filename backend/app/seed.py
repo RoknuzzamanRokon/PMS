@@ -166,6 +166,16 @@ def seed_database(db: Session) -> None:
             )
         )
 
+    if not _exists(db, Property, "property_id", "PROP004"):
+        db.add(
+            Property(
+                property_id="PROP004",
+                name="Divice Villa Resturent",
+                name_lang="Divice Villa Resturent",
+                property_type="VILLA",
+            )
+        )
+
     room_records = [
         ("ROOM001", "Deluxe Suite", Decimal("240.00"), Decimal("18.00")),
         ("ROOM002", "Standard Double", Decimal("145.00"), Decimal("10.00")),
@@ -190,6 +200,23 @@ def seed_database(db: Session) -> None:
                     mandatory_tax=Decimal("7.00"),
                 )
             )
+
+    if not _exists(db, Room, "room_id", "ROOM009"):
+        db.add(
+            Room(
+                property_id="PROP004",
+                room_id="ROOM009",
+                room_name="Divice Villa Room 1",
+                room_name_lang="Divice Villa Room 1",
+                room_status="PROCESSING",
+                base_rate=Decimal("0.00"),
+                tax_and_service_fee=Decimal("0.00"),
+                surcharges=Decimal("0.00"),
+                mandatory_fee=Decimal("0.00"),
+                resort_fee=Decimal("0.00"),
+                mandatory_tax=Decimal("0.00"),
+            )
+        )
 
     rate_plan_records = [
         ("RATE001", "ROOM001", "Deluxe Flexible", "Best flexible rate for deluxe suite", 12, 4, 8),

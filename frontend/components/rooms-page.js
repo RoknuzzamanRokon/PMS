@@ -25,12 +25,12 @@ function createRoomForm(propertyId) {
     room_name: "",
     room_name_lang: "",
     room_status: "PROCESSING",
-    base_rate: "240",
-    tax_and_service_fee: "18",
-    surcharges: "5",
-    mandatory_fee: "3",
-    resort_fee: "2",
-    mandatory_tax: "7",
+    base_rate: "0",
+    tax_and_service_fee: "0",
+    surcharges: "0",
+    mandatory_fee: "0",
+    resort_fee: "0",
+    mandatory_tax: "0",
   };
 }
 

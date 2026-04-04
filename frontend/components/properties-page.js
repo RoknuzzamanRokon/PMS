@@ -71,7 +71,9 @@ export function PropertiesPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [propertySort, setPropertySort] = useState("created-desc");
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -123,6 +125,35 @@ export function PropertiesPage() {
     );
   }, [properties, search]);
 
+  const sortedProperties = useMemo(() => {
+    const items = [...filteredProperties];
+
+    items.sort((left, right) => {
+      if (propertySort === "name-asc") {
+        return String(left.name || left.property_id).localeCompare(
+          String(right.name || right.property_id),
+        );
+      }
+
+      if (propertySort === "name-desc") {
+        return String(right.name || right.property_id).localeCompare(
+          String(left.name || left.property_id),
+        );
+      }
+
+      const leftTime = new Date(left.created_at || 0).getTime();
+      const rightTime = new Date(right.created_at || 0).getTime();
+
+      if (propertySort === "created-asc") {
+        return leftTime - rightTime;
+      }
+
+      return rightTime - leftTime;
+    });
+
+    return items;
+  }, [filteredProperties, propertySort]);
+
   const propertyTypeCount = useMemo(
     () => new Set(properties.map((property) => property.property_type).filter(Boolean)).size,
     [properties],
@@ -151,11 +182,24 @@ export function PropertiesPage() {
       setApiConnected(true);
       setForm(emptyForm);
       setShowCreateForm(false);
+      setShowCreatePropertyModal(false);
     } catch (error) {
       setSubmitError(error.message || "Could not create property.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function openCreatePropertyModal() {
+    setForm(emptyForm);
+    setSubmitError("");
+    setShowCreatePropertyModal(true);
+  }
+
+  function closeCreatePropertyModal() {
+    setForm(emptyForm);
+    setSubmitError("");
+    setShowCreatePropertyModal(false);
   }
 
   async function handleViewProperty(propertyId) {
@@ -316,134 +360,6 @@ export function PropertiesPage() {
         </div>
       </div>
 
-
-
-      <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h3 className="text-xl font-bold">Property Actions</h3>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Create a new property, refresh the feed, or jump to operational
-              modules.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => setShowCreateForm((current) => !current)}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
-            >
-              <span className="material-symbols-outlined text-base">
-                add_business
-              </span>
-              {showCreateForm ? "Close Form" : "Create Property"}
-            </button>
-            <button
-              type="button"
-              onClick={() => loadProperties(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
-            >
-              <span className="material-symbols-outlined text-base">
-                {refreshing ? "sync" : "refresh"}
-              </span>
-              {refreshing ? "Refreshing..." : "Refresh List"}
-            </button>
-          </div>
-        </div>
-
-        {showCreateForm ? (
-          <form
-            onSubmit={handleCreateProperty}
-            className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70"
-          >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Property Name
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  placeholder="City View Hotel"
-                />
-              </label>
-
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Display Name
-                <input
-                  type="text"
-                  value={form.name_lang}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      name_lang: event.target.value,
-                    }))
-                  }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                  placeholder="City View Hotel"
-                />
-              </label>
-
-              <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Property Type
-                <select
-                  value={form.property_type}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      property_type: event.target.value,
-                    }))
-                  }
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-                >
-                  {propertyTypeOptions.map((type) => (
-                    <option key={type} value={type}>
-                      {formatPropertyType(type)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {submitError ? (
-              <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-                {submitError}
-              </p>
-            ) : null}
-
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setForm(emptyForm);
-                  setShowCreateForm(false);
-                  setSubmitError("");
-                }}
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
-              >
-                <span className="material-symbols-outlined text-base">
-                  save
-                </span>
-                {submitting ? "Creating..." : "Save Property"}
-              </button>
-            </div>
-          </form>
-        ) : null}
-      </section>
-
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -452,18 +368,43 @@ export function PropertiesPage() {
               Search the property feed and open related property actions.
             </p>
           </div>
-          <label className="relative w-full max-w-md">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              search
-            </span>
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search by property ID, name, or type"
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            />
-          </label>
+          <div className="flex w-full max-w-xl flex-wrap items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={openCreatePropertyModal}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+            >
+              <span className="material-symbols-outlined text-base">add_business</span>
+              Create Property
+            </button>
+            <label className="relative min-w-[260px] flex-1">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                search
+              </span>
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by property ID, name, or type"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              />
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800">
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+                Sort
+              </span>
+              <select
+                value={propertySort}
+                onChange={(event) => setPropertySort(event.target.value)}
+                className="bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
+              >
+                <option value="created-desc">Newest</option>
+                <option value="created-asc">Oldest</option>
+                <option value="name-asc">Name A-Z</option>
+                <option value="name-desc">Name Z-A</option>
+              </select>
+            </label>
+          </div>
         </div>
 
         {loading ? (
@@ -483,7 +424,7 @@ export function PropertiesPage() {
               </div>
             ))}
           </div>
-        ) : filteredProperties.length ? (
+        ) : sortedProperties.length ? (
           <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
             <div className="hidden bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800/70 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
               <span>Property ID</span>
@@ -493,7 +434,7 @@ export function PropertiesPage() {
               <span>Actions</span>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700">
-              {filteredProperties.map((property) => (
+              {sortedProperties.map((property) => (
                 <article
                   key={property.property_id}
                   className="grid gap-4 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
@@ -611,6 +552,114 @@ export function PropertiesPage() {
           </div>
         )}
       </section>
+
+      {showCreatePropertyModal ? (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-700">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  Create Property
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  Add New Property
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Create a property directly from the Properties List section.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeCreatePropertyModal}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProperty} className="mt-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Property Name
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    placeholder="City View Hotel"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Display Name
+                  <input
+                    type="text"
+                    value={form.name_lang}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        name_lang: event.target.value,
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    placeholder="City View Hotel"
+                  />
+                </label>
+
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Property Type
+                  <select
+                    value={form.property_type}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        property_type: event.target.value,
+                      }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  >
+                    {propertyTypeOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {formatPropertyType(type)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {submitError ? (
+                <p className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {submitError}
+                </p>
+              ) : null}
+
+              <div className="mt-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeCreatePropertyModal}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
+                >
+                  <span className="material-symbols-outlined text-base">save</span>
+                  {submitting ? "Creating..." : "Save Property"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
 
       {showDetailsModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">

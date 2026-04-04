@@ -380,6 +380,14 @@ class MealPlanRead(APIModel):
     description: Optional[str] = None
 
 
+class BedTypeRead(APIModel):
+    id: int
+    code: str
+    title: str
+    bed_value: int
+    description: Optional[str] = None
+
+
 class GuestCreate(BaseModel):
     guest_id: Optional[str] = None
     first_name: str

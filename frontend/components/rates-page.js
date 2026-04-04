@@ -272,30 +272,30 @@ function createRatePlanForm(room) {
   return {
     rate_id: "",
     room_id: room?.room_id || "",
-    title: room?.room_name ? `${room.room_name} Flexible` : "",
-    description: "Best flexible rate",
-    meal_plan: "BB",
-    is_refundable: true,
-    bed_type: "King",
-    cancellation_policy: "24h flexible",
-    status: true,
-    min_stay: "1",
-    max_stay: "30",
-    currency: "USD",
-    base_rate: formatRateValue(room?.base_rate ?? 0),
-    tax_and_service_fee: formatRateValue(room?.tax_and_service_fee ?? 0),
-    surcharges: "5.00",
-    mandatory_fee: "3.00",
-    resort_fee: "2.00",
-    mandatory_tax: "7.00",
-    total_inventory: "12",
-    available_inventory: "4",
-    sold_inventory: "8",
+    title: "",
+    description: "",
+    meal_plan: "",
+    is_refundable: false,
+    bed_type: "",
+    cancellation_policy: "",
+    status: false,
+    min_stay: "",
+    max_stay: "",
+    currency: "",
+    base_rate: "",
+    tax_and_service_fee: "",
+    surcharges: "",
+    mandatory_fee: "",
+    resort_fee: "",
+    mandatory_tax: "",
+    total_inventory: "",
+    available_inventory: "",
+    sold_inventory: "",
     closed_to_arrival: false,
     closed_to_departure: false,
     stop_sell: false,
-    extra_adult_rate: "25.00",
-    extra_child_rate: "15.00",
+    extra_adult_rate: "",
+    extra_child_rate: "",
   };
 }
 
@@ -309,23 +309,23 @@ function createRatePlanPayload(form) {
     bed_type: form.bed_type.trim(),
     cancellation_policy: form.cancellation_policy.trim(),
     status: Boolean(form.status),
-    min_stay: parseIntegerValue(form.min_stay),
-    max_stay: parseIntegerValue(form.max_stay),
-    currency: form.currency.trim(),
-    base_rate: Number(form.base_rate),
-    tax_and_service_fee: Number(form.tax_and_service_fee),
-    surcharges: Number(form.surcharges),
-    mandatory_fee: Number(form.mandatory_fee),
-    resort_fee: Number(form.resort_fee),
-    mandatory_tax: Number(form.mandatory_tax),
-    total_inventory: parseIntegerValue(form.total_inventory),
-    available_inventory: parseIntegerValue(form.available_inventory),
-    sold_inventory: parseIntegerValue(form.sold_inventory),
+    min_stay: parseIntegerValue(form.min_stay || "0"),
+    max_stay: parseIntegerValue(form.max_stay || "0"),
+    currency: (form.currency || "USD").trim(),
+    base_rate: Number(form.base_rate || 0),
+    tax_and_service_fee: Number(form.tax_and_service_fee || 0),
+    surcharges: Number(form.surcharges || 0),
+    mandatory_fee: Number(form.mandatory_fee || 0),
+    resort_fee: Number(form.resort_fee || 0),
+    mandatory_tax: Number(form.mandatory_tax || 0),
+    total_inventory: parseIntegerValue(form.total_inventory || "0"),
+    available_inventory: parseIntegerValue(form.available_inventory || "0"),
+    sold_inventory: parseIntegerValue(form.sold_inventory || "0"),
     closed_to_arrival: Boolean(form.closed_to_arrival),
     closed_to_departure: Boolean(form.closed_to_departure),
     stop_sell: Boolean(form.stop_sell),
-    extra_adult_rate: Number(form.extra_adult_rate),
-    extra_child_rate: Number(form.extra_child_rate),
+    extra_adult_rate: Number(form.extra_adult_rate || 0),
+    extra_child_rate: Number(form.extra_child_rate || 0),
   };
 }
 
@@ -359,6 +359,10 @@ function createRatePlanFormFromDetails(room, ratePlan) {
     extra_adult_rate: formatRateValue(ratePlan?.extra_adult_rate ?? 0),
     extra_child_rate: formatRateValue(ratePlan?.extra_child_rate ?? 0),
   };
+}
+
+function getRoomSummarySource(roomSummary, selectedRoomForRatePlan) {
+  return roomSummary || selectedRoomForRatePlan || null;
 }
 
 function buildRowsFromApi(
@@ -604,14 +608,17 @@ export function DailyRatesPage({ propertyId }) {
   const [cellPopover, setCellPopover] = useState(null);
   const [availabilityStatuses, setAvailabilityStatuses] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
+  const [bedTypes, setBedTypes] = useState([]);
   const [showRatePlanModal, setShowRatePlanModal] = useState(false);
   const [selectedRoomForRatePlan, setSelectedRoomForRatePlan] = useState(null);
+  const [selectedRoomSummary, setSelectedRoomSummary] = useState(null);
   const [ratePlanModalMode, setRatePlanModalMode] = useState("create");
   const [editingRatePlanId, setEditingRatePlanId] = useState("");
   const [ratePlanModalError, setRatePlanModalError] = useState("");
   const [ratePlanModalSuccess, setRatePlanModalSuccess] = useState("");
   const [savingNewRatePlan, setSavingNewRatePlan] = useState(false);
   const [loadingRatePlanDetails, setLoadingRatePlanDetails] = useState(false);
+  const [loadingRoomSummary, setLoadingRoomSummary] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
   const matrixRoomColumnWidth = 200;
@@ -869,10 +876,11 @@ export function DailyRatesPage({ propertyId }) {
     async function loadRates() {
       setLoadingRates(true);
       try {
-        const [propertyList, statusList, mealPlanList] = await Promise.all([
+        const [propertyList, statusList, mealPlanList, bedTypeList] = await Promise.all([
           fetchJson("/properties"),
           fetchJson("/rate-plans/availability-statuses").catch(() => []),
-          fetchJson("/meal-plans").catch(() => []),
+          fetchJson("/feature/meal-plans").catch(() => []),
+          fetchJson("/feature/bed-type").catch(() => []),
         ]);
         if (ignore) {
           return;
@@ -881,6 +889,7 @@ export function DailyRatesPage({ propertyId }) {
         setProperties(propertyList);
         setAvailabilityStatuses(Array.isArray(statusList) ? statusList : []);
         setMealPlans(Array.isArray(mealPlanList) ? mealPlanList : []);
+        setBedTypes(Array.isArray(bedTypeList) ? bedTypeList : []);
 
         if (!propertyId) {
           if (!ignore) {
@@ -888,6 +897,7 @@ export function DailyRatesPage({ propertyId }) {
             setRows([]);
             setRooms([]);
             setInventoryDates([]);
+            setBedTypes(Array.isArray(bedTypeList) ? bedTypeList : []);
             setPropertyName("Selected Property");
             setApiConnected(false);
             setLoadingRates(false);
@@ -966,6 +976,7 @@ export function DailyRatesPage({ propertyId }) {
           setPropertyName("Selected Property");
           setAvailabilityStatuses([]);
           setMealPlans([]);
+          setBedTypes([]);
         }
       } finally {
         if (!ignore) {
@@ -1132,11 +1143,12 @@ export function DailyRatesPage({ propertyId }) {
     if (!resolvedPropertyId) {
       setRows([]);
       setRooms([]);
-      setInventoryDates([]);
-      setPropertyName("Selected Property");
-      setApiConnected(false);
-      return;
-    }
+        setInventoryDates([]);
+        setPropertyName("Selected Property");
+        setBedTypes([]);
+        setApiConnected(false);
+        return;
+      }
 
     const inventoryEndDate =
       days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
@@ -1391,6 +1403,7 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
     setSelectedRoomForRatePlan(room);
+    setSelectedRoomSummary(null);
     setRatePlanModalMode("create");
     setEditingRatePlanId("");
     setNewRatePlanForm(createRatePlanForm(room));
@@ -1407,11 +1420,13 @@ export function DailyRatesPage({ propertyId }) {
 
     setShowRatePlanModal(false);
     setSelectedRoomForRatePlan(null);
+    setSelectedRoomSummary(null);
     setRatePlanModalMode("create");
     setEditingRatePlanId("");
     setRatePlanModalError("");
     setRatePlanModalSuccess("");
     setLoadingRatePlanDetails(false);
+    setLoadingRoomSummary(false);
     setNewRatePlanForm(createRatePlanForm(null));
 
     if (roomPlansContext) {
@@ -1433,6 +1448,7 @@ export function DailyRatesPage({ propertyId }) {
     }
 
     setSelectedRoomForRatePlan(room);
+    setSelectedRoomSummary(null);
     setRatePlanModalMode("edit");
     setEditingRatePlanId(plan.code);
     setRatePlanModalError("");
@@ -1454,6 +1470,43 @@ export function DailyRatesPage({ propertyId }) {
       setLoadingRatePlanDetails(false);
     }
   }
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadRoomSummary() {
+      if (!showRatePlanModal || !selectedRoomForRatePlan?.room_id) {
+        setSelectedRoomSummary(null);
+        setLoadingRoomSummary(false);
+        return;
+      }
+
+      setLoadingRoomSummary(true);
+
+      try {
+        const roomDetail = await fetchJson(
+          `/rooms/${encodeURIComponent(selectedRoomForRatePlan.room_id)}`,
+        );
+        if (!ignore) {
+          setSelectedRoomSummary(roomDetail);
+        }
+      } catch {
+        if (!ignore) {
+          setSelectedRoomSummary(null);
+        }
+      } finally {
+        if (!ignore) {
+          setLoadingRoomSummary(false);
+        }
+      }
+    }
+
+    loadRoomSummary();
+
+    return () => {
+      ignore = true;
+    };
+  }, [showRatePlanModal, selectedRoomForRatePlan?.room_id]);
 
   async function handleSubmitRatePlan(event) {
     event.preventDefault();
@@ -1831,6 +1884,23 @@ export function DailyRatesPage({ propertyId }) {
     ];
   }, [mealPlans]);
 
+  const bedTypeOptions = useMemo(() => {
+    if (bedTypes.length) {
+      return bedTypes.map((bedType) => ({
+        value: bedType.code,
+        label: bedType.title || bedType.code,
+      }));
+    }
+
+    return [
+      { value: "SB", label: "Single Bed" },
+      { value: "DB", label: "Double Bed" },
+      { value: "TB", label: "Twin Beds" },
+      { value: "QB", label: "Queen Bed" },
+      { value: "KB", label: "King Bed" },
+    ];
+  }, [bedTypes]);
+
   return (
     <PmsShell
       searchPlaceholder="Search rooms or guests..."
@@ -2016,7 +2086,8 @@ export function DailyRatesPage({ propertyId }) {
               <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Dropdown / metadata</p>
                 <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/rate-plans/availability-statuses</p>
-                <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/meal-plans</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/feature/meal-plans</p>
+                <p className="mt-1 font-mono text-xs text-slate-700">/api/v1/feature/bed-type</p>
               </div>
               <div className="rounded-xl border border-amber-200 bg-white px-3 py-3">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Rate create / update / delete</p>
@@ -2951,93 +3022,96 @@ export function DailyRatesPage({ propertyId }) {
                     </p>
                   ) : null}
                   <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-slate-100 p-3.5 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-                          Room Summary
-                        </p>
-                        <h4 className="mt-1 text-sm font-bold text-slate-900">
-                          {selectedRoomForRatePlan?.room_name ||
-                            selectedRoomForRatePlan?.room_id ||
-                            "Selected Room"}
-                        </h4>
-                        <p className="mt-0.5 text-[11px] text-slate-500">
-                          {[
-                            selectedRoomForRatePlan?.room_id,
-                            selectedRoomForRatePlan?.room_name_lang,
-                            selectedRoomForRatePlan?.room_status,
-                          ]
-                            .filter(Boolean)
-                            .join(" • ")}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
-                          Total Room Amount
-                        </p>
-                        <p className="mt-1 text-lg font-bold text-slate-900">
-                          {formatMoneyWithCurrency(
-                            newRatePlanForm.currency || "USD",
-                            Number(selectedRoomForRatePlan?.base_rate || 0) +
-                              Number(
-                                selectedRoomForRatePlan?.tax_and_service_fee ||
-                                  0,
-                              ) +
-                              Number(selectedRoomForRatePlan?.surcharges || 0) +
-                              Number(
-                                selectedRoomForRatePlan?.mandatory_fee || 0,
-                              ) +
-                              Number(selectedRoomForRatePlan?.resort_fee || 0) +
-                              Number(
-                                selectedRoomForRatePlan?.mandatory_tax || 0,
-                              ),
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-2.5 grid gap-2 md:grid-cols-6">
-                      {[
-                        [
-                          "Base Rate --",
-                          selectedRoomForRatePlan?.base_rate || 0,
-                        ],
-                        [
-                          "Tax & Service",
-                          selectedRoomForRatePlan?.tax_and_service_fee || 0,
-                        ],
-                        [
-                          "Surcharges --",
-                          selectedRoomForRatePlan?.surcharges || 0,
-                        ],
-                        [
-                          "Mandatory Fee",
-                          selectedRoomForRatePlan?.mandatory_fee || 0,
-                        ],
-                        [
-                          "Resort Fee",
-                          selectedRoomForRatePlan?.resort_fee || 0,
-                        ],
-                        [
-                          "Mandatory Tax",
-                          selectedRoomForRatePlan?.mandatory_tax || 0,
-                        ],
-                      ].map(([label, value]) => (
-                        <div
-                          key={label}
-                          className="rounded-xl bg-white px-2.5 py-2 shadow-sm"
-                        >
-                          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                            {label}
-                          </p>
-                          <p className="mt-0.5 text-xs font-bold text-slate-900">
-                            {formatMoneyWithCurrency(
-                              newRatePlanForm.currency || "USD",
-                              value,
-                            )}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                    {(() => {
+                      const roomSummary = getRoomSummarySource(
+                        selectedRoomSummary,
+                        selectedRoomForRatePlan,
+                      );
+                      const totalRoomAmount =
+                        Number(roomSummary?.base_rate || 0) +
+                        Number(roomSummary?.tax_and_service_fee || 0) +
+                        Number(roomSummary?.surcharges || 0) +
+                        Number(roomSummary?.mandatory_fee || 0) +
+                        Number(roomSummary?.resort_fee || 0) +
+                        Number(roomSummary?.mandatory_tax || 0);
+
+                      return (
+                        <>
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Room Summary
+                              </p>
+                              <h4 className="mt-1 text-sm font-bold text-slate-900">
+                                {roomSummary?.room_name ||
+                                  roomSummary?.room_id ||
+                                  "Selected Room"}
+                              </h4>
+                              <p className="mt-0.5 text-[11px] text-slate-500">
+                                {[
+                                  roomSummary?.room_id,
+                                  roomSummary?.room_name_lang,
+                                  roomSummary?.room_status,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ")}
+                              </p>
+                            </div>
+                            <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
+                              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                Total Room Amount
+                              </p>
+                              <p className="mt-1 text-lg font-bold text-slate-900">
+                                {formatMoneyWithCurrency(
+                                  newRatePlanForm.currency || "USD",
+                                  totalRoomAmount,
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          {loadingRoomSummary ? (
+                            <p className="mt-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-medium text-slate-500 shadow-sm">
+                              Loading room summary from `/rooms/
+                              {selectedRoomForRatePlan?.room_id}`...
+                            </p>
+                          ) : null}
+                          <div className="mt-2.5 grid gap-2 md:grid-cols-6">
+                            {[
+                              ["Base Rate --", roomSummary?.base_rate || 0],
+                              [
+                                "Tax & Service",
+                                roomSummary?.tax_and_service_fee || 0,
+                              ],
+                              ["Surcharges --", roomSummary?.surcharges || 0],
+                              [
+                                "Mandatory Fee",
+                                roomSummary?.mandatory_fee || 0,
+                              ],
+                              ["Resort Fee", roomSummary?.resort_fee || 0],
+                              [
+                                "Mandatory Tax",
+                                roomSummary?.mandatory_tax || 0,
+                              ],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl bg-white px-2.5 py-2 shadow-sm"
+                              >
+                                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                  {label}
+                                </p>
+                                <p className="mt-0.5 text-xs font-bold text-slate-900">
+                                  {formatMoneyWithCurrency(
+                                    newRatePlanForm.currency || "USD",
+                                    value,
+                                  )}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -3092,6 +3166,7 @@ export function DailyRatesPage({ propertyId }) {
                             }
                             className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                           >
+                            <option value="">Select meal plan</option>
                             {mealPlanOptions.map((mealPlan) => (
                               <option
                                 key={mealPlan.value}
@@ -3102,8 +3177,29 @@ export function DailyRatesPage({ propertyId }) {
                             ))}
                           </select>
                         </label>
+                        <label className="block">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                            Bed Type
+                          </span>
+                          <select
+                            value={newRatePlanForm.bed_type}
+                            onChange={(event) =>
+                              setNewRatePlanForm((current) => ({
+                                ...current,
+                                bed_type: event.target.value,
+                              }))
+                            }
+                            className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
+                          >
+                            <option value="">Select bed type</option>
+                            {bedTypeOptions.map((bedType) => (
+                              <option key={bedType.value} value={bedType.value}>
+                                {bedType.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
                         {[
-                          ["bed_type", "Bed Type"],
                           ["currency", "Currency"],
                           ["cancellation_policy", "Cancellation"],
                         ].map(([field, label]) => (

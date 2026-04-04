@@ -228,6 +228,16 @@ class MealPlan(Base):
     description: Mapped[str | None] = mapped_column("desc", String(255), nullable=True)
 
 
+class BedType(Base):
+    __tablename__ = "z_bed_type"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(10), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(100))
+    bed_value: Mapped[int] = mapped_column(Integer)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
 class PropertyType(Base):
     __tablename__ = "z_property_type"
 

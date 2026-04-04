@@ -242,6 +242,7 @@ export function RoomsManagementPage({ propertyId }) {
   const [roomStatusMode, setRoomStatusMode] = useState("form");
   const [activeRoomDetail, setActiveRoomDetail] = useState(null);
   const [roomEditorForm, setRoomEditorForm] = useState(() => createRoomEditorForm());
+  const [showEditInfoModal, setShowEditInfoModal] = useState(false);
   const [loadingRoomDetail, setLoadingRoomDetail] = useState(false);
   const [savingRoomDetail, setSavingRoomDetail] = useState(false);
   const [roomDetailError, setRoomDetailError] = useState("");
@@ -426,8 +427,23 @@ export function RoomsManagementPage({ propertyId }) {
   function closeActiveRoomView() {
     setActiveRoomId("");
     setActiveRoomDetail(null);
+    setShowEditInfoModal(false);
     setRoomDetailError("");
     setRoomDetailSuccess("");
+  }
+
+  function openEditInfoModal() {
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+    setShowEditInfoModal(true);
+  }
+
+  function closeEditInfoModal() {
+    setShowEditInfoModal(false);
+    if (activeRoomDetail) {
+      setRoomEditorForm(createRoomEditorForm(activeRoomDetail));
+    }
+    setRoomDetailError("");
   }
 
   function handleSaveImageDraft(event) {
@@ -542,8 +558,47 @@ export function RoomsManagementPage({ propertyId }) {
       applyRoomDetailToEditors(refreshedRoom, activeCategory);
       setRoomDetailSuccess(`Saved changes for ${refreshedRoom.room_id}.`);
       await loadOverview();
+      closeActiveRoomView();
     } catch (error) {
       setRoomDetailError(error.message || "Could not save room changes.");
+    } finally {
+      setSavingRoomDetail(false);
+    }
+  }
+
+  async function handleSaveEditInfo(event) {
+    event.preventDefault();
+
+    if (!activeCategory) {
+      return;
+    }
+
+    setSavingRoomDetail(true);
+    setRoomDetailError("");
+    setRoomDetailSuccess("");
+
+    try {
+      await fetchJson(`/rooms/${activeCategory.room_id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          room_name: roomEditorForm.room_name.trim(),
+          room_name_lang: roomEditorForm.room_name_lang.trim() || roomEditorForm.room_name.trim(),
+          base_rate: numberValue(roomEditorForm.base_rate),
+          tax_and_service_fee: numberValue(roomEditorForm.tax_and_service_fee),
+          surcharges: numberValue(roomEditorForm.surcharges),
+          mandatory_fee: numberValue(roomEditorForm.mandatory_fee),
+          resort_fee: numberValue(roomEditorForm.resort_fee),
+          mandatory_tax: numberValue(roomEditorForm.mandatory_tax),
+        }),
+      });
+
+      const refreshedRoom = await fetchJson(`/rooms/${activeCategory.room_id}`);
+      applyRoomDetailToEditors(refreshedRoom, activeCategory);
+      setRoomDetailSuccess(`Saved info changes for ${refreshedRoom.room_id}.`);
+      setShowEditInfoModal(false);
+      await loadOverview();
+    } catch (error) {
+      setRoomDetailError(error.message || "Could not save room info.");
     } finally {
       setSavingRoomDetail(false);
     }
@@ -1377,7 +1432,7 @@ export function RoomsManagementPage({ propertyId }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRoomDetailSuccess("Edit Info flow is reserved for full room editing. Room View currently allows status updates only.")}
+                  onClick={openEditInfoModal}
                   className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
                 >
                   Edit Info
@@ -1394,6 +1449,161 @@ export function RoomsManagementPage({ propertyId }) {
                 </>
               );
             })()}
+          </div>
+        </div>
+      ) : null}
+      {activeCategory && showEditInfoModal ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-700">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  Edit Info
+                </p>
+                <h3 className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
+                  {activeCategory.room_id}
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Update room name, display name, and pricing fields.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditInfoModal}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+              >
+                <span className="material-symbols-outlined text-base">close</span>
+                Close
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditInfo} className="mt-6 space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Name
+                  <input
+                    type="text"
+                    value={roomEditorForm.room_name}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, room_name: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Display Name
+                  <input
+                    type="text"
+                    value={roomEditorForm.room_name_lang}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, room_name_lang: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Base Rate
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.base_rate}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, base_rate: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Tax & Service Fee
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.tax_and_service_fee}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, tax_and_service_fee: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Surcharges
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.surcharges}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, surcharges: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Mandatory Fee
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.mandatory_fee}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, mandatory_fee: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Resort Fee
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.resort_fee}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, resort_fee: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+                <label className="flex flex-col gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Mandatory Tax
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={roomEditorForm.mandatory_tax}
+                    onChange={(event) =>
+                      setRoomEditorForm((current) => ({ ...current, mandatory_tax: event.target.value }))
+                    }
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  />
+                </label>
+              </div>
+
+              {roomDetailError ? (
+                <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {roomDetailError}
+                </p>
+              ) : null}
+
+              <div className="flex flex-wrap justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeEditInfoModal}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRoomDetail}
+                  className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {savingRoomDetail ? "Saving..." : "Save Info Changes"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}

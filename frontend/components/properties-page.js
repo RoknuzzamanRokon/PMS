@@ -65,6 +65,56 @@ function formatCurrencyValue(value, currency = "USD") {
   }).format(numeric);
 }
 
+function getPropertySortDirection(sortValue, field) {
+  if (sortValue === `${field}-asc`) {
+    return "asc";
+  }
+
+  if (sortValue === `${field}-desc`) {
+    return "desc";
+  }
+
+  return null;
+}
+
+function compareTextValues(left, right, direction = "asc") {
+  const comparison = String(left || "").localeCompare(String(right || ""));
+  return direction === "desc" ? comparison * -1 : comparison;
+}
+
+function compareDateValues(left, right, direction = "desc") {
+  const leftTime = new Date(left || 0).getTime();
+  const rightTime = new Date(right || 0).getTime();
+  const safeLeft = Number.isFinite(leftTime) ? leftTime : 0;
+  const safeRight = Number.isFinite(rightTime) ? rightTime : 0;
+  const comparison = safeLeft - safeRight;
+  return direction === "desc" ? comparison * -1 : comparison;
+}
+
+function comparePropertiesBySort(left, right, sortValue) {
+  if (sortValue === "property_id-asc") {
+    return compareTextValues(left.property_id, right.property_id, "asc");
+  }
+
+  if (sortValue === "property_id-desc") {
+    return compareTextValues(left.property_id, right.property_id, "desc");
+  }
+
+  if (sortValue === "name-asc") {
+    return compareTextValues(left.name || left.property_id, right.name || right.property_id, "asc");
+  }
+
+  if (sortValue === "name-desc") {
+    return compareTextValues(left.name || left.property_id, right.name || right.property_id, "desc");
+  }
+
+  if (sortValue === "created-asc") {
+    return compareDateValues(left.created_at, right.created_at, "asc");
+  }
+
+  return compareDateValues(left.created_at, right.created_at, "desc");
+}
+
 export function PropertiesPage() {
   const [properties, setProperties] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
@@ -72,6 +122,7 @@ export function PropertiesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [propertySort, setPropertySort] = useState("created-desc");
+  const [propertySortHistory, setPropertySortHistory] = useState(["created-desc"]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -128,31 +179,49 @@ export function PropertiesPage() {
   const sortedProperties = useMemo(() => {
     const items = [...filteredProperties];
 
-    items.sort((left, right) => {
-      if (propertySort === "name-asc") {
-        return String(left.name || left.property_id).localeCompare(
-          String(right.name || right.property_id),
-        );
-      }
-
-      if (propertySort === "name-desc") {
-        return String(right.name || right.property_id).localeCompare(
-          String(left.name || left.property_id),
-        );
-      }
-
-      const leftTime = new Date(left.created_at || 0).getTime();
-      const rightTime = new Date(right.created_at || 0).getTime();
-
-      if (propertySort === "created-asc") {
-        return leftTime - rightTime;
-      }
-
-      return rightTime - leftTime;
+    propertySortHistory.forEach((sortValue) => {
+      items.sort((left, right) => comparePropertiesBySort(left, right, sortValue));
     });
 
     return items;
-  }, [filteredProperties, propertySort]);
+  }, [filteredProperties, propertySortHistory]);
+
+  function handlePropertySortHeaderClick(field) {
+    setPropertySort((current) => {
+      const currentDirection = getPropertySortDirection(current, field);
+      const nextSort =
+        currentDirection === "asc"
+          ? `${field}-desc`
+          : currentDirection === "desc"
+            ? `${field}-asc`
+            : field === "created"
+              ? "created-desc"
+              : `${field}-asc`;
+
+      setPropertySortHistory((currentHistory) => [
+        ...currentHistory.filter((value) => !value.startsWith(`${field}-`)),
+        nextSort,
+      ]);
+
+      return nextSort;
+    });
+  }
+
+  function renderSortHeader(label, field) {
+    const direction = getPropertySortDirection(propertySort, field);
+    const icon = direction === "asc" ? "north" : direction === "desc" ? "south" : "unfold_more";
+
+    return (
+      <button
+        type="button"
+        onClick={() => handlePropertySortHeaderClick(field)}
+        className="inline-flex items-center gap-1.5 text-left transition-colors hover:text-primary"
+      >
+        <span>{label}</span>
+        <span className="material-symbols-outlined text-sm">{icon}</span>
+      </button>
+    );
+  }
 
   const propertyTypeCount = useMemo(
     () => new Set(properties.map((property) => property.property_type).filter(Boolean)).size,
@@ -395,9 +464,14 @@ export function PropertiesPage() {
               </span>
               <select
                 value={propertySort}
-                onChange={(event) => setPropertySort(event.target.value)}
+                onChange={(event) => {
+                  setPropertySort(event.target.value);
+                  setPropertySortHistory([event.target.value]);
+                }}
                 className="bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
               >
+                <option value="property_id-asc">Property ID A-Z</option>
+                <option value="property_id-desc">Property ID Z-A</option>
                 <option value="created-desc">Newest</option>
                 <option value="created-asc">Oldest</option>
                 <option value="name-asc">Name A-Z</option>
@@ -427,10 +501,10 @@ export function PropertiesPage() {
         ) : sortedProperties.length ? (
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-transparent backdrop-blur-md dark:border-slate-700 dark:bg-transparent">
             <div className="hidden bg-white/30 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-900/30 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
-              <span>Property ID</span>
-              <span>Name</span>
+              {renderSortHeader("Property ID", "property_id")}
+              {renderSortHeader("Name", "name")}
               <span>Type</span>
-              <span>Created</span>
+              {renderSortHeader("Created", "created")}
               <span>Actions</span>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700">

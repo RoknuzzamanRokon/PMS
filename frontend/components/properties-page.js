@@ -360,7 +360,7 @@ export function PropertiesPage() {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <section className="rounded-2xl border border-slate-200 bg-transparent p-6 shadow-sm dark:border-slate-700 dark:bg-transparent">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold">Properties List</h3>
@@ -425,8 +425,8 @@ export function PropertiesPage() {
             ))}
           </div>
         ) : sortedProperties.length ? (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-            <div className="hidden bg-slate-50 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-800/70 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-transparent backdrop-blur-md dark:border-slate-700 dark:bg-transparent">
+            <div className="hidden bg-white/30 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-900/30 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
               <span>Property ID</span>
               <span>Name</span>
               <span>Type</span>
@@ -437,7 +437,7 @@ export function PropertiesPage() {
               {sortedProperties.map((property) => (
                 <article
                   key={property.property_id}
-                  className="grid gap-4 px-5 py-4 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
+                  className="grid gap-4 px-5 py-4 transition-colors hover:bg-white/30 dark:hover:bg-slate-900/30 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
                 >
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const propertyTypeOptions = ["HOTEL", "RESORT", "APARTMENT", "VILLA", "HOSTEL"];
@@ -116,6 +117,7 @@ function comparePropertiesBySort(left, right, sortValue) {
 }
 
 export function PropertiesPage() {
+  const { theme } = useTheme();
   const [properties, setProperties] = useState([]);
   const [apiConnected, setApiConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -137,6 +139,64 @@ export function PropertiesPage() {
   const [loadingPropertyRooms, setLoadingPropertyRooms] = useState(false);
   const [propertyRoomsError, setPropertyRoomsError] = useState("");
   const [showRatePlansSummaryModal, setShowRatePlansSummaryModal] = useState(false);
+  const isLightTheme = theme === "light";
+  const isSoftLightTheme = theme === "soft-light";
+  const isDarkTheme = theme === "dark";
+  const outlinedPrimaryButtonClassName =
+    [
+      "inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors",
+      isLightTheme
+        ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
+        : isSoftLightTheme
+          ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
+          : isDarkTheme
+            ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
+            : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
+    ].join(" ");
+  const outlinedPrimaryActionButtonClassName =
+    [
+      "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+      isLightTheme
+        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+        : isSoftLightTheme
+          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+          : isDarkTheme
+            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+    ].join(" ");
+  const outlinedPrimaryIconButtonClassName =
+    [
+      "rounded-full border p-2 transition-colors",
+      isLightTheme
+        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+        : isSoftLightTheme
+          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+          : isDarkTheme
+            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+    ].join(" ");
+  const outlinedPrimarySecondaryButtonClassName =
+    [
+      "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+      isLightTheme
+        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+        : isSoftLightTheme
+          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+          : isDarkTheme
+            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+    ].join(" ");
+  const outlinedPrimarySubmitButtonClassName =
+    [
+      "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors disabled:opacity-70",
+      isLightTheme
+        ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
+        : isSoftLightTheme
+          ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
+          : isDarkTheme
+            ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
+            : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
+    ].join(" ");
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -441,7 +501,7 @@ export function PropertiesPage() {
             <button
               type="button"
               onClick={openCreatePropertyModal}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
+              className={outlinedPrimaryButtonClassName}
             >
               <span className="material-symbols-outlined text-base">add_business</span>
               Create Property
@@ -556,7 +616,7 @@ export function PropertiesPage() {
                       <button
                         type="button"
                         onClick={() => handleViewProperty(property.property_id)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                        className={outlinedPrimaryActionButtonClassName}
                       >
                         <span className="material-symbols-outlined text-base">
                           visibility
@@ -569,7 +629,7 @@ export function PropertiesPage() {
                       />
                       <Link
                         href={`/rooms-management?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                        className={outlinedPrimaryActionButtonClassName}
                       >
                         <span className="material-symbols-outlined text-base">
                           bed
@@ -582,7 +642,7 @@ export function PropertiesPage() {
                       />
                       <Link
                         href={`/daily-rates?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                        className={outlinedPrimaryActionButtonClassName}
                       >
                         <span className="material-symbols-outlined text-base">
                           sell
@@ -595,7 +655,7 @@ export function PropertiesPage() {
                       />
                       <Link
                         href={`/inventory?property_id=${property.property_id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-primary hover:text-primary dark:border-slate-700 dark:text-slate-300"
+                        className={outlinedPrimaryActionButtonClassName}
                       >
                         <span className="material-symbols-outlined text-base">
                           calendar_month
@@ -645,7 +705,7 @@ export function PropertiesPage() {
               <button
                 type="button"
                 onClick={closeCreatePropertyModal}
-                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                className={outlinedPrimaryIconButtonClassName}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -717,14 +777,14 @@ export function PropertiesPage() {
                 <button
                   type="button"
                   onClick={closeCreatePropertyModal}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                  className={outlinedPrimarySecondaryButtonClassName}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-70"
+                  className={outlinedPrimarySubmitButtonClassName}
                 >
                   <span className="material-symbols-outlined text-base">save</span>
                   {submitting ? "Creating..." : "Save Property"}
@@ -754,7 +814,7 @@ export function PropertiesPage() {
               <button
                 type="button"
                 onClick={closeDetailsModal}
-                className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                className={outlinedPrimaryIconButtonClassName}
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1113,7 +1173,7 @@ export function PropertiesPage() {
                 <button
                   type="button"
                   onClick={closeRoomsSummaryModal}
-                  className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                  className={outlinedPrimaryIconButtonClassName}
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>
@@ -1323,7 +1383,7 @@ export function PropertiesPage() {
                 <button
                   type="button"
                   onClick={closeRatePlansSummaryModal}
-                  className="rounded-full border border-slate-200 p-2 text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:text-slate-400"
+                  className={outlinedPrimaryIconButtonClassName}
                 >
                   <span className="material-symbols-outlined">close</span>
                 </button>

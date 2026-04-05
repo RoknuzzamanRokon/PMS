@@ -2,7 +2,7 @@ import "./globals.css";
 import { ThemeProvider } from "../components/theme-provider";
 
 export const metadata = {
-  title: "Hotel PMS Frontend",
+  title: "Inno PMS Frontend",
   description: "Next.js frontend recreated from the UI HTML files.",
 };
 

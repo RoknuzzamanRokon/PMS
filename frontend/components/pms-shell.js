@@ -13,6 +13,13 @@ function NavLink({ item, active, collapsed, theme }) {
   const isLightTheme = theme === "light";
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
+  const activeClassName = isLightTheme
+    ? "border border-slate-300 bg-white/35 font-bold text-slate-900"
+    : isSoftLightTheme
+      ? "border border-[#d9b4d1] bg-white/25 font-bold text-[#7a3d6c]"
+      : isDarkTheme
+        ? "border border-slate-600 bg-slate-900/25 font-bold text-slate-100"
+        : "border border-slate-600 bg-slate-950/25 font-bold text-slate-100";
 
   return (
     <Link
@@ -21,7 +28,7 @@ function NavLink({ item, active, collapsed, theme }) {
         "group flex items-center rounded-lg px-3 py-2.5 text-sm transition-colors",
         collapsed ? "justify-center" : "gap-3",
         active
-          ? "bg-primary/10 font-bold text-primary dark:bg-primary/15"
+          ? activeClassName
           : isLightTheme
             ? "font-medium text-slate-700 hover:bg-white/80"
             : isSoftLightTheme
@@ -57,6 +64,41 @@ export function PmsShell({
   const isLightTheme = theme === "light";
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
+  const backgroundLayerStyle = {
+    background: isLightTheme
+      ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(241,245,249,0.88) 100%)"
+      : isSoftLightTheme
+        ? "linear-gradient(180deg, rgba(255,246,251,0.92) 0%, rgba(250,232,242,0.88) 100%)"
+        : isDarkTheme
+          ? "linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.92) 100%)"
+          : "linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(17,24,39,0.94) 100%)",
+  };
+  const sidebarMetricCardClassName = [
+    "shadow-panel border backdrop-blur-md",
+    isLightTheme
+      ? "border-slate-200/70 bg-white/45 text-slate-900"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1]/70 bg-white/35 text-[#5c264f]"
+        : isDarkTheme
+          ? "border-slate-700/80 bg-slate-900/45 text-slate-100"
+          : "border-slate-700/80 bg-slate-950/45 text-slate-100",
+  ].join(" ");
+  const sidebarMetricTrackClassName = [
+    "mt-3 h-1.5 w-full rounded-full",
+    isLightTheme
+      ? "bg-slate-900/10"
+      : isSoftLightTheme
+        ? "bg-[#7a3d6c]/15"
+        : "bg-white/15",
+  ].join(" ");
+  const sidebarMetricBarClassName = [
+    "h-full rounded-full",
+    isLightTheme
+      ? "bg-slate-700"
+      : isSoftLightTheme
+        ? "bg-[#8f4b81]"
+        : "bg-white",
+  ].join(" ");
   const sidebarPanelStyle = {
     background: "transparent",
     borderColor: isLightTheme
@@ -88,13 +130,13 @@ export function PmsShell({
         <div className="flex items-center gap-8">
           <Link
             href="/dashboard/"
-            className="flex items-center gap-3 text-primary"
+            className="flex items-center gap-5 text-primary"
           >
-            <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/25">
-              <span className="material-symbols-outlined">domain</span>
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/25">
+              <span className="material-symbols-outlined text-[28px]">domain</span>
             </div>
-            <h2 className="text-lg font-bold leading-tight tracking-tight">
-              Hotel PMS
+            <h2 className="text-2xl font-bold leading-tight tracking-tight">
+              Inno PMS
             </h2>
           </Link>
         </div>
@@ -135,7 +177,10 @@ export function PmsShell({
         </div>
       </header>
 
-      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ ...backgroundLayerStyle, zIndex: 0 }}
+      >
         <DotGrid
           dotSize={2}
           gap={24}
@@ -282,7 +327,7 @@ export function PmsShell({
         >
           <div
             className={[
-              "bg-primary text-white shadow-panel",
+              sidebarMetricCardClassName,
               sidebarCollapsed
                 ? "flex size-14 items-center justify-center rounded-full"
                 : "rounded-2xl p-4",
@@ -301,9 +346,9 @@ export function PmsShell({
               {sidebarMetricValue}
             </p>
             {!sidebarCollapsed ? (
-              <div className="mt-3 h-1.5 w-full rounded-full bg-white/20">
+              <div className={sidebarMetricTrackClassName}>
                 <div
-                  className="h-full rounded-full bg-white"
+                  className={sidebarMetricBarClassName}
                   style={{ width: `${sidebarMetricProgress}%` }}
                 />
               </div>

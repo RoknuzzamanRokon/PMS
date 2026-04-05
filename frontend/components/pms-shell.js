@@ -58,13 +58,7 @@ export function PmsShell({
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
   const sidebarPanelStyle = {
-    background: isLightTheme
-      ? "linear-gradient(180deg, rgba(255,255,255,0.94) 0%, rgba(245,247,250,0.90) 100%)"
-      : isSoftLightTheme
-        ? "linear-gradient(180deg, rgba(255,245,251,0.94) 0%, rgba(244,221,238,0.90) 100%)"
-        : isDarkTheme
-          ? "linear-gradient(180deg, rgba(15,23,42,0.90) 0%, rgba(30,41,59,0.94) 100%)"
-          : "linear-gradient(180deg, rgba(2,6,23,0.95) 0%, rgba(15,23,42,0.98) 100%)",
+    background: "transparent",
     borderColor: isLightTheme
       ? "rgba(148,163,184,0.16)"
       : isSoftLightTheme
@@ -329,4 +323,3 @@ export function PmsShell({
     </div>
   );
 }
-

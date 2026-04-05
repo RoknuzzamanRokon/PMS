@@ -308,6 +308,7 @@ class CalendarItemRead(APIModel):
 
 
 class RoomInventoryBulkUpsertRequest(BaseModel):
+    rate_id: Optional[str] = None
     start_date: date
     end_date: date
     is_live: bool = True
@@ -318,6 +319,7 @@ class RoomInventoryBulkUpsertRequest(BaseModel):
 class RoomInventoryCalendarRead(APIModel):
     property_id: str
     room_id: str
+    rate_id: Optional[str] = None
     stay_date: date
     is_live: int
     total_inventory: int
@@ -331,6 +333,7 @@ class RoomInventoryCalendarRead(APIModel):
 class RoomInventoryBulkUpsertResponse(BaseModel):
     room_id: str
     property_id: str
+    rate_id: Optional[str] = None
     created: int
     updated: int
     start_date: date

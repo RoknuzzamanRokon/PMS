@@ -392,6 +392,8 @@ def property_inventory_summary_for_dates(
                     continue
                 active_room += 1
                 room_ids.append(room.room_id)
+                if inventory_row.rate_id:
+                    rate_ids_by_date[current_date].add(inventory_row.rate_id)
                 if inventory_row.booked_inventory > 0:
                     booked_room += 1
                 if inventory_row.available_inventory > 0:

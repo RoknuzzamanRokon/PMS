@@ -48,11 +48,70 @@ def ensure_room_status_column() -> None:
         connection.execute(text("UPDATE rooms SET room_status = 'PROCESSING' WHERE room_status IS NULL"))
 
 
+def ensure_room_inventory_rate_id_column() -> None:
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("room_inventory_calendar")}
+    if "rate_id" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE room_inventory_calendar ADD COLUMN rate_id VARCHAR(32)"))
+
+    with SessionLocal() as db:
+        inventory_rows = db.execute(
+            text(
+                """
+                SELECT id, room_id
+                FROM room_inventory_calendar
+                WHERE rate_id IS NULL OR rate_id = ''
+                """
+            )
+        ).all()
+        if not inventory_rows:
+            return
+
+        rate_plan_by_room = {
+            row[0]: row[1]
+            for row in db.execute(
+                text(
+                    """
+                    SELECT room_id, rate_id
+                    FROM rate_plans
+                    WHERE status = 1
+                    ORDER BY room_id ASC, created_at ASC
+                    """
+                )
+            ).all()
+        }
+        if not rate_plan_by_room:
+            rate_plan_by_room = {
+                row[0]: row[1]
+                for row in db.execute(
+                    text(
+                        """
+                        SELECT room_id, rate_id
+                        FROM rate_plans
+                        ORDER BY room_id ASC, created_at ASC
+                        """
+                    )
+                ).all()
+            }
+
+        for inventory_id, room_id in inventory_rows:
+            rate_id = rate_plan_by_room.get(room_id)
+            if not rate_id:
+                continue
+            db.execute(
+                text("UPDATE room_inventory_calendar SET rate_id = :rate_id WHERE id = :inventory_id"),
+                {"rate_id": rate_id, "inventory_id": inventory_id},
+            )
+        db.commit()
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
     ensure_rate_plan_supplier_column()
     ensure_room_status_column()
+    ensure_room_inventory_rate_id_column()
     with SessionLocal() as db:
         seed_database(db)
 

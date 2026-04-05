@@ -75,6 +75,7 @@ def _next_room_inventory_calendar_id(db: Session) -> int:
 def _ensure_room_inventory_calendar_rows(
     db: Session,
     room: Room,
+    rate_id: str | None,
     stay_dates: list[date],
 ) -> int:
     if not stay_dates:
@@ -98,6 +99,8 @@ def _ensure_room_inventory_calendar_rows(
         row = existing_by_date.get(stay_date)
         if row:
             row.property_id = room.property_id
+            if rate_id:
+                row.rate_id = rate_id
             row.is_live = 1 if str(room.room_status or "").upper() == LIVE_ROOM_STATUS else 0
             row.available_inventory = max(row.total_inventory - row.booked_inventory - row.blocked_inventory, 0) if row.is_live else 0
             continue
@@ -112,6 +115,7 @@ def _ensure_room_inventory_calendar_rows(
                 id=next_id,
                 property_id=room.property_id,
                 room_id=room.room_id,
+                rate_id=rate_id,
                 stay_date=stay_date,
                 is_live=is_live,
                 total_inventory=total_inventory,
@@ -388,7 +392,7 @@ def bulk_upsert_rate_calendar(
     created = 0
     room_inventory_created = 0
     stay_dates = [item.stay_date for item in payload.items]
-    room_inventory_created = _ensure_room_inventory_calendar_rows(db, room, stay_dates)
+    room_inventory_created = _ensure_room_inventory_calendar_rows(db, room, rate_id, stay_dates)
     for item in payload.items:
         availability_code = _ensure_availability_status_code(db, item.availability)
         existing = db.scalar(

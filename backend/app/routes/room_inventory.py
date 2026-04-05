@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Room, RoomInventoryCalendar
+from ..models import RatePlan, Room, RoomInventoryCalendar
 from ..schemas import (
     PropertyInventoryCalendarResponse,
     PropertyInventoryDayDetail,
@@ -23,6 +23,27 @@ def _iter_dates(start_date: date, end_date: date):
     total_days = (end_date - start_date).days + 1
     for offset in range(total_days):
         yield start_date + timedelta(days=offset)
+
+
+def _resolve_room_inventory_rate_id(db: Session, room: Room, rate_id: str | None) -> str | None:
+    candidate = str(rate_id or "").strip()
+    if candidate:
+        rate_plan = db.scalar(
+            select(RatePlan).where(
+                RatePlan.rate_id == candidate,
+                RatePlan.room_id == room.room_id,
+            )
+        )
+        if not rate_plan:
+            raise HTTPException(status_code=404, detail=f"Rate plan {candidate} not found for room {room.room_id}.")
+        return rate_plan.rate_id
+
+    default_rate_plan = db.scalar(
+        select(RatePlan)
+        .where(RatePlan.room_id == room.room_id)
+        .order_by(RatePlan.status.desc(), RatePlan.created_at.asc())
+    )
+    return default_rate_plan.rate_id if default_rate_plan else None
 
 
 @router.post("/api/v1/rooms/{room_id}/inventory-calendar/bulk-upsert", response_model=RoomInventoryBulkUpsertResponse)
@@ -42,6 +63,7 @@ def bulk_upsert_room_inventory(
             status_code=409,
             detail=f"Room {room_id} is not linked to a live room. Daily inventory can be activated only for live rooms.",
         )
+    resolved_rate_id = _resolve_room_inventory_rate_id(db, room, payload.rate_id)
 
     created = 0
     updated = 0
@@ -55,6 +77,7 @@ def bulk_upsert_room_inventory(
         is_live = int(payload.is_live)
         if existing:
             existing.property_id = room.property_id
+            existing.rate_id = resolved_rate_id
             existing.is_live = is_live
             existing.total_inventory = payload.total_inventory
             existing.blocked_inventory = payload.blocked_inventory
@@ -70,6 +93,7 @@ def bulk_upsert_room_inventory(
                 RoomInventoryCalendar(
                     property_id=room.property_id,
                     room_id=room_id,
+                    rate_id=resolved_rate_id,
                     stay_date=stay_date,
                     is_live=is_live,
                     total_inventory=payload.total_inventory,
@@ -89,6 +113,7 @@ def bulk_upsert_room_inventory(
     return {
         "room_id": room_id,
         "property_id": room.property_id,
+        "rate_id": resolved_rate_id,
         "created": created,
         "updated": updated,
         "start_date": payload.start_date,
@@ -127,7 +152,7 @@ def get_property_inventory_day_detail(
                 RoomInventoryCalendar.property_id == property_id,
                 RoomInventoryCalendar.stay_date == stay_date,
             )
-            .order_by(RoomInventoryCalendar.room_id.asc())
+            .order_by(RoomInventoryCalendar.room_id.asc(), RoomInventoryCalendar.rate_id.asc())
         )
         .scalars()
         .all()

@@ -126,6 +126,7 @@ class RoomInventoryCalendar(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     property_id: Mapped[str] = mapped_column(String(32), ForeignKey("properties.property_id"), index=True)
     room_id: Mapped[str] = mapped_column(String(32), ForeignKey("rooms.room_id"), index=True)
+    rate_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("rate_plans.rate_id"), nullable=True, index=True)
     stay_date: Mapped[date] = mapped_column(Date, index=True)
     is_live: Mapped[int] = mapped_column(Integer, default=1)
     total_inventory: Mapped[int] = mapped_column(Integer, default=1)

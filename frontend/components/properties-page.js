@@ -580,29 +580,6 @@ export function PropertiesPage() {
                 style={softLightGlassInsetStyle}
               />
             </label>
-            {/* <label
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800"
-              style={softLightGlassInsetStyle}
-            >
-              <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                Sort
-              </span>
-              <select
-                value={propertySort}
-                onChange={(event) => {
-                  setPropertySort(event.target.value);
-                  setPropertySortHistory([event.target.value]);
-                }}
-                className="bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
-              >
-                <option value="property_id-asc">Property ID A-Z</option>
-                <option value="property_id-desc">Property ID Z-A</option>
-                <option value="created-desc">Newest</option>
-                <option value="created-asc">Oldest</option>
-                <option value="name-asc">Name A-Z</option>
-                <option value="name-desc">Name Z-A</option>
-              </select>
-            </label> */}
           </div>
         </div>
 

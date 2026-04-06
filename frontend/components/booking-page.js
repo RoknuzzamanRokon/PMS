@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const defaultPropertyId = "PROP001";
@@ -41,6 +42,8 @@ function getGuestName(guest) {
 }
 
 export function BookingPage({ propertyId }) {
+  const { resolvedTheme } = useTheme();
+  const isSoftLightTheme = resolvedTheme === "soft-light";
   const initialCheckIn = useMemo(() => toIsoDate(new Date()), []);
   const initialCheckOut = useMemo(() => toIsoDate(addDays(new Date(), 1)), []);
   const [properties, setProperties] = useState([]);
@@ -135,6 +138,28 @@ export function BookingPage({ propertyId }) {
 
     return Number(selectedPlan.total_price || 0);
   }, [selectedPlan]);
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
 
   function handleGuestChange(guestId) {
     const guest = guests.find((item) => item.guest_id === guestId) || null;
@@ -274,6 +299,7 @@ export function BookingPage({ propertyId }) {
           <form
             onSubmit={handleAvailabilitySearch}
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
           >
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
@@ -303,6 +329,7 @@ export function BookingPage({ propertyId }) {
                     }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {properties.map((property) => (
                     <option
@@ -323,6 +350,7 @@ export function BookingPage({ propertyId }) {
                   value={form.guest_id}
                   onChange={(event) => handleGuestChange(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {guests.map((guest) => (
                     <option key={guest.guest_id} value={guest.guest_id}>
@@ -346,6 +374,7 @@ export function BookingPage({ propertyId }) {
                     }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
 
@@ -363,6 +392,7 @@ export function BookingPage({ propertyId }) {
                     }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
 
@@ -380,6 +410,7 @@ export function BookingPage({ propertyId }) {
                     }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
             </div>
@@ -403,14 +434,20 @@ export function BookingPage({ propertyId }) {
             </div>
           </form>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <h3 className="text-lg font-bold">Booking Snapshot</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Review the current guest and selected room plan before submit.
             </p>
 
             <div className="mt-6 space-y-4">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Guest
                 </p>
@@ -426,7 +463,10 @@ export function BookingPage({ propertyId }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Selected Plan
                 </p>
@@ -440,7 +480,10 @@ export function BookingPage({ propertyId }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700">
+              <div
+                className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Estimated Total
                 </p>
@@ -460,7 +503,10 @@ export function BookingPage({ propertyId }) {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <section
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+          style={softLightGlassCardStyle}
+        >
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Available Rooms</h3>
@@ -489,6 +535,7 @@ export function BookingPage({ propertyId }) {
                         ? "border-primary bg-primary/[0.05] ring-2 ring-primary/15"
                         : "border-slate-200 hover:border-primary/40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70",
                     ].join(" ")}
+                    style={!active ? softLightGlassInsetStyle : undefined}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -512,7 +559,10 @@ export function BookingPage({ propertyId }) {
                     </div>
 
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Base Rate
                         </p>
@@ -520,7 +570,10 @@ export function BookingPage({ propertyId }) {
                           {formatCurrency(plan.base_rate, plan.currency)}
                         </p>
                       </div>
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Nights
                         </p>
@@ -528,7 +581,10 @@ export function BookingPage({ propertyId }) {
                           {plan.total_nights}
                         </p>
                       </div>
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Total Price
                         </p>
@@ -558,6 +614,7 @@ export function BookingPage({ propertyId }) {
           <form
             onSubmit={handleCreateReservation}
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
           >
             <h3 className="text-lg font-bold">Create Booking</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -573,6 +630,7 @@ export function BookingPage({ propertyId }) {
                   value={form.guest_id}
                   onChange={(event) => handleGuestChange(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {guests.map((guest) => (
                     <option key={guest.guest_id} value={guest.guest_id}>
@@ -595,6 +653,7 @@ export function BookingPage({ propertyId }) {
                     }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   <option value="Pending">Pending</option>
                   <option value="CONFIRMED">Confirmed</option>
@@ -618,10 +677,14 @@ export function BookingPage({ propertyId }) {
                 }
                 placeholder="Guest name staying in the room"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                style={softLightGlassInsetStyle}
               />
             </label>
 
-            <div className="mt-6 space-y-3 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800/70">
+            <div
+              className="mt-6 space-y-3 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800/70"
+              style={softLightGlassInsetStyle}
+            >
               <div className="flex items-center justify-between gap-4">
                 <span className="text-slate-500 dark:text-slate-400">
                   Property ID
@@ -680,7 +743,10 @@ export function BookingPage({ propertyId }) {
             </button>
           </form>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <h3 className="text-lg font-bold">API Response</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               The reservation result is shown here after a successful booking.
@@ -708,6 +774,7 @@ export function BookingPage({ propertyId }) {
                     <div
                       key={label}
                       className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                      style={softLightGlassInsetStyle}
                     >
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                         {label}
@@ -719,7 +786,10 @@ export function BookingPage({ propertyId }) {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <div
+                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                  style={softLightGlassInsetStyle}
+                >
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                     Price Breakdown
                   </p>
@@ -736,6 +806,7 @@ export function BookingPage({ propertyId }) {
                       <div
                         key={label}
                         className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
                       >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           {label}

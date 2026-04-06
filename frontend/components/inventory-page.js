@@ -698,6 +698,28 @@ export function InventoryPage({ propertyId }) {
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
   const isMidnightTheme = theme === "midnight";
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
 
   const bookingBlockStyles = {
     CONFIRMED: {
@@ -945,14 +967,14 @@ export function InventoryPage({ propertyId }) {
       legendText: isLightTheme
         ? "text-fuchsia-700"
         : isSoftLightTheme
-          ? "text-fuchsia-100"
+          ? "text-[rgba(122,51,108,0.96)]"
           : isDarkTheme
             ? "text-fuchsia-300"
             : "text-fuchsia-200",
       legendBadge: isLightTheme
         ? "border border-fuchsia-200 bg-fuchsia-50/90 text-fuchsia-700"
         : isSoftLightTheme
-          ? "border border-fuchsia-200/20 bg-fuchsia-400/10 text-fuchsia-100"
+          ? "border border-[rgba(183,93,165,0.34)] bg-[rgba(255,241,247,0.96)] text-[rgba(122,51,108,0.96)]"
           : isDarkTheme
             ? "border border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300"
             : "border border-fuchsia-400/20 bg-fuchsia-400/12 text-fuchsia-200",
@@ -997,14 +1019,14 @@ export function InventoryPage({ propertyId }) {
       legendText: isLightTheme
         ? "text-violet-700"
         : isSoftLightTheme
-          ? "text-violet-100"
+          ? "text-[rgba(88,61,122,0.96)]"
           : isDarkTheme
             ? "text-violet-300"
             : "text-violet-200",
       legendBadge: isLightTheme
         ? "border border-violet-200 bg-violet-50/90 text-violet-700"
         : isSoftLightTheme
-          ? "border border-violet-200/20 bg-violet-400/10 text-violet-100"
+          ? "border border-[rgba(168,132,196,0.34)] bg-[rgba(246,240,255,0.96)] text-[rgba(88,61,122,0.96)]"
           : isDarkTheme
             ? "border border-violet-400/20 bg-violet-400/10 text-violet-300"
             : "border border-violet-400/20 bg-violet-400/12 text-violet-200",
@@ -1049,14 +1071,14 @@ export function InventoryPage({ propertyId }) {
       legendText: isLightTheme
         ? "text-amber-700"
         : isSoftLightTheme
-          ? "text-amber-100"
+          ? "text-[rgba(138,82,0,0.96)]"
           : isDarkTheme
             ? "text-amber-300"
             : "text-amber-200",
       legendBadge: isLightTheme
         ? "border border-amber-200 bg-amber-50/90 text-amber-700"
         : isSoftLightTheme
-          ? "border border-amber-200/20 bg-amber-400/10 text-amber-100"
+          ? "border border-[rgba(245,158,11,0.34)] bg-[rgba(255,248,235,0.96)] text-[rgba(138,82,0,0.96)]"
           : isDarkTheme
             ? "border border-amber-400/20 bg-amber-400/10 text-amber-300"
             : "border border-amber-400/20 bg-amber-400/12 text-amber-200",
@@ -1187,7 +1209,10 @@ export function InventoryPage({ propertyId }) {
       sidebarMetricProgress={Math.max(20, Math.min(100, roomRows.length * 18))}
     >
       {!hasSelectedProperty ? (
-        <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <section
+          className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+          style={softLightGlassCardStyle}
+        >
           <span className="material-symbols-outlined text-4xl text-slate-400">
             calendar_month
           </span>
@@ -1212,7 +1237,7 @@ export function InventoryPage({ propertyId }) {
         </section>
       ) : (
         <div
-          className="-m-6 flex min-h-[calc(100vh-108px)] flex-col overflow-hidden lg:-m-8"
+          className="flex min-h-[calc(100vh-108px)] flex-col overflow-hidden"
           style={{
             background: "transparent",
           }}
@@ -1274,6 +1299,7 @@ export function InventoryPage({ propertyId }) {
               <div
                 key={label}
                 className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900"
+                style={softLightGlassInsetStyle}
               >
                 <span className="material-symbols-outlined text-lg text-slate-400">
                   {icon}
@@ -1287,7 +1313,10 @@ export function InventoryPage({ propertyId }) {
               </div>
             ))}
             <div className="ml-auto flex items-center gap-6">
-              <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60">
+              <label
+                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60"
+                style={softLightGlassInsetStyle}
+              >
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Sort
                 </span>
@@ -1379,7 +1408,7 @@ export function InventoryPage({ propertyId }) {
                   >
                     <span
                       className={[
-                        "text-[10px] font-bold uppercase tracking-widest",
+                        "text-sm font-extrabold uppercase tracking-widest",
                         calendarThemeStyles.firstColumn.title,
                       ].join(" ")}
                     >
@@ -1813,13 +1842,19 @@ export function InventoryPage({ propertyId }) {
 
             <form onSubmit={handleSaveBookingEditor} className="mt-6 space-y-5">
               {loadingBookingDetails ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                <div
+                  className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300"
+                  style={softLightGlassInsetStyle}
+                >
                   Loading booking details...
                 </div>
               ) : null}
 
               <div className="space-y-5">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+                <div
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60"
+                  style={softLightGlassCardStyle}
+                >
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
                       Basic Info
@@ -1869,6 +1904,7 @@ export function InventoryPage({ propertyId }) {
                       <div
                         key={label}
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/70"
+                        style={softLightGlassInsetStyle}
                       >
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                           {label}
@@ -1881,7 +1917,10 @@ export function InventoryPage({ propertyId }) {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/70">
+                <div
+                  className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/70"
+                  style={softLightGlassCardStyle}
+                >
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
                       Booking Change
@@ -1906,6 +1945,7 @@ export function InventoryPage({ propertyId }) {
                           }))
                         }
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        style={softLightGlassInsetStyle}
                       />
                     </label>
                     <label className="block">

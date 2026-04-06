@@ -101,7 +101,7 @@ const toneClasses = {
 };
 
 function createDays(startDate, total) {
-  const start = startDate ? new Date(startDate) : new Date();
+  const start = parseCalendarDate(startDate || new Date());
 
   return Array.from({ length: total }, (_, index) => {
     const date = new Date(start);
@@ -226,13 +226,33 @@ function toIsoDateFromParts(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function getMonthStartIsoDate(value = new Date()) {
+function parseCalendarDate(value = new Date()) {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return new Date(
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+      );
+    }
+  }
+
   const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getMonthStartIsoDate(value = new Date()) {
+  const date = parseCalendarDate(value);
   return toIsoDateFromParts(date.getFullYear(), date.getMonth(), 1);
 }
 
 function getDaysInMonth(value = new Date()) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
@@ -404,7 +424,7 @@ function buildRowsFromApi(
   const bookingByRoomId = new Map(
     (inventoryRows || []).map((row) => [row.room_id, row.booking || null]),
   );
-  const start = startDate ? new Date(startDate) : new Date();
+  const normalizedStart = parseCalendarDate(startDate || new Date());
 
   return ratePlans.map((ratePlan) => {
     const room = roomMap.get(ratePlan.room_id);
@@ -415,8 +435,8 @@ function buildRowsFromApi(
       ? Math.round((ratePlan.sold_inventory / ratePlan.total_inventory) * 100)
       : 0;
     const cells = Array.from({ length: total }, (_, index) => {
-      const currentDate = new Date(start);
-      currentDate.setDate(start.getDate() + index);
+      const currentDate = new Date(normalizedStart);
+      currentDate.setDate(normalizedStart.getDate() + index);
       const stayDate = toIsoDateFromParts(
         currentDate.getFullYear(),
         currentDate.getMonth(),
@@ -604,7 +624,7 @@ export function DailyRatesPage({
   initialRoomId = "",
 }) {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const matrixScrollRef = useRef(null);
   const matrixDragRef = useRef({
     active: false,
@@ -665,10 +685,10 @@ export function DailyRatesPage({
   const [newRatePlanForm, setNewRatePlanForm] = useState(
     createRatePlanForm(null),
   );
-  const isLightTheme = theme === "light";
-  const isSoftLightTheme = theme === "soft-light";
-  const isDarkTheme = theme === "dark";
-  const isMidnightTheme = theme === "midnight";
+  const isLightTheme = resolvedTheme === "light";
+  const isSoftLightTheme = resolvedTheme === "soft-light";
+  const isDarkTheme = resolvedTheme === "dark";
+  const isMidnightTheme = resolvedTheme === "midnight";
   const matrixThemeStyles = {
     panel: {
       borderColor: "var(--soft-border)",
@@ -717,20 +737,24 @@ export function DailyRatesPage({
             ? "rgba(15,23,42,0.88)"
             : "rgba(248,250,252,0.94)",
       stickyBackground: isSoftLightTheme
-        ? "linear-gradient(180deg, rgba(255,245,250,0.96) 0%, rgba(250,233,245,0.92) 100%)"
+        ? "rgb(255, 241, 247)"
         : isDarkTheme
-          ? "linear-gradient(180deg, rgba(30,41,59,0.96) 0%, rgba(51,65,85,0.92) 100%)"
+          ? "rgb(30, 41, 59)"
           : isMidnightTheme
-            ? "linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(15,23,42,0.94) 100%)"
-            : "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.94) 100%)",
+            ? "rgb(2, 6, 23)"
+            : "rgb(248, 250, 252)",
       textClass:
-        isSoftLightTheme || isDarkTheme || isMidnightTheme
-          ? "text-white"
-          : "text-slate-900",
+        isSoftLightTheme
+          ? "text-[#6f2f62]"
+          : isDarkTheme || isMidnightTheme
+            ? "text-white"
+            : "text-slate-900",
       subtextClass:
-        isSoftLightTheme || isDarkTheme || isMidnightTheme
-          ? "text-white/70"
-          : "text-slate-500",
+        isSoftLightTheme
+          ? "text-[#8b5e80]"
+          : isDarkTheme || isMidnightTheme
+            ? "text-white/70"
+            : "text-slate-500",
     },
     firstColumn: {
       evenBg: isSoftLightTheme
@@ -778,6 +802,28 @@ export function DailyRatesPage({
             : "rgba(255,255,255,0.96)",
     },
   };
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
   const totalDays = useMemo(
     () => getDaysInMonth(calendarStartDate),
     [calendarStartDate],
@@ -905,9 +951,9 @@ export function DailyRatesPage({
 
   useEffect(() => {
     setSelectedDateIndex((current) =>
-      Math.min(current, Math.max(range - 1, 0)),
+      Math.min(current, Math.max(totalDays - 1, 0)),
     );
-  }, [range, calendarStartDate]);
+  }, [totalDays, calendarStartDate]);
 
   useEffect(() => {
     let ignore = false;
@@ -952,7 +998,7 @@ export function DailyRatesPage({
         }
 
         const inventoryEndDate =
-          days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+          days[Math.max(totalDays - 1, 0)]?.isoDate || calendarStartDate;
         const [data, inventoryData, inventoryBoardData, availableDatesData] =
           await Promise.all([
             fetchJson(
@@ -962,10 +1008,10 @@ export function DailyRatesPage({
               `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
             ).catch(() => ({ dates: [] })),
             fetchJson(
-              `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+              `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
             ).catch(() => ({ rows: [] })),
             fetchJson(
-              `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+              `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
             ).catch(() => ({ property: null, availability: [] })),
           ]);
 
@@ -999,7 +1045,7 @@ export function DailyRatesPage({
                 data.rooms || [],
                 data.rate_plans || [],
                 calendarStartDate,
-                range,
+                totalDays,
                 inventoryBoardData?.rows || [],
               );
         setInventoryDates(nextInventoryDates);
@@ -1029,7 +1075,7 @@ export function DailyRatesPage({
     return () => {
       ignore = true;
     };
-  }, [propertyId, calendarStartDate, range]);
+  }, [propertyId, calendarStartDate, range, totalDays, days]);
 
   useEffect(() => {
     setBulkForm((current) => {
@@ -1187,14 +1233,14 @@ export function DailyRatesPage({
       return;
     }
 
-    const start = new Date(calendarStartDate);
-    const next = new Date(value);
+    const start = parseCalendarDate(calendarStartDate);
+    const next = parseCalendarDate(value);
     const diff = Math.floor(
       (next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     if (diff >= 0 && diff < totalDays) {
-      setSelectedDateIndex(Math.min(diff, range - 1));
+      setSelectedDateIndex(Math.min(diff, totalDays - 1));
       return;
     }
 
@@ -1217,7 +1263,7 @@ export function DailyRatesPage({
     }
 
     const inventoryEndDate =
-      days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+      days[Math.max(totalDays - 1, 0)]?.isoDate || calendarStartDate;
     const [data, inventoryData, inventoryBoardData, availableDatesData] =
       await Promise.all([
         fetchJson(
@@ -1227,10 +1273,10 @@ export function DailyRatesPage({
           `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
         ).catch(() => ({ dates: [] })),
         fetchJson(
-          `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
         ).catch(() => ({ rows: [] })),
         fetchJson(
-          `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
         ).catch(() => ({ property: null, availability: [] })),
       ]);
     const calendarByRateId = Object.fromEntries(
@@ -1258,7 +1304,7 @@ export function DailyRatesPage({
             data.rooms || [],
             data.rate_plans || [],
             calendarStartDate,
-            range,
+            totalDays,
             inventoryBoardData?.rows || [],
           );
     setInventoryDates(nextInventoryDates);
@@ -1714,7 +1760,7 @@ export function DailyRatesPage({
   }
 
   function shiftCalendar(daysToShift) {
-    const current = new Date(calendarStartDate);
+    const current = parseCalendarDate(calendarStartDate);
     // shift by months: positive = next month, negative = prev month
     const months = daysToShift > 0 ? 1 : -1;
     const next = new Date(
@@ -2249,7 +2295,10 @@ export function DailyRatesPage({
         </div> */}
 
             <div className="grid gap-4 md:grid-cols-2 md:items-start">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                style={softLightGlassCardStyle}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
@@ -2260,7 +2309,10 @@ export function DailyRatesPage({
                       receive rate plans.
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                  <div
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+                    style={softLightGlassInsetStyle}
+                  >
                     {roomList.length} rooms
                   </div>
                 </div>
@@ -2274,6 +2326,7 @@ export function DailyRatesPage({
                     <div
                       key={room.room_id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                      style={softLightGlassInsetStyle}
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-slate-900">
@@ -2315,7 +2368,10 @@ export function DailyRatesPage({
                   ) : null}
                 </div>
               </article>
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                style={softLightGlassCardStyle}
+              >
                 <h3 className="text-base font-bold text-slate-900">
                   Bulk Editor
                 </h3>
@@ -2352,6 +2408,7 @@ export function DailyRatesPage({
                         setBulkSuccess("");
                       }}
                       className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:border-primary hover:text-primary"
+                      style={softLightGlassInsetStyle}
                     >
                       {preset.label}
                     </button>
@@ -2483,6 +2540,7 @@ export function DailyRatesPage({
                 <article
                   key={card.title}
                   className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  style={softLightGlassCardStyle}
                 >
                   <h3 className="text-base font-bold text-slate-900">
                     {card.title}
@@ -2492,6 +2550,7 @@ export function DailyRatesPage({
                       <div
                         key={item}
                         className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                        style={softLightGlassInsetStyle}
                       >
                         {item}
                       </div>
@@ -2634,12 +2693,14 @@ export function DailyRatesPage({
                       className="sticky left-0 z-40 flex min-h-[76px] items-center px-5 py-4 text-left"
                       style={{
                         borderRight: "1px solid rgba(148, 163, 184, 0.16)",
-                        background: matrixThemeStyles.headerRow.background,
+                        background: isSoftLightTheme
+                          ? "rgb(154, 73, 137)"
+                          : matrixThemeStyles.headerRow.background,
                         boxShadow: "2px 0 10px rgba(15,23,42,0.08)",
                       }}
                     >
                       <p
-                        className={`text-xs font-bold uppercase tracking-wider ${matrixThemeStyles.headerRow.labelClass}`}
+                        className={`text-sm font-black uppercase tracking-[0.18em] ${isSoftLightTheme ? "text-white" : matrixThemeStyles.headerRow.labelClass}`}
                       >
                         Rate Plan
                       </p>
@@ -3134,7 +3195,7 @@ export function DailyRatesPage({
           {showRatePlanModal ? (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 pt-20 backdrop-blur-sm">
               <div
-                className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
+                className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
                 style={{ background: "var(--popup-card-bg)" }}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -3195,11 +3256,17 @@ export function DailyRatesPage({
                     </label>
                   </div> */}
                   {loadingRatePlanDetails ? (
-                    <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                    <p
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600"
+                      style={softLightGlassInsetStyle}
+                    >
                       Loading full rate plan details...
                     </p>
                   ) : null}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60"
+                    style={softLightGlassCardStyle}
+                  >
                     {(() => {
                       const roomSummary = getRoomSummarySource(
                         selectedRoomSummary,
@@ -3269,7 +3336,10 @@ export function DailyRatesPage({
                       );
                     })()}
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div
+                    className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                    style={softLightGlassCardStyle}
+                  >
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                       Rate Details
                     </p>
@@ -3501,7 +3571,10 @@ export function DailyRatesPage({
                             .join(" • ")}
                         </p>
                       </div>
-                      <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
+                      <div
+                        className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Subtotal Price
                         </p>
@@ -3518,7 +3591,10 @@ export function DailyRatesPage({
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div
+                        className="rounded-2xl bg-white p-4 shadow-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Price Breakdown
                         </p>
@@ -3580,7 +3656,10 @@ export function DailyRatesPage({
                         </div>
                       </div>
 
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div
+                        className="rounded-2xl bg-white p-4 shadow-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Flags & Policy
                         </p>
@@ -3695,6 +3774,7 @@ export function DailyRatesPage({
                           openEditRatePlanModal(activeRoomPlansModal, plan)
                         }
                         className="block w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                        style={softLightGlassCardStyle}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
@@ -3713,7 +3793,10 @@ export function DailyRatesPage({
                         </div>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Rate ID
                             </p>
@@ -3721,7 +3804,10 @@ export function DailyRatesPage({
                               {plan.code}
                             </p>
                           </div>
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Base Rate
                             </p>
@@ -3734,7 +3820,10 @@ export function DailyRatesPage({
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy</p>
                       <p className="mt-1 text-sm font-bold text-slate-900">{plan.occupancy}</p>
                     </div> */}
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Flags
                             </p>

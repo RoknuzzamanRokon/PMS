@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const fallbackData = {
@@ -241,8 +242,10 @@ export function RoomsManagementPage({
   autoOpenCreateRoom = false,
 }) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
+  const isSoftLightTheme = resolvedTheme === "soft-light";
   const [activeManagementSection, setActiveManagementSection] =
     useState("add-room");
   const [data, setData] = useState(fallbackData);
@@ -281,6 +284,28 @@ export function RoomsManagementPage({
   const [ratePlanSuccess, setRatePlanSuccess] = useState("");
   const propertyLocation = "Location info not available";
   const roomStatusStorageKey = `inno-rooms-room-launch-status:${selectedPropertyId}`;
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
 
   async function loadOverview() {
     if (!selectedPropertyId) {
@@ -792,7 +817,10 @@ export function RoomsManagementPage({
       </div>
 
       {!hasSelectedProperty ? (
-        <section className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <section
+          className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+          style={softLightGlassCardStyle}
+        >
           <span className="material-symbols-outlined text-4xl text-slate-400">
             holiday_village
           </span>
@@ -817,7 +845,10 @@ export function RoomsManagementPage({
         </section>
       ) : (
         <>
-          <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <section
+            className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
@@ -827,7 +858,10 @@ export function RoomsManagementPage({
                   {data.property.name}
                 </h3>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                  <div
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300"
+                    style={softLightGlassInsetStyle}
+                  >
                     <span className="material-symbols-outlined text-primary">
                       badge
                     </span>
@@ -840,7 +874,10 @@ export function RoomsManagementPage({
                       </p>
                     </div>
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                  <div
+                    className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800/70 dark:text-slate-300"
+                    style={softLightGlassInsetStyle}
+                  >
                     <span className="material-symbols-outlined text-primary">
                       location_on
                     </span>
@@ -913,7 +950,10 @@ export function RoomsManagementPage({
 
           {activeManagementSection === "room-image" ? (
             <section className="mb-8">
-              <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <article
+                className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                style={softLightGlassCardStyle}
+              >
                 <div className="mb-5">
                   <h3 className="text-xl font-bold">Room Image Draft</h3>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -1046,7 +1086,10 @@ export function RoomsManagementPage({
           ) : null}
 
           {activeManagementSection === "amenities" ? (
-            <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+            <section
+              className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+              style={softLightGlassCardStyle}
+            >
               <div className="mb-4">
                 <h3 className="text-xl font-bold">Amenities</h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -1054,7 +1097,10 @@ export function RoomsManagementPage({
                   amenity fields and save flow here next.
                 </p>
               </div>
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   Amenities section is ready for the next feature.
                 </p>
@@ -1066,7 +1112,10 @@ export function RoomsManagementPage({
           ) : null}
 
           {activeManagementSection === "more-sections" ? (
-            <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+            <section
+              className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+              style={softLightGlassCardStyle}
+            >
               <div className="mb-4">
                 <h3 className="text-xl font-bold">More Sections Later</h3>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -1074,7 +1123,10 @@ export function RoomsManagementPage({
                   occupancy, and publishing controls.
                 </p>
               </div>
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-base font-semibold text-slate-900 dark:text-slate-100">
                   Future room elements can be added here.
                 </p>
@@ -1082,7 +1134,10 @@ export function RoomsManagementPage({
             </section>
           ) : null}
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <section
+            className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h3 className="text-xl font-bold">Room Inventory Table</h3>

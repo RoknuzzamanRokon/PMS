@@ -27,13 +27,13 @@
     radial-gradient(circle at 76% 84%, rgba(191, 219, 254, 0.34), transparent 24%),
     linear-gradient(180deg, #fffdf8 0%, #f9f4ec 52%, #eef4fb 100%);
   --app-fg: #43352d;
-  --panel-bg: rgba(255, 250, 242, 0.88);
+  --panel-bg: #FFF9F2;
   --panel-border: rgba(221, 191, 161, 0.42);
   --panel-shadow: 0 24px 48px -32px rgba(146, 104, 62, 0.26);
   --muted-text: #8b6f5d;
-  --soft-surface: rgba(255, 246, 236, 0.94);
+  --soft-surface: #FFF9F2;
   --soft-border: rgba(232, 212, 190, 0.9);
-  --popup-card-bg: #F4EDF1;
+  --popup-card-bg: #FFF9F2;
   --scroll-track: #f7ede4;
   --scroll-thumb: #d8c0a7;
 }

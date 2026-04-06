@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const fallbackOverview = {
@@ -56,6 +57,7 @@ function formatTimestamp(value) {
 }
 
 export function DashboardPage() {
+  const { resolvedTheme } = useTheme();
   const [overview, setOverview] = useState(fallbackOverview);
   const [apiConnected, setApiConnected] = useState(false);
   const [properties, setProperties] = useState([]);
@@ -179,6 +181,18 @@ export function DashboardPage() {
         .some((value) => value.toLowerCase().includes(query)),
     );
   }, [properties, propertySearch]);
+  const isSoftLightTheme = resolvedTheme === "soft-light";
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
 
   return (
     <PmsShell
@@ -187,7 +201,10 @@ export function DashboardPage() {
       sidebarMetricValue={`$${Number(summary.payments_total).toLocaleString()}`}
       sidebarMetricProgress={Math.max(15, Math.min(100, Math.round(summary.occupancy_percent)))}
     >
-      <section className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+      <section
+        className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+        style={softLightGlassCardStyle}
+      >
         <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
           Dashboard page is under development.
         </h3>

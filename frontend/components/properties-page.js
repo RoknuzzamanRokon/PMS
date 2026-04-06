@@ -203,6 +203,28 @@ export function PropertiesPage() {
           ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
           : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
   ].join(" ");
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -523,7 +545,10 @@ export function PropertiesPage() {
         </div>
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-transparent p-6 shadow-sm dark:border-slate-700 dark:bg-transparent">
+      <section
+        className="rounded-2xl border border-slate-200 bg-transparent p-6 shadow-sm dark:border-slate-700 dark:bg-transparent"
+        style={softLightGlassCardStyle}
+      >
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-bold">Properties List</h3>
@@ -552,9 +577,13 @@ export function PropertiesPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by property ID, name, or type"
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-700 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                style={softLightGlassInsetStyle}
               />
             </label>
-            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800">
+            {/* <label
+              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 dark:border-slate-700 dark:bg-slate-800"
+              style={softLightGlassInsetStyle}
+            >
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 Sort
               </span>
@@ -573,7 +602,7 @@ export function PropertiesPage() {
                 <option value="name-asc">Name A-Z</option>
                 <option value="name-desc">Name Z-A</option>
               </select>
-            </label>
+            </label> */}
           </div>
         </div>
 
@@ -583,6 +612,7 @@ export function PropertiesPage() {
               <div
                 key={index}
                 className="animate-pulse rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
               >
                 <div className="grid gap-4 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr]">
                   <div className="h-5 w-24 rounded bg-slate-200" />
@@ -595,7 +625,10 @@ export function PropertiesPage() {
             ))}
           </div>
         ) : sortedProperties.length ? (
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-transparent backdrop-blur-md dark:border-slate-700 dark:bg-transparent">
+          <div
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-transparent backdrop-blur-md dark:border-slate-700 dark:bg-transparent"
+            style={softLightGlassInsetStyle}
+          >
             <div className="hidden bg-white/30 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 dark:bg-slate-900/30 dark:text-slate-400 md:grid md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:gap-4">
               {renderSortHeader("Property ID", "property_id")}
               {renderSortHeader("Name", "name")}
@@ -608,6 +641,7 @@ export function PropertiesPage() {
                 <article
                   key={property.property_id}
                   className="grid gap-4 px-5 py-4 transition-colors hover:bg-white/30 dark:hover:bg-slate-900/30 md:grid-cols-[0.9fr_1.1fr_0.7fr_0.8fr_1.4fr] md:items-center"
+                  style={softLightGlassInsetStyle}
                 >
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
@@ -632,7 +666,12 @@ export function PropertiesPage() {
                     <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 md:hidden">
                       Type
                     </p>
-                    <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">
+                    <span
+                      className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      style={
+                        isSoftLightTheme ? softLightGlassInsetStyle : undefined
+                      }
+                    >
                       {formatPropertyType(property.property_type)}
                     </span>
                   </div>
@@ -705,7 +744,10 @@ export function PropertiesPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70">
+          <div
+            className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70"
+            style={softLightGlassInsetStyle}
+          >
             <span className="material-symbols-outlined text-xl text-slate-400">
               holiday_village
             </span>
@@ -837,9 +879,9 @@ export function PropertiesPage() {
       ) : null}
 
       {showDetailsModal ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 pt-[85px] backdrop-blur-sm">
           <div
-            className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95"
+            className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-xl border border-slate-200 bg-white px-6 pb-6 pt-12 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95"
             style={{ background: "var(--popup-card-bg)" }}
           >
             <div className="flex items-start justify-between gap-4">
@@ -943,6 +985,7 @@ export function PropertiesPage() {
                       ]
                         .filter(Boolean)
                         .join(" ")}
+                      style={softLightGlassInsetStyle}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -1052,7 +1095,10 @@ export function PropertiesPage() {
                   </article>
                 </section> */}
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <section
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                  style={softLightGlassCardStyle}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1062,7 +1108,10 @@ export function PropertiesPage() {
                         Full property room inventory and linked rate plans.
                       </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <div
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      style={softLightGlassInsetStyle}
+                    >
                       {selectedPropertyDetail.rooms?.length || 0} rooms
                     </div>
                   </div>
@@ -1072,6 +1121,7 @@ export function PropertiesPage() {
                       <article
                         key={room.room_id}
                         className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                        style={softLightGlassInsetStyle}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
@@ -1255,6 +1305,7 @@ export function PropertiesPage() {
                     <article
                       key={label}
                       className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                      style={softLightGlassInsetStyle}
                     >
                       <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         {label}
@@ -1266,7 +1317,10 @@ export function PropertiesPage() {
                   ))}
                 </section>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <section
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                  style={softLightGlassCardStyle}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1284,6 +1338,7 @@ export function PropertiesPage() {
                             <span
                               key={status}
                               className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                              style={softLightGlassInsetStyle}
                             >
                               {status.toLowerCase().replaceAll("_", " ")}:{" "}
                               {count}
@@ -1299,7 +1354,10 @@ export function PropertiesPage() {
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+                <section
+                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                  style={softLightGlassCardStyle}
+                >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1309,7 +1367,10 @@ export function PropertiesPage() {
                         Room details fetched only for this property.
                       </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                    <div
+                      className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      style={softLightGlassInsetStyle}
+                    >
                       {propertyRooms.length} rooms
                     </div>
                   </div>
@@ -1320,6 +1381,7 @@ export function PropertiesPage() {
                         <article
                           key={room.room_id}
                           className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                          style={softLightGlassInsetStyle}
                         >
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
@@ -1469,6 +1531,7 @@ export function PropertiesPage() {
                   <article
                     key={label}
                     className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70"
+                    style={softLightGlassInsetStyle}
                   >
                     <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                       {label}
@@ -1480,7 +1543,10 @@ export function PropertiesPage() {
                 ))}
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <section
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                style={softLightGlassCardStyle}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1494,14 +1560,20 @@ export function PropertiesPage() {
                     <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300">
                       active: {propertyRatePlanSummary.activeCount}
                     </span>
-                    <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                    <span
+                      className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                      style={softLightGlassInsetStyle}
+                    >
                       inactive: {propertyRatePlanSummary.inactiveCount}
                     </span>
                   </div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+              <section
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+                style={softLightGlassCardStyle}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -1511,7 +1583,10 @@ export function PropertiesPage() {
                       All rate plans from every room in this property.
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                  <div
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    style={softLightGlassInsetStyle}
+                  >
                     {propertyRatePlanSummary.total} rate plans
                   </div>
                 </div>
@@ -1522,6 +1597,7 @@ export function PropertiesPage() {
                       <article
                         key={plan.rate_id}
                         className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60"
+                        style={softLightGlassInsetStyle}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>

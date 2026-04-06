@@ -64,15 +64,6 @@ export function PmsShell({
   const isLightTheme = theme === "light";
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
-  const backgroundLayerStyle = {
-    background: isLightTheme
-      ? "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(241,245,249,0.88) 100%)"
-      : isSoftLightTheme
-        ? "linear-gradient(180deg, rgba(255,246,251,0.92) 0%, rgba(250,232,242,0.88) 100%)"
-        : isDarkTheme
-          ? "linear-gradient(180deg, rgba(15,23,42,0.96) 0%, rgba(30,41,59,0.92) 100%)"
-          : "linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(17,24,39,0.94) 100%)",
-  };
   const sidebarMetricCardClassName = [
     "shadow-panel border backdrop-blur-md",
     isLightTheme
@@ -125,7 +116,10 @@ export function PmsShell({
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent text-slate-900 dark:text-slate-100">
+    <div
+      className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-transparent"
+      style={{ color: "var(--app-fg)" }}
+    >
       <header className="theme-panel fixed inset-x-0 top-0 z-50 flex items-center justify-between border-b px-6 py-3">
         <div className="flex items-center gap-8">
           <Link
@@ -133,7 +127,9 @@ export function PmsShell({
             className="flex items-center gap-5 text-primary"
           >
             <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/25">
-              <span className="material-symbols-outlined text-[28px]">domain</span>
+              <span className="material-symbols-outlined text-[28px]">
+                domain
+              </span>
             </div>
             <h2 className="text-2xl font-bold leading-tight tracking-tight">
               Inno PMS
@@ -177,10 +173,7 @@ export function PmsShell({
         </div>
       </header>
 
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{ ...backgroundLayerStyle, zIndex: 0 }}
-      >
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
         <DotGrid
           dotSize={2}
           gap={24}
@@ -193,7 +186,6 @@ export function PmsShell({
           returnDuration={1.7}
         />
       </div>
-
 
       <div
         className="flex grow overflow-hidden pt-[73px] relative"
@@ -249,7 +241,10 @@ export function PmsShell({
               </span>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 pb-36">
+          <div
+            className="flex-1 overflow-y-auto p-4 pb-36"
+            style={{ colorScheme: "inherit", background: "transparent" }}
+          >
             {!sidebarCollapsed ? <div className="mb-4" /> : null}
             <nav className="space-y-1">
               {navItems.map((item) => (

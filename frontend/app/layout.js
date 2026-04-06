@@ -8,21 +8,26 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning style={{ colorScheme: "light" }}>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function () {
                 try {
-                  var savedTheme = localStorage.getItem("inno-rooms-theme") || "system";
-                  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                  var resolvedTheme = savedTheme === "system" ? (prefersDark ? "dark" : "light") : savedTheme;
+                  var savedTheme = localStorage.getItem("inno-rooms-theme") || "light";
+                  var resolvedTheme = (savedTheme === "system" || !savedTheme) ? "light" : savedTheme;
                   var isDarkFamily = resolvedTheme === "dark" || resolvedTheme === "midnight";
                   var root = document.documentElement;
-                  root.classList.toggle("dark", isDarkFamily);
+                  if (isDarkFamily) {
+                    root.classList.add("dark");
+                  } else {
+                    root.classList.remove("dark");
+                  }
                   root.dataset.theme = resolvedTheme;
                   root.style.colorScheme = isDarkFamily ? "dark" : "light";
+                  root.style.background = "var(--app-bg)";
+                  root.style.color = "var(--app-fg)";
                 } catch (error) {}
               })();
             `,

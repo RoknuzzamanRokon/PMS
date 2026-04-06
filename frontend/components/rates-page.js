@@ -268,6 +268,27 @@ function parseIntegerValue(value) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
+function enumerateDateRange(startDate, endDate) {
+  if (!startDate || !endDate || startDate > endDate) {
+    return [];
+  }
+
+  const dates = [];
+  const cursor = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (cursor <= end) {
+    dates.push(toIsoDateFromParts(
+      cursor.getFullYear(),
+      cursor.getMonth(),
+      cursor.getDate(),
+    ));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
+}
+
 function createRatePlanForm(room) {
   return {
     rate_id: "",
@@ -575,7 +596,11 @@ function StatCard({ stat }) {
   );
 }
 
-export function DailyRatesPage({ propertyId }) {
+export function DailyRatesPage({
+  propertyId,
+  autoOpenCreateRate = false,
+  initialRoomId = "",
+}) {
   const router = useRouter();
   const { theme } = useTheme();
   const matrixScrollRef = useRef(null);
@@ -584,6 +609,7 @@ export function DailyRatesPage({ propertyId }) {
     startX: 0,
     scrollLeft: 0,
   });
+  const autoOpenedRateModalRef = useRef(false);
   const hasSelectedProperty = Boolean(propertyId);
   const liveRoomStatus = "LIVE";
   const [range, setRange] = useState(21);
@@ -633,6 +659,7 @@ export function DailyRatesPage({ propertyId }) {
     base_rate: "",
     availability: "",
   });
+  const [queuedCalendarUpdates, setQueuedCalendarUpdates] = useState({});
   const [newRatePlanForm, setNewRatePlanForm] = useState(
     createRatePlanForm(null),
   );
@@ -865,6 +892,16 @@ export function DailyRatesPage({ propertyId }) {
   }, [propertyId]);
 
   useEffect(() => {
+    setQueuedCalendarUpdates({});
+    setBulkError("");
+    setBulkSuccess("");
+  }, [propertyId]);
+
+  useEffect(() => {
+    autoOpenedRateModalRef.current = false;
+  }, [autoOpenCreateRate, initialRoomId, propertyId]);
+
+  useEffect(() => {
     setSelectedDateIndex((current) =>
       Math.min(current, Math.max(range - 1, 0)),
     );
@@ -1005,14 +1042,18 @@ export function DailyRatesPage({ propertyId }) {
     });
   }, [rows, calendarStartDate]);
 
-  const pendingChanges = useMemo(
-    () =>
-      rows.reduce(
-        (count, row) => count + row.cells.filter((cell) => cell.changed).length,
-        0,
-      ),
-    [rows],
-  );
+  const pendingChanges = useMemo(() => {
+    const visiblePending = rows.reduce((count, row) => {
+      return count + row.cells.filter((cell) => cell.changed).length;
+    }, 0);
+
+    const queuedPending = Object.values(queuedCalendarUpdates).reduce(
+      (count, rateUpdates) => count + Object.keys(rateUpdates || {}).length,
+      0,
+    );
+
+    return visiblePending + queuedPending;
+  }, [queuedCalendarUpdates, rows]);
   const liveRoomIds = useMemo(
     () =>
       new Set(
@@ -1060,6 +1101,24 @@ export function DailyRatesPage({ propertyId }) {
         };
       });
   }, [rooms, rows, liveRoomStatus]);
+
+  useEffect(() => {
+    if (!autoOpenCreateRate || !initialRoomId || autoOpenedRateModalRef.current) {
+      return;
+    }
+
+    if (!roomList.length) {
+      return;
+    }
+
+    const targetRoom = roomList.find((room) => room.room_id === initialRoomId);
+    if (!targetRoom) {
+      return;
+    }
+
+    autoOpenedRateModalRef.current = true;
+    openRatePlanModal(targetRoom);
+  }, [autoOpenCreateRate, initialRoomId, roomList]);
   const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
   const selectedStayDate = selectedDay?.isoDate || "";
   const selectedDateSummary = useMemo(() => {
@@ -1433,6 +1492,13 @@ export function DailyRatesPage({ propertyId }) {
     if (roomPlansContext) {
       setActiveRoomPlansModal(roomPlansContext);
     }
+
+    if (autoOpenCreateRate) {
+      const nextUrl = selectedProperty
+        ? `/daily-rates?property_id=${encodeURIComponent(selectedProperty)}`
+        : "/daily-rates";
+      router.replace(nextUrl);
+    }
   }
 
   function openActiveRoomPlansModal(room) {
@@ -1672,8 +1738,36 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
+    const selectedDates = enumerateDateRange(
+      bulkForm.start_date,
+      bulkForm.end_date,
+    );
+    const selectedDateSet = new Set(selectedDates);
+
+    if (selectedDates.length > 366) {
+      setBulkError("Bulk Editor supports up to 1 year per update.");
+      return;
+    }
+
     if (!bulkForm.base_rate.trim() && !bulkForm.availability.trim()) {
       setBulkError("Enter a rate, availability, or both for the bulk update.");
+      return;
+    }
+
+    const targetRow = rows.find((row) => row.code === bulkForm.rate_id);
+    if (!targetRow) {
+      setBulkError("Selected rate plan is not loaded.");
+      return;
+    }
+
+    const visibleDates = new Set(targetRow.cells.map((cell) => cell.stay_date));
+    const queuedOnlyDates = selectedDates.filter((date) => !visibleDates.has(date));
+    const queuedOnlyCount = queuedOnlyDates.length;
+
+    if (queuedOnlyDates.length && !bulkForm.base_rate.trim()) {
+      setBulkError(
+        "Enter a base rate when updating dates outside the visible calendar window.",
+      );
       return;
     }
 
@@ -1687,10 +1781,7 @@ export function DailyRatesPage({ propertyId }) {
         return {
           ...row,
           cells: row.cells.map((cell, index) => {
-            if (
-              cell.stay_date < bulkForm.start_date ||
-              cell.stay_date > bulkForm.end_date
-            ) {
+            if (!selectedDateSet.has(cell.stay_date)) {
               return cell;
             }
 
@@ -1720,6 +1811,36 @@ export function DailyRatesPage({ propertyId }) {
         };
       }),
     );
+
+    if (queuedOnlyCount) {
+      const sampleCell = targetRow.cells[0];
+      const defaultCurrency = sampleCell?.currency || "USD";
+      const defaultTax = Number(sampleCell?.tax || 0);
+      const nextBaseRate = formatRateValue(parseRateValue(bulkForm.base_rate));
+      const nextAvailability = bulkForm.availability || "";
+
+      setQueuedCalendarUpdates((current) => {
+        const currentRateUpdates = current[bulkForm.rate_id] || {};
+        const nextRateUpdates = { ...currentRateUpdates };
+
+        queuedOnlyDates.forEach((stayDate) => {
+          nextRateUpdates[stayDate] = {
+            stay_date: stayDate,
+            currency: defaultCurrency,
+            base_rate: Number(nextBaseRate),
+            tax: defaultTax,
+            availability: nextAvailability,
+          };
+        });
+
+        return {
+          ...current,
+          [bulkForm.rate_id]: nextRateUpdates,
+        };
+      });
+
+      updatedCount += queuedOnlyCount;
+    }
 
     setBulkError("");
     setBulkSuccess(
@@ -1754,17 +1875,27 @@ export function DailyRatesPage({ propertyId }) {
           }));
 
         if (changedItems.length) {
-          groups[row.code] = changedItems;
+          groups[row.code] = Object.fromEntries(
+            changedItems.map((item) => [item.stay_date, item]),
+          );
         }
 
         return groups;
       }, {});
 
+      Object.entries(queuedCalendarUpdates).forEach(([rateId, itemsByDate]) => {
+        const existingItems = payloadsByRateId[rateId] || {};
+        payloadsByRateId[rateId] = {
+          ...existingItems,
+          ...itemsByDate,
+        };
+      });
+
       await Promise.all(
-        Object.entries(payloadsByRateId).map(([rateId, items]) =>
+        Object.entries(payloadsByRateId).map(([rateId, itemsByDate]) =>
           fetchJson(`/rate-plans/${rateId}/calendar/bulk-upsert`, {
             method: "POST",
-            body: JSON.stringify({ items }),
+            body: JSON.stringify({ items: Object.values(itemsByDate) }),
           }),
         ),
       );
@@ -1773,6 +1904,7 @@ export function DailyRatesPage({ propertyId }) {
         `Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`,
       );
 
+      setQueuedCalendarUpdates({});
       await refreshDailyRates(selectedProperty || propertyId || "");
     } catch (error) {
       setPublishError(error.message || "Could not publish calendar changes.");
@@ -2181,8 +2313,40 @@ export function DailyRatesPage({ propertyId }) {
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Queue a date-range update for one rate plan, then publish all
-                  pending changes.
+                  pending changes. One bulk action can cover up to 1 year.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    { label: "30 Days", days: 30 },
+                    { label: "90 Days", days: 90 },
+                    { label: "180 Days", days: 180 },
+                    { label: "1 Year", days: 365 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        const startDate = bulkForm.start_date || new Date().toISOString().slice(0, 10);
+                        const endDate = new Date(`${startDate}T00:00:00`);
+                        endDate.setDate(endDate.getDate() + preset.days - 1);
+                        setBulkForm((current) => ({
+                          ...current,
+                          start_date: startDate,
+                          end_date: toIsoDateFromParts(
+                            endDate.getFullYear(),
+                            endDate.getMonth(),
+                            endDate.getDate(),
+                          ),
+                        }));
+                        setBulkError("");
+                        setBulkSuccess("");
+                      }}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:border-primary hover:text-primary"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <form onSubmit={applyBulkChanges} className="mt-4 space-y-3">
                   <label className="block">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">

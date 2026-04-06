@@ -219,7 +219,7 @@ function formatCurrency(value) {
   }).format(amount);
 }
 
-export function RoomsManagementPage({ propertyId }) {
+export function RoomsManagementPage({ propertyId, autoOpenCreateRoom = false }) {
   const router = useRouter();
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
@@ -286,6 +286,18 @@ export function RoomsManagementPage({ propertyId }) {
     setCreatedRoomId("");
     loadOverview();
   }, [selectedPropertyId]);
+
+  useEffect(() => {
+    if (!autoOpenCreateRoom || !selectedPropertyId) {
+      return;
+    }
+
+    setRoomForm(createRoomForm(selectedPropertyId));
+    setShowRoomPreview(false);
+    setRoomSubmitError("");
+    setRoomSubmitSuccess("");
+    setShowCreateRoomModal(true);
+  }, [autoOpenCreateRoom, selectedPropertyId]);
 
   useEffect(() => {
     try {
@@ -413,6 +425,13 @@ export function RoomsManagementPage({ propertyId }) {
     setShowCreateRoomModal(false);
     setShowRoomPreview(false);
     setRoomSubmitError("");
+
+    if (autoOpenCreateRoom) {
+      const nextUrl = selectedPropertyId
+        ? `/rooms-management?property_id=${encodeURIComponent(selectedPropertyId)}`
+        : "/rooms-management";
+      router.replace(nextUrl);
+    }
   }
 
   function handleSkipForNow() {
@@ -1037,7 +1056,7 @@ export function RoomsManagementPage({ propertyId }) {
                         type="button"
                         onClick={() =>
                           router.push(
-                            `/daily-rates?property_id=${encodeURIComponent(row.property_id)}`,
+                            `/daily-rates?property_id=${encodeURIComponent(row.property_id)}&open=create-rate&room_id=${encodeURIComponent(row.room_id)}`,
                           )
                         }
                         className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"

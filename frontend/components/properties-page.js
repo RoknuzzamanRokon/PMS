@@ -1162,7 +1162,7 @@ export function PropertiesPage() {
 
               <div className="flex flex-wrap items-center gap-3">
                 <Link
-                  href={`/rooms-management?property_id=${selectedPropertyDetail?.property_id || ""}`}
+                  href={`/rooms-management?property_id=${selectedPropertyDetail?.property_id || ""}&open=create-room`}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-opacity hover:opacity-90"
                 >
                   <span className="material-symbols-outlined text-base">

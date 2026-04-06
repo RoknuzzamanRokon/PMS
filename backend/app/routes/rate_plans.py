@@ -140,7 +140,7 @@ def list_availability_statuses(db: Session = Depends(get_db)):
 def daily_rates_matrix(
     property_id: str = Query(...),
     start_date: date | None = Query(None),
-    days: int = Query(30, ge=1, le=30),
+    days: int = Query(30, ge=1, le=31),
     db: Session = Depends(get_db),
 ):
     start = start_date or date.today()

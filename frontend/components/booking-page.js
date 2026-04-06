@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PmsShell } from "./pms-shell";
+import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
 const defaultPropertyId = "PROP001";
@@ -41,6 +42,8 @@ function getGuestName(guest) {
 }
 
 export function BookingPage({ propertyId }) {
+  const { resolvedTheme } = useTheme();
+  const isSoftLightTheme = resolvedTheme === "soft-light";
   const initialCheckIn = useMemo(() => toIsoDate(new Date()), []);
   const initialCheckOut = useMemo(() => toIsoDate(addDays(new Date(), 1)), []);
   const [properties, setProperties] = useState([]);
@@ -83,7 +86,8 @@ export function BookingPage({ propertyId }) {
 
         const nextProperties = Array.isArray(propertyList) ? propertyList : [];
         const nextGuests = Array.isArray(guestList) ? guestList : [];
-        const fallbackPropertyId = nextProperties[0]?.property_id || propertyId || defaultPropertyId;
+        const fallbackPropertyId =
+          nextProperties[0]?.property_id || propertyId || defaultPropertyId;
         const fallbackGuest = nextGuests[0] || null;
 
         setProperties(nextProperties);
@@ -93,7 +97,8 @@ export function BookingPage({ propertyId }) {
           property_id: current.property_id || fallbackPropertyId,
           guest_id: current.guest_id || fallbackGuest?.guest_id || "",
           occupant_name:
-            current.occupant_name || (fallbackGuest ? getGuestName(fallbackGuest) : ""),
+            current.occupant_name ||
+            (fallbackGuest ? getGuestName(fallbackGuest) : ""),
         }));
         setApiConnected(true);
       } catch {
@@ -121,7 +126,8 @@ export function BookingPage({ propertyId }) {
   );
 
   const selectedPlan = useMemo(
-    () => availableRooms.find((plan) => plan.rate_id === selectedRateId) || null,
+    () =>
+      availableRooms.find((plan) => plan.rate_id === selectedRateId) || null,
     [availableRooms, selectedRateId],
   );
 
@@ -132,6 +138,28 @@ export function BookingPage({ propertyId }) {
 
     return Number(selectedPlan.total_price || 0);
   }, [selectedPlan]);
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
 
   function handleGuestChange(guestId) {
     const guest = guests.find((item) => item.guest_id === guestId) || null;
@@ -182,7 +210,9 @@ export function BookingPage({ propertyId }) {
     event.preventDefault();
 
     if (!selectedPlan) {
-      setReservationError("Select an available room and rate before creating the booking.");
+      setReservationError(
+        "Select an available room and rate before creating the booking.",
+      );
       return;
     }
 
@@ -213,7 +243,9 @@ export function BookingPage({ propertyId }) {
       });
 
       setCreatedBooking(response);
-      setReservationSuccess(`Reservation ${response.booking_id} created successfully.`);
+      setReservationSuccess(
+        `Reservation ${response.booking_id} created successfully.`,
+      );
     } catch (error) {
       setReservationError(error.message || "Could not create reservation.");
     } finally {
@@ -226,19 +258,26 @@ export function BookingPage({ propertyId }) {
       searchPlaceholder="Search booking, guest, property..."
       sidebarMetricLabel="Available Plans"
       sidebarMetricValue={`${availableRooms.length}`}
-      sidebarMetricProgress={Math.max(16, Math.min(100, availableRooms.length * 20))}
+      sidebarMetricProgress={Math.max(
+        16,
+        Math.min(100, availableRooms.length * 20),
+      )}
     >
       <div className="space-y-8">
         <section className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              <span className="material-symbols-outlined text-base">event_available</span>
+              <span className="material-symbols-outlined text-base">
+                event_available
+              </span>
               Booking Workspace
             </div>
-            <h2 className="text-3xl font-bold tracking-tight">Create Reservation</h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-              Search room availability, choose a guest, and create a live booking through
-              `/api/v1/reservations`.
+            <h2 className="text-xl font-bold tracking-tight">
+              Create Reservation
+            </h2>
+            <p className="mt-2 max-w-xl text-sm text-slate-500 dark:text-slate-400">
+              Search room availability, choose a guest, and create a live
+              booking through `/api/v1/reservations`.
             </p>
           </div>
           <div
@@ -259,7 +298,8 @@ export function BookingPage({ propertyId }) {
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <form
             onSubmit={handleAvailabilitySearch}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
           >
             <div className="mb-6 flex items-center justify-between gap-4">
               <div>
@@ -269,22 +309,33 @@ export function BookingPage({ propertyId }) {
                 </p>
               </div>
               <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {loadingLookups ? "Loading data..." : `${properties.length} properties`}
+                {loadingLookups
+                  ? "Loading data..."
+                  : `${properties.length} properties`}
               </span>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Property</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Property
+                </span>
                 <select
                   value={form.property_id}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, property_id: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      property_id: event.target.value,
+                    }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {properties.map((property) => (
-                    <option key={property.property_id} value={property.property_id}>
+                    <option
+                      key={property.property_id}
+                      value={property.property_id}
+                    >
                       {property.property_id} - {property.name}
                     </option>
                   ))}
@@ -292,11 +343,14 @@ export function BookingPage({ propertyId }) {
               </label>
 
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Guest</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Guest
+                </span>
                 <select
                   value={form.guest_id}
                   onChange={(event) => handleGuestChange(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {guests.map((guest) => (
                     <option key={guest.guest_id} value={guest.guest_id}>
@@ -307,38 +361,56 @@ export function BookingPage({ propertyId }) {
               </label>
 
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Check-In</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Check-In
+                </span>
                 <input
                   type="date"
                   value={form.check_in_date}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, check_in_date: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      check_in_date: event.target.value,
+                    }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
 
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Check-Out</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Check-Out
+                </span>
                 <input
                   type="date"
                   value={form.check_out_date}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, check_out_date: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      check_out_date: event.target.value,
+                    }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
 
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Currency</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Currency
+                </span>
                 <input
                   type="text"
                   value={form.currency}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
+                    setForm((current) => ({
+                      ...current,
+                      currency: event.target.value.toUpperCase(),
+                    }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 />
               </label>
             </div>
@@ -355,31 +427,46 @@ export function BookingPage({ propertyId }) {
                 disabled={availabilityLoading || loadingLookups}
                 className="inline-flex items-center justify-center rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {availabilityLoading ? "Searching..." : "Search Available Rooms"}
+                {availabilityLoading
+                  ? "Searching..."
+                  : "Search Available Rooms"}
               </button>
             </div>
           </form>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <h3 className="text-lg font-bold">Booking Snapshot</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Review the current guest and selected room plan before submit.
             </p>
 
             <div className="mt-6 space-y-4">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Guest
                 </p>
                 <p className="mt-2 text-base font-semibold text-slate-900 dark:text-slate-100">
-                  {selectedGuest ? getGuestName(selectedGuest) : "No guest selected"}
+                  {selectedGuest
+                    ? getGuestName(selectedGuest)
+                    : "No guest selected"}
                 </p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  {selectedGuest ? `${selectedGuest.guest_id} • ${selectedGuest.email}` : "Select a guest to continue"}
+                  {selectedGuest
+                    ? `${selectedGuest.guest_id} • ${selectedGuest.email}`
+                    : "Select a guest to continue"}
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+              <div
+                className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Selected Plan
                 </p>
@@ -393,14 +480,20 @@ export function BookingPage({ propertyId }) {
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700">
+              <div
+                className="rounded-2xl border border-dashed border-slate-200 p-4 dark:border-slate-700"
+                style={softLightGlassInsetStyle}
+              >
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                   Estimated Total
                 </p>
-                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+                <p className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-100">
                   {estimatedTotal == null
                     ? "--"
-                    : formatCurrency(estimatedTotal, selectedPlan?.currency || form.currency)}
+                    : formatCurrency(
+                        estimatedTotal,
+                        selectedPlan?.currency || form.currency,
+                      )}
                 </p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Based on the selected room total for this stay.
@@ -410,12 +503,16 @@ export function BookingPage({ propertyId }) {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+        <section
+          className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+          style={softLightGlassCardStyle}
+        >
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Available Rooms</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                Pick one available room-rate combination to send in the `rooms` array.
+                Pick one available room-rate combination to send in the `rooms`
+                array.
               </p>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -433,11 +530,12 @@ export function BookingPage({ propertyId }) {
                     type="button"
                     onClick={() => setSelectedRateId(plan.rate_id)}
                     className={[
-                      "rounded-3xl border p-5 text-left transition",
+                      "rounded-xl border p-5 text-left transition",
                       active
                         ? "border-primary bg-primary/[0.05] ring-2 ring-primary/15"
                         : "border-slate-200 hover:border-primary/40 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/70",
                     ].join(" ")}
+                    style={!active ? softLightGlassInsetStyle : undefined}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
@@ -461,7 +559,10 @@ export function BookingPage({ propertyId }) {
                     </div>
 
                     <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Base Rate
                         </p>
@@ -469,7 +570,10 @@ export function BookingPage({ propertyId }) {
                           {formatCurrency(plan.base_rate, plan.currency)}
                         </p>
                       </div>
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Nights
                         </p>
@@ -477,7 +581,10 @@ export function BookingPage({ propertyId }) {
                           {plan.total_nights}
                         </p>
                       </div>
-                      <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                      <div
+                        className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           Total Price
                         </p>
@@ -491,12 +598,13 @@ export function BookingPage({ propertyId }) {
               })}
             </div>
           ) : (
-            <div className="rounded-3xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-slate-700">
+            <div className="rounded-xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-slate-700">
               <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 No availability loaded yet
               </p>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                Run the availability search above to load rooms that can be booked.
+                Run the availability search above to load rooms that can be
+                booked.
               </p>
             </div>
           )}
@@ -505,7 +613,8 @@ export function BookingPage({ propertyId }) {
         <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
           <form
             onSubmit={handleCreateReservation}
-            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
           >
             <h3 className="text-lg font-bold">Create Booking</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -514,11 +623,14 @@ export function BookingPage({ propertyId }) {
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="space-y-2 text-sm">
-                <span className="font-semibold text-slate-700 dark:text-slate-200">Guest</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Guest
+                </span>
                 <select
                   value={form.guest_id}
                   onChange={(event) => handleGuestChange(event.target.value)}
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   {guests.map((guest) => (
                     <option key={guest.guest_id} value={guest.guest_id}>
@@ -535,9 +647,13 @@ export function BookingPage({ propertyId }) {
                 <select
                   value={form.booking_status}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, booking_status: event.target.value }))
+                    setForm((current) => ({
+                      ...current,
+                      booking_status: event.target.value,
+                    }))
                   }
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                  style={softLightGlassInsetStyle}
                 >
                   <option value="Pending">Pending</option>
                   <option value="CONFIRMED">Confirmed</option>
@@ -554,29 +670,50 @@ export function BookingPage({ propertyId }) {
                 type="text"
                 value={form.occupant_name}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, occupant_name: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    occupant_name: event.target.value,
+                  }))
                 }
                 placeholder="Guest name staying in the room"
                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100"
+                style={softLightGlassInsetStyle}
               />
             </label>
 
-            <div className="mt-6 space-y-3 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800/70">
+            <div
+              className="mt-6 space-y-3 rounded-2xl bg-slate-50 p-4 text-sm dark:bg-slate-800/70"
+              style={softLightGlassInsetStyle}
+            >
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500 dark:text-slate-400">Property ID</span>
-                <span className="font-semibold">{form.property_id || "--"}</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Property ID
+                </span>
+                <span className="font-semibold">
+                  {form.property_id || "--"}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500 dark:text-slate-400">Guest ID</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Guest ID
+                </span>
                 <span className="font-semibold">{form.guest_id || "--"}</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500 dark:text-slate-400">Room ID</span>
-                <span className="font-semibold">{selectedPlan?.room_id || "--"}</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Room ID
+                </span>
+                <span className="font-semibold">
+                  {selectedPlan?.room_id || "--"}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500 dark:text-slate-400">Rate ID</span>
-                <span className="font-semibold">{selectedPlan?.rate_id || "--"}</span>
+                <span className="text-slate-500 dark:text-slate-400">
+                  Rate ID
+                </span>
+                <span className="font-semibold">
+                  {selectedPlan?.rate_id || "--"}
+                </span>
               </div>
             </div>
 
@@ -594,14 +731,22 @@ export function BookingPage({ propertyId }) {
 
             <button
               type="submit"
-              disabled={reservationLoading || !selectedPlan || !form.guest_id || !form.occupant_name.trim()}
+              disabled={
+                reservationLoading ||
+                !selectedPlan ||
+                !form.guest_id ||
+                !form.occupant_name.trim()
+              }
               className="mt-6 inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900"
             >
               {reservationLoading ? "Creating Booking..." : "Create Booking"}
             </button>
           </form>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+          <div
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/80"
+            style={softLightGlassCardStyle}
+          >
             <h3 className="text-lg font-bold">API Response</h3>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               The reservation result is shown here after a successful booking.
@@ -620,10 +765,17 @@ export function BookingPage({ propertyId }) {
                     ["Currency", createdBooking.currency],
                     [
                       "Total Price",
-                      formatCurrency(createdBooking.total_price, createdBooking.currency),
+                      formatCurrency(
+                        createdBooking.total_price,
+                        createdBooking.currency,
+                      ),
                     ],
                   ].map(([label, value]) => (
-                    <div key={label} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                    <div
+                      key={label}
+                      className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                      style={softLightGlassInsetStyle}
+                    >
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                         {label}
                       </p>
@@ -634,7 +786,10 @@ export function BookingPage({ propertyId }) {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700">
+                <div
+                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-700"
+                  style={softLightGlassInsetStyle}
+                >
                   <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                     Price Breakdown
                   </p>
@@ -642,10 +797,17 @@ export function BookingPage({ propertyId }) {
                     {[
                       ["Base Price", createdBooking.price?.base_price],
                       ["Tax Price", createdBooking.price?.tax_price],
-                      ["Per Night Price", createdBooking.price?.per_night_price],
+                      [
+                        "Per Night Price",
+                        createdBooking.price?.per_night_price,
+                      ],
                       ["Total Price", createdBooking.price?.total_price],
                     ].map(([label, value]) => (
-                      <div key={label} className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                      <div
+                        key={label}
+                        className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                           {label}
                         </p>
@@ -662,12 +824,13 @@ export function BookingPage({ propertyId }) {
                 </pre>
               </div>
             ) : (
-              <div className="mt-6 rounded-3xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-slate-700">
+              <div className="mt-6 rounded-xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-slate-700">
                 <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                   Booking response will appear here
                 </p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  Create a reservation to inspect the returned booking ID, totals, and price object.
+                  Create a reservation to inspect the returned booking ID,
+                  totals, and price object.
                 </p>
               </div>
             )}

@@ -101,7 +101,7 @@ const toneClasses = {
 };
 
 function createDays(startDate, total) {
-  const start = startDate ? new Date(startDate) : new Date();
+  const start = parseCalendarDate(startDate || new Date());
 
   return Array.from({ length: total }, (_, index) => {
     const date = new Date(start);
@@ -226,13 +226,33 @@ function toIsoDateFromParts(year, month, day) {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-function getMonthStartIsoDate(value = new Date()) {
+function parseCalendarDate(value = new Date()) {
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return new Date(
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+      );
+    }
+  }
+
   const date = new Date(value);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getMonthStartIsoDate(value = new Date()) {
+  const date = parseCalendarDate(value);
   return toIsoDateFromParts(date.getFullYear(), date.getMonth(), 1);
 }
 
 function getDaysInMonth(value = new Date()) {
-  const date = new Date(value);
+  const date = parseCalendarDate(value);
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
@@ -266,6 +286,29 @@ function formatMoneyWithCurrency(currency, value) {
 function parseIntegerValue(value) {
   const numeric = Number.parseInt(String(value), 10);
   return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function enumerateDateRange(startDate, endDate) {
+  if (!startDate || !endDate || startDate > endDate) {
+    return [];
+  }
+
+  const dates = [];
+  const cursor = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+
+  while (cursor <= end) {
+    dates.push(
+      toIsoDateFromParts(
+        cursor.getFullYear(),
+        cursor.getMonth(),
+        cursor.getDate(),
+      ),
+    );
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return dates;
 }
 
 function createRatePlanForm(room) {
@@ -381,7 +424,7 @@ function buildRowsFromApi(
   const bookingByRoomId = new Map(
     (inventoryRows || []).map((row) => [row.room_id, row.booking || null]),
   );
-  const start = startDate ? new Date(startDate) : new Date();
+  const normalizedStart = parseCalendarDate(startDate || new Date());
 
   return ratePlans.map((ratePlan) => {
     const room = roomMap.get(ratePlan.room_id);
@@ -392,8 +435,8 @@ function buildRowsFromApi(
       ? Math.round((ratePlan.sold_inventory / ratePlan.total_inventory) * 100)
       : 0;
     const cells = Array.from({ length: total }, (_, index) => {
-      const currentDate = new Date(start);
-      currentDate.setDate(start.getDate() + index);
+      const currentDate = new Date(normalizedStart);
+      currentDate.setDate(normalizedStart.getDate() + index);
       const stayDate = toIsoDateFromParts(
         currentDate.getFullYear(),
         currentDate.getMonth(),
@@ -575,15 +618,20 @@ function StatCard({ stat }) {
   );
 }
 
-export function DailyRatesPage({ propertyId }) {
+export function DailyRatesPage({
+  propertyId,
+  autoOpenCreateRate = false,
+  initialRoomId = "",
+}) {
   const router = useRouter();
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const matrixScrollRef = useRef(null);
   const matrixDragRef = useRef({
     active: false,
     startX: 0,
     scrollLeft: 0,
   });
+  const autoOpenedRateModalRef = useRef(false);
   const hasSelectedProperty = Boolean(propertyId);
   const liveRoomStatus = "LIVE";
   const [range, setRange] = useState(21);
@@ -633,13 +681,14 @@ export function DailyRatesPage({ propertyId }) {
     base_rate: "",
     availability: "",
   });
+  const [queuedCalendarUpdates, setQueuedCalendarUpdates] = useState({});
   const [newRatePlanForm, setNewRatePlanForm] = useState(
     createRatePlanForm(null),
   );
-  const isLightTheme = theme === "light";
-  const isSoftLightTheme = theme === "soft-light";
-  const isDarkTheme = theme === "dark";
-  const isMidnightTheme = theme === "midnight";
+  const isLightTheme = resolvedTheme === "light";
+  const isSoftLightTheme = resolvedTheme === "soft-light";
+  const isDarkTheme = resolvedTheme === "dark";
+  const isMidnightTheme = resolvedTheme === "midnight";
   const matrixThemeStyles = {
     panel: {
       borderColor: "var(--soft-border)",
@@ -688,20 +737,24 @@ export function DailyRatesPage({ propertyId }) {
             ? "rgba(15,23,42,0.88)"
             : "rgba(248,250,252,0.94)",
       stickyBackground: isSoftLightTheme
-        ? "linear-gradient(180deg, rgba(255,245,250,0.96) 0%, rgba(250,233,245,0.92) 100%)"
+        ? "rgb(255, 241, 247)"
         : isDarkTheme
-          ? "linear-gradient(180deg, rgba(30,41,59,0.96) 0%, rgba(51,65,85,0.92) 100%)"
+          ? "rgb(30, 41, 59)"
           : isMidnightTheme
-            ? "linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(15,23,42,0.94) 100%)"
-            : "linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.94) 100%)",
+            ? "rgb(2, 6, 23)"
+            : "rgb(248, 250, 252)",
       textClass:
-        isSoftLightTheme || isDarkTheme || isMidnightTheme
-          ? "text-white"
-          : "text-slate-900",
+        isSoftLightTheme
+          ? "text-[#6f2f62]"
+          : isDarkTheme || isMidnightTheme
+            ? "text-white"
+            : "text-slate-900",
       subtextClass:
-        isSoftLightTheme || isDarkTheme || isMidnightTheme
-          ? "text-white/70"
-          : "text-slate-500",
+        isSoftLightTheme
+          ? "text-[#8b5e80]"
+          : isDarkTheme || isMidnightTheme
+            ? "text-white/70"
+            : "text-slate-500",
     },
     firstColumn: {
       evenBg: isSoftLightTheme
@@ -749,6 +802,28 @@ export function DailyRatesPage({ propertyId }) {
             : "rgba(255,255,255,0.96)",
     },
   };
+  const softLightGlassCardStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+        borderColor: "rgb(221 191 161 / 55%)",
+        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+      }
+    : undefined;
+  const softLightGlassInsetStyle = isSoftLightTheme
+    ? {
+        backgroundColor: "rgb(255, 249, 242)",
+        backgroundImage:
+          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+        borderColor: "rgb(221 191 161 / 42%)",
+        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+      }
+    : undefined;
   const totalDays = useMemo(
     () => getDaysInMonth(calendarStartDate),
     [calendarStartDate],
@@ -865,10 +940,20 @@ export function DailyRatesPage({ propertyId }) {
   }, [propertyId]);
 
   useEffect(() => {
+    setQueuedCalendarUpdates({});
+    setBulkError("");
+    setBulkSuccess("");
+  }, [propertyId]);
+
+  useEffect(() => {
+    autoOpenedRateModalRef.current = false;
+  }, [autoOpenCreateRate, initialRoomId, propertyId]);
+
+  useEffect(() => {
     setSelectedDateIndex((current) =>
-      Math.min(current, Math.max(range - 1, 0)),
+      Math.min(current, Math.max(totalDays - 1, 0)),
     );
-  }, [range, calendarStartDate]);
+  }, [totalDays, calendarStartDate]);
 
   useEffect(() => {
     let ignore = false;
@@ -913,7 +998,7 @@ export function DailyRatesPage({ propertyId }) {
         }
 
         const inventoryEndDate =
-          days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+          days[Math.max(totalDays - 1, 0)]?.isoDate || calendarStartDate;
         const [data, inventoryData, inventoryBoardData, availableDatesData] =
           await Promise.all([
             fetchJson(
@@ -923,10 +1008,10 @@ export function DailyRatesPage({ propertyId }) {
               `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
             ).catch(() => ({ dates: [] })),
             fetchJson(
-              `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+              `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
             ).catch(() => ({ rows: [] })),
             fetchJson(
-              `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+              `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
             ).catch(() => ({ property: null, availability: [] })),
           ]);
 
@@ -960,7 +1045,7 @@ export function DailyRatesPage({ propertyId }) {
                 data.rooms || [],
                 data.rate_plans || [],
                 calendarStartDate,
-                range,
+                totalDays,
                 inventoryBoardData?.rows || [],
               );
         setInventoryDates(nextInventoryDates);
@@ -990,7 +1075,7 @@ export function DailyRatesPage({ propertyId }) {
     return () => {
       ignore = true;
     };
-  }, [propertyId, calendarStartDate, range]);
+  }, [propertyId, calendarStartDate, range, totalDays, days]);
 
   useEffect(() => {
     setBulkForm((current) => {
@@ -1005,14 +1090,18 @@ export function DailyRatesPage({ propertyId }) {
     });
   }, [rows, calendarStartDate]);
 
-  const pendingChanges = useMemo(
-    () =>
-      rows.reduce(
-        (count, row) => count + row.cells.filter((cell) => cell.changed).length,
-        0,
-      ),
-    [rows],
-  );
+  const pendingChanges = useMemo(() => {
+    const visiblePending = rows.reduce((count, row) => {
+      return count + row.cells.filter((cell) => cell.changed).length;
+    }, 0);
+
+    const queuedPending = Object.values(queuedCalendarUpdates).reduce(
+      (count, rateUpdates) => count + Object.keys(rateUpdates || {}).length,
+      0,
+    );
+
+    return visiblePending + queuedPending;
+  }, [queuedCalendarUpdates, rows]);
   const liveRoomIds = useMemo(
     () =>
       new Set(
@@ -1060,6 +1149,28 @@ export function DailyRatesPage({ propertyId }) {
         };
       });
   }, [rooms, rows, liveRoomStatus]);
+
+  useEffect(() => {
+    if (
+      !autoOpenCreateRate ||
+      !initialRoomId ||
+      autoOpenedRateModalRef.current
+    ) {
+      return;
+    }
+
+    if (!roomList.length) {
+      return;
+    }
+
+    const targetRoom = roomList.find((room) => room.room_id === initialRoomId);
+    if (!targetRoom) {
+      return;
+    }
+
+    autoOpenedRateModalRef.current = true;
+    openRatePlanModal(targetRoom);
+  }, [autoOpenCreateRate, initialRoomId, roomList]);
   const selectedDay = visibleDays[selectedDateIndex] || visibleDays[0] || null;
   const selectedStayDate = selectedDay?.isoDate || "";
   const selectedDateSummary = useMemo(() => {
@@ -1122,14 +1233,14 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
-    const start = new Date(calendarStartDate);
-    const next = new Date(value);
+    const start = parseCalendarDate(calendarStartDate);
+    const next = parseCalendarDate(value);
     const diff = Math.floor(
       (next.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
     );
 
     if (diff >= 0 && diff < totalDays) {
-      setSelectedDateIndex(Math.min(diff, range - 1));
+      setSelectedDateIndex(Math.min(diff, totalDays - 1));
       return;
     }
 
@@ -1152,7 +1263,7 @@ export function DailyRatesPage({ propertyId }) {
     }
 
     const inventoryEndDate =
-      days[Math.max(range - 1, 0)]?.isoDate || calendarStartDate;
+      days[Math.max(totalDays - 1, 0)]?.isoDate || calendarStartDate;
     const [data, inventoryData, inventoryBoardData, availableDatesData] =
       await Promise.all([
         fetchJson(
@@ -1162,10 +1273,10 @@ export function DailyRatesPage({ propertyId }) {
           `/properties/${encodeURIComponent(resolvedPropertyId)}/inventory-calendar?start_date=${calendarStartDate}&end_date=${inventoryEndDate}`,
         ).catch(() => ({ dates: [] })),
         fetchJson(
-          `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          `/inventory/calendar?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
         ).catch(() => ({ rows: [] })),
         fetchJson(
-          `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${range}`,
+          `/search/available-dates?property_id=${encodeURIComponent(resolvedPropertyId)}&start_date=${calendarStartDate}&days=${totalDays}`,
         ).catch(() => ({ property: null, availability: [] })),
       ]);
     const calendarByRateId = Object.fromEntries(
@@ -1193,7 +1304,7 @@ export function DailyRatesPage({ propertyId }) {
             data.rooms || [],
             data.rate_plans || [],
             calendarStartDate,
-            range,
+            totalDays,
             inventoryBoardData?.rows || [],
           );
     setInventoryDates(nextInventoryDates);
@@ -1433,6 +1544,13 @@ export function DailyRatesPage({ propertyId }) {
     if (roomPlansContext) {
       setActiveRoomPlansModal(roomPlansContext);
     }
+
+    if (autoOpenCreateRate) {
+      const nextUrl = selectedProperty
+        ? `/daily-rates?property_id=${encodeURIComponent(selectedProperty)}`
+        : "/daily-rates";
+      router.replace(nextUrl);
+    }
   }
 
   function openActiveRoomPlansModal(room) {
@@ -1642,7 +1760,7 @@ export function DailyRatesPage({ propertyId }) {
   }
 
   function shiftCalendar(daysToShift) {
-    const current = new Date(calendarStartDate);
+    const current = parseCalendarDate(calendarStartDate);
     // shift by months: positive = next month, negative = prev month
     const months = daysToShift > 0 ? 1 : -1;
     const next = new Date(
@@ -1672,8 +1790,38 @@ export function DailyRatesPage({ propertyId }) {
       return;
     }
 
+    const selectedDates = enumerateDateRange(
+      bulkForm.start_date,
+      bulkForm.end_date,
+    );
+    const selectedDateSet = new Set(selectedDates);
+
+    if (selectedDates.length > 366) {
+      setBulkError("Bulk Editor supports up to 1 year per update.");
+      return;
+    }
+
     if (!bulkForm.base_rate.trim() && !bulkForm.availability.trim()) {
       setBulkError("Enter a rate, availability, or both for the bulk update.");
+      return;
+    }
+
+    const targetRow = rows.find((row) => row.code === bulkForm.rate_id);
+    if (!targetRow) {
+      setBulkError("Selected rate plan is not loaded.");
+      return;
+    }
+
+    const visibleDates = new Set(targetRow.cells.map((cell) => cell.stay_date));
+    const queuedOnlyDates = selectedDates.filter(
+      (date) => !visibleDates.has(date),
+    );
+    const queuedOnlyCount = queuedOnlyDates.length;
+
+    if (queuedOnlyDates.length && !bulkForm.base_rate.trim()) {
+      setBulkError(
+        "Enter a base rate when updating dates outside the visible calendar window.",
+      );
       return;
     }
 
@@ -1687,10 +1835,7 @@ export function DailyRatesPage({ propertyId }) {
         return {
           ...row,
           cells: row.cells.map((cell, index) => {
-            if (
-              cell.stay_date < bulkForm.start_date ||
-              cell.stay_date > bulkForm.end_date
-            ) {
+            if (!selectedDateSet.has(cell.stay_date)) {
               return cell;
             }
 
@@ -1720,6 +1865,36 @@ export function DailyRatesPage({ propertyId }) {
         };
       }),
     );
+
+    if (queuedOnlyCount) {
+      const sampleCell = targetRow.cells[0];
+      const defaultCurrency = sampleCell?.currency || "USD";
+      const defaultTax = Number(sampleCell?.tax || 0);
+      const nextBaseRate = formatRateValue(parseRateValue(bulkForm.base_rate));
+      const nextAvailability = bulkForm.availability || "";
+
+      setQueuedCalendarUpdates((current) => {
+        const currentRateUpdates = current[bulkForm.rate_id] || {};
+        const nextRateUpdates = { ...currentRateUpdates };
+
+        queuedOnlyDates.forEach((stayDate) => {
+          nextRateUpdates[stayDate] = {
+            stay_date: stayDate,
+            currency: defaultCurrency,
+            base_rate: Number(nextBaseRate),
+            tax: defaultTax,
+            availability: nextAvailability,
+          };
+        });
+
+        return {
+          ...current,
+          [bulkForm.rate_id]: nextRateUpdates,
+        };
+      });
+
+      updatedCount += queuedOnlyCount;
+    }
 
     setBulkError("");
     setBulkSuccess(
@@ -1754,17 +1929,27 @@ export function DailyRatesPage({ propertyId }) {
           }));
 
         if (changedItems.length) {
-          groups[row.code] = changedItems;
+          groups[row.code] = Object.fromEntries(
+            changedItems.map((item) => [item.stay_date, item]),
+          );
         }
 
         return groups;
       }, {});
 
+      Object.entries(queuedCalendarUpdates).forEach(([rateId, itemsByDate]) => {
+        const existingItems = payloadsByRateId[rateId] || {};
+        payloadsByRateId[rateId] = {
+          ...existingItems,
+          ...itemsByDate,
+        };
+      });
+
       await Promise.all(
-        Object.entries(payloadsByRateId).map(([rateId, items]) =>
+        Object.entries(payloadsByRateId).map(([rateId, itemsByDate]) =>
           fetchJson(`/rate-plans/${rateId}/calendar/bulk-upsert`, {
             method: "POST",
-            body: JSON.stringify({ items }),
+            body: JSON.stringify({ items: Object.values(itemsByDate) }),
           }),
         ),
       );
@@ -1773,6 +1958,7 @@ export function DailyRatesPage({ propertyId }) {
         `Published ${pendingChanges} calendar change${pendingChanges === 1 ? "" : "s"}.`,
       );
 
+      setQueuedCalendarUpdates({});
       await refreshDailyRates(selectedProperty || propertyId || "");
     } catch (error) {
       setPublishError(error.message || "Could not publish calendar changes.");
@@ -1946,10 +2132,10 @@ export function DailyRatesPage({ propertyId }) {
                 </span>
                 Revenue Control Desk
               </div>
-              <h2 className="text-3xl font-bold tracking-tight">
+              <h2 className="text-xl font-bold tracking-tight">
                 Daily Rates &amp; Yield
               </h2>
-              <p className="max-w-3xl text-sm text-slate-500">
+              <p className="max-w-xl text-sm text-slate-500">
                 This screen now consumes a property-level FastAPI daily-rates
                 feed and shows all rooms with their linked rate plans.
               </p>
@@ -2109,7 +2295,10 @@ export function DailyRatesPage({ propertyId }) {
         </div> */}
 
             <div className="grid gap-4 md:grid-cols-2 md:items-start">
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                style={softLightGlassCardStyle}
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-bold text-slate-900">
@@ -2120,7 +2309,10 @@ export function DailyRatesPage({ propertyId }) {
                       receive rate plans.
                     </p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                  <div
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+                    style={softLightGlassInsetStyle}
+                  >
                     {roomList.length} rooms
                   </div>
                 </div>
@@ -2134,6 +2326,7 @@ export function DailyRatesPage({ propertyId }) {
                     <div
                       key={room.room_id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3"
+                      style={softLightGlassInsetStyle}
                     >
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-slate-900">
@@ -2175,14 +2368,52 @@ export function DailyRatesPage({ propertyId }) {
                   ) : null}
                 </div>
               </article>
-              <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                style={softLightGlassCardStyle}
+              >
                 <h3 className="text-base font-bold text-slate-900">
                   Bulk Editor
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Queue a date-range update for one rate plan, then publish all
-                  pending changes.
+                  pending changes. One bulk action can cover up to 1 year.
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[
+                    { label: "30 Days", days: 30 },
+                    { label: "90 Days", days: 90 },
+                    { label: "180 Days", days: 180 },
+                    { label: "1 Year", days: 365 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        const startDate =
+                          bulkForm.start_date ||
+                          new Date().toISOString().slice(0, 10);
+                        const endDate = new Date(`${startDate}T00:00:00`);
+                        endDate.setDate(endDate.getDate() + preset.days - 1);
+                        setBulkForm((current) => ({
+                          ...current,
+                          start_date: startDate,
+                          end_date: toIsoDateFromParts(
+                            endDate.getFullYear(),
+                            endDate.getMonth(),
+                            endDate.getDate(),
+                          ),
+                        }));
+                        setBulkError("");
+                        setBulkSuccess("");
+                      }}
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 transition-colors hover:border-primary hover:text-primary"
+                      style={softLightGlassInsetStyle}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
                 <form onSubmit={applyBulkChanges} className="mt-4 space-y-3">
                   <label className="block">
                     <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -2309,6 +2540,7 @@ export function DailyRatesPage({ propertyId }) {
                 <article
                   key={card.title}
                   className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                  style={softLightGlassCardStyle}
                 >
                   <h3 className="text-base font-bold text-slate-900">
                     {card.title}
@@ -2318,6 +2550,7 @@ export function DailyRatesPage({ propertyId }) {
                       <div
                         key={item}
                         className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                        style={softLightGlassInsetStyle}
                       >
                         {item}
                       </div>
@@ -2460,12 +2693,14 @@ export function DailyRatesPage({ propertyId }) {
                       className="sticky left-0 z-40 flex min-h-[76px] items-center px-5 py-4 text-left"
                       style={{
                         borderRight: "1px solid rgba(148, 163, 184, 0.16)",
-                        background: matrixThemeStyles.headerRow.background,
+                        background: isSoftLightTheme
+                          ? "rgb(154, 73, 137)"
+                          : matrixThemeStyles.headerRow.background,
                         boxShadow: "2px 0 10px rgba(15,23,42,0.08)",
                       }}
                     >
                       <p
-                        className={`text-xs font-bold uppercase tracking-wider ${matrixThemeStyles.headerRow.labelClass}`}
+                        className={`text-sm font-black uppercase tracking-[0.18em] ${isSoftLightTheme ? "text-white" : matrixThemeStyles.headerRow.labelClass}`}
                       >
                         Rate Plan
                       </p>
@@ -2958,8 +3193,11 @@ export function DailyRatesPage({ propertyId }) {
             </div>
           </section>
           {showRatePlanModal ? (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 pt-20 backdrop-blur-sm">
+              <div
+                className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
+                style={{ background: "var(--popup-card-bg)" }}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -2990,7 +3228,7 @@ export function DailyRatesPage({ propertyId }) {
                   onSubmit={handleSubmitRatePlan}
                   className="mt-6 space-y-4"
                 >
-                  <div className="grid gap-4 md:grid-cols-2">
+                  {/* <div className="grid gap-4 md:grid-cols-2">
                     <label className="block">
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                         Room ID
@@ -3016,13 +3254,19 @@ export function DailyRatesPage({ propertyId }) {
                         className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 outline-none"
                       />
                     </label>
-                  </div>
+                  </div> */}
                   {loadingRatePlanDetails ? (
-                    <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600">
+                    <p
+                      className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-600"
+                      style={softLightGlassInsetStyle}
+                    >
                       Loading full rate plan details...
                     </p>
                   ) : null}
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60">
+                  <div
+                    className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/60"
+                    style={softLightGlassCardStyle}
+                  >
                     {(() => {
                       const roomSummary = getRoomSummarySource(
                         selectedRoomSummary,
@@ -3092,7 +3336,10 @@ export function DailyRatesPage({ propertyId }) {
                       );
                     })()}
                   </div>
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div
+                    className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                    style={softLightGlassCardStyle}
+                  >
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                       Rate Details
                     </p>
@@ -3324,7 +3571,10 @@ export function DailyRatesPage({ propertyId }) {
                             .join(" • ")}
                         </p>
                       </div>
-                      <div className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm">
+                      <div
+                        className="w-full rounded-2xl bg-white px-4 py-3 text-right shadow-sm md:max-w-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Subtotal Price
                         </p>
@@ -3341,7 +3591,10 @@ export function DailyRatesPage({ propertyId }) {
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div
+                        className="rounded-2xl bg-white p-4 shadow-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Price Breakdown
                         </p>
@@ -3403,7 +3656,10 @@ export function DailyRatesPage({ propertyId }) {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div
+                        className="rounded-2xl bg-white p-4 shadow-sm"
+                        style={softLightGlassInsetStyle}
+                      >
                         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
                           Flags & Policy
                         </p>
@@ -3482,7 +3738,10 @@ export function DailyRatesPage({ propertyId }) {
           ) : null}
           {activeRoomPlansModal ? (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-              <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+              <div
+                className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl"
+                style={{ background: "var(--popup-card-bg)" }}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -3515,6 +3774,7 @@ export function DailyRatesPage({ propertyId }) {
                           openEditRatePlanModal(activeRoomPlansModal, plan)
                         }
                         className="block w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition-colors hover:border-slate-300 hover:bg-white"
+                        style={softLightGlassCardStyle}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
@@ -3533,7 +3793,10 @@ export function DailyRatesPage({ propertyId }) {
                         </div>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Rate ID
                             </p>
@@ -3541,7 +3804,10 @@ export function DailyRatesPage({ propertyId }) {
                               {plan.code}
                             </p>
                           </div>
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Base Rate
                             </p>
@@ -3554,7 +3820,10 @@ export function DailyRatesPage({ propertyId }) {
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Occupancy</p>
                       <p className="mt-1 text-sm font-bold text-slate-900">{plan.occupancy}</p>
                     </div> */}
-                          <div className="rounded-xl bg-white px-3 py-3">
+                          <div
+                            className="rounded-xl bg-white px-3 py-3"
+                            style={softLightGlassInsetStyle}
+                          >
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                               Flags
                             </p>

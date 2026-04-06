@@ -1559,11 +1559,14 @@ export function InventoryPage({ propertyId }) {
                               );
                             const isPastDay =
                               new Date(`${day.isoDate}T00:00:00`).getTime() <
-                              new Date(`${toIsoDate(new Date())}T00:00:00`).getTime();
+                              new Date(
+                                `${toIsoDate(new Date())}T00:00:00`,
+                              ).getTime();
                             const isSelectedCell =
                               Boolean(dragState) &&
                               dragState.targetRoomId === room.room_id &&
-                              dayIndex >= Number(dragState.previewLeftDays || 0) &&
+                              dayIndex >=
+                                Number(dragState.previewLeftDays || 0) &&
                               dayIndex <=
                                 Number(dragState.previewLeftDays || 0) +
                                   Number(dragState.durationDays || 0);
@@ -1782,7 +1785,10 @@ export function InventoryPage({ propertyId }) {
 
       {selectedBooking ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <div
+            className="w-full max-w-xl rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            style={{ background: "var(--popup-card-bg)" }}
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
@@ -1813,7 +1819,7 @@ export function InventoryPage({ propertyId }) {
               ) : null}
 
               <div className="space-y-5">
-                <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/60">
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
                       Basic Info
@@ -1875,7 +1881,7 @@ export function InventoryPage({ propertyId }) {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/70">
+                <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900/70">
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
                       Booking Change

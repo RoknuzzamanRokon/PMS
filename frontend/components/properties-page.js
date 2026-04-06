@@ -102,11 +102,19 @@ function comparePropertiesBySort(left, right, sortValue) {
   }
 
   if (sortValue === "name-asc") {
-    return compareTextValues(left.name || left.property_id, right.name || right.property_id, "asc");
+    return compareTextValues(
+      left.name || left.property_id,
+      right.name || right.property_id,
+      "asc",
+    );
   }
 
   if (sortValue === "name-desc") {
-    return compareTextValues(left.name || left.property_id, right.name || right.property_id, "desc");
+    return compareTextValues(
+      left.name || left.property_id,
+      right.name || right.property_id,
+      "desc",
+    );
   }
 
   if (sortValue === "created-asc") {
@@ -124,7 +132,9 @@ export function PropertiesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
   const [propertySort, setPropertySort] = useState("created-desc");
-  const [propertySortHistory, setPropertySortHistory] = useState(["created-desc"]);
+  const [propertySortHistory, setPropertySortHistory] = useState([
+    "created-desc",
+  ]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCreatePropertyModal, setShowCreatePropertyModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -138,65 +148,61 @@ export function PropertiesPage() {
   const [propertyRooms, setPropertyRooms] = useState([]);
   const [loadingPropertyRooms, setLoadingPropertyRooms] = useState(false);
   const [propertyRoomsError, setPropertyRoomsError] = useState("");
-  const [showRatePlansSummaryModal, setShowRatePlansSummaryModal] = useState(false);
+  const [showRatePlansSummaryModal, setShowRatePlansSummaryModal] =
+    useState(false);
   const isLightTheme = theme === "light";
   const isSoftLightTheme = theme === "soft-light";
   const isDarkTheme = theme === "dark";
-  const outlinedPrimaryButtonClassName =
-    [
-      "inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors",
-      isLightTheme
-        ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
-        : isSoftLightTheme
-          ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
-          : isDarkTheme
-            ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
-            : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
-    ].join(" ");
-  const outlinedPrimaryActionButtonClassName =
-    [
-      "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-      isLightTheme
-        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
-        : isSoftLightTheme
-          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
-          : isDarkTheme
-            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
-            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
-    ].join(" ");
-  const outlinedPrimaryIconButtonClassName =
-    [
-      "rounded-full border p-2 transition-colors",
-      isLightTheme
-        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
-        : isSoftLightTheme
-          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
-          : isDarkTheme
-            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
-            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
-    ].join(" ");
-  const outlinedPrimarySecondaryButtonClassName =
-    [
-      "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
-      isLightTheme
-        ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
-        : isSoftLightTheme
-          ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
-          : isDarkTheme
-            ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
-            : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
-    ].join(" ");
-  const outlinedPrimarySubmitButtonClassName =
-    [
-      "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors disabled:opacity-70",
-      isLightTheme
-        ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
-        : isSoftLightTheme
-          ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
-          : isDarkTheme
-            ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
-            : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
-    ].join(" ");
+  const outlinedPrimaryButtonClassName = [
+    "inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-colors",
+    isLightTheme
+      ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
+        : isDarkTheme
+          ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
+          : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
+  ].join(" ");
+  const outlinedPrimaryActionButtonClassName = [
+    "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+    isLightTheme
+      ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+        : isDarkTheme
+          ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+          : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+  ].join(" ");
+  const outlinedPrimaryIconButtonClassName = [
+    "rounded-full border p-2 transition-colors",
+    isLightTheme
+      ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+        : isDarkTheme
+          ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+          : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+  ].join(" ");
+  const outlinedPrimarySecondaryButtonClassName = [
+    "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+    isLightTheme
+      ? "border-slate-300 bg-white/45 text-slate-700 hover:border-slate-400 hover:bg-white/70"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1] bg-white/30 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/45"
+        : isDarkTheme
+          ? "border-slate-600 bg-slate-900/30 text-slate-200 hover:border-slate-500 hover:bg-slate-800/50"
+          : "border-slate-600 bg-slate-950/30 text-slate-100 hover:border-slate-500 hover:bg-slate-900/50",
+  ].join(" ");
+  const outlinedPrimarySubmitButtonClassName = [
+    "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold transition-colors disabled:opacity-70",
+    isLightTheme
+      ? "border-slate-300 bg-white/55 text-slate-700 hover:border-slate-400 hover:bg-white/75"
+      : isSoftLightTheme
+        ? "border-[#d9b4d1] bg-white/35 text-[#7a3d6c] hover:border-[#c797bd] hover:bg-white/50"
+        : isDarkTheme
+          ? "border-slate-600 bg-slate-900/35 text-slate-200 hover:border-slate-500 hover:bg-slate-800/55"
+          : "border-slate-600 bg-slate-950/35 text-slate-100 hover:border-slate-500 hover:bg-slate-900/55",
+  ].join(" ");
 
   async function loadProperties(showRefreshing = false) {
     if (showRefreshing) {
@@ -230,7 +236,12 @@ export function PropertiesPage() {
     }
 
     return properties.filter((property) =>
-      [property.property_id, property.name, property.name_lang, property.property_type]
+      [
+        property.property_id,
+        property.name,
+        property.name_lang,
+        property.property_type,
+      ]
         .filter(Boolean)
         .some((value) => value.toLowerCase().includes(query)),
     );
@@ -240,7 +251,9 @@ export function PropertiesPage() {
     const items = [...filteredProperties];
 
     propertySortHistory.forEach((sortValue) => {
-      items.sort((left, right) => comparePropertiesBySort(left, right, sortValue));
+      items.sort((left, right) =>
+        comparePropertiesBySort(left, right, sortValue),
+      );
     });
 
     return items;
@@ -269,7 +282,12 @@ export function PropertiesPage() {
 
   function renderSortHeader(label, field) {
     const direction = getPropertySortDirection(propertySort, field);
-    const icon = direction === "asc" ? "north" : direction === "desc" ? "south" : "unfold_more";
+    const icon =
+      direction === "asc"
+        ? "north"
+        : direction === "desc"
+          ? "south"
+          : "unfold_more";
 
     return (
       <button
@@ -284,7 +302,10 @@ export function PropertiesPage() {
   }
 
   const propertyTypeCount = useMemo(
-    () => new Set(properties.map((property) => property.property_type).filter(Boolean)).size,
+    () =>
+      new Set(
+        properties.map((property) => property.property_type).filter(Boolean),
+      ).size,
     [properties],
   );
 
@@ -338,10 +359,14 @@ export function PropertiesPage() {
     setSelectedPropertyDetail(null);
 
     try {
-      const detail = await fetchJson(`/properties/${encodeURIComponent(propertyId)}`);
+      const detail = await fetchJson(
+        `/properties/${encodeURIComponent(propertyId)}`,
+      );
       setSelectedPropertyDetail(detail);
     } catch (error) {
-      setPropertyDetailError(error.message || "Could not load property details.");
+      setPropertyDetailError(
+        error.message || "Could not load property details.",
+      );
     } finally {
       setLoadingPropertyDetail(false);
     }
@@ -368,7 +393,9 @@ export function PropertiesPage() {
     setPropertyRooms([]);
 
     try {
-      const rooms = await fetchJson(`/rooms?property_id=${encodeURIComponent(propertyId)}`);
+      const rooms = await fetchJson(
+        `/rooms?property_id=${encodeURIComponent(propertyId)}`,
+      );
       setPropertyRooms(Array.isArray(rooms) ? rooms : []);
     } catch (error) {
       setPropertyRoomsError(error.message || "Could not load room summary.");
@@ -411,7 +438,10 @@ export function PropertiesPage() {
       return 0;
     }
 
-    const total = propertyRooms.reduce((sum, room) => sum + Number(room.base_rate || 0), 0);
+    const total = propertyRooms.reduce(
+      (sum, room) => sum + Number(room.base_rate || 0),
+      0,
+    );
     return total / propertyRooms.length;
   }, [propertyRooms]);
 
@@ -429,14 +459,18 @@ export function PropertiesPage() {
   );
 
   const propertyRatePlanSummary = useMemo(() => {
-    const activeCount = propertyRatePlans.filter((plan) => Boolean(plan.status)).length;
+    const activeCount = propertyRatePlans.filter((plan) =>
+      Boolean(plan.status),
+    ).length;
     const inactiveCount = propertyRatePlans.length - activeCount;
     const supplierCount = new Set(
       propertyRatePlans.map((plan) => plan.supplier_name).filter(Boolean),
     ).size;
     const averageCurrentRate = propertyRatePlans.length
-      ? propertyRatePlans.reduce((sum, plan) => sum + Number(plan.current_rate || 0), 0) /
-        propertyRatePlans.length
+      ? propertyRatePlans.reduce(
+          (sum, plan) => sum + Number(plan.current_rate || 0),
+          0,
+        ) / propertyRatePlans.length
       : 0;
 
     return {
@@ -466,10 +500,10 @@ export function PropertiesPage() {
             </span>
             Property Workspace
           </div>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-xl font-bold tracking-tight">
             Property Management
           </h2>
-          <p className="max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+          <p className="max-w-xl text-sm text-slate-500 dark:text-slate-400">
             Manage the property list and jump into property actions for rooms,
             inventory, and daily rates from one place.
           </p>
@@ -503,7 +537,9 @@ export function PropertiesPage() {
               onClick={openCreatePropertyModal}
               className={outlinedPrimaryButtonClassName}
             >
-              <span className="material-symbols-outlined text-base">add_business</span>
+              <span className="material-symbols-outlined text-base">
+                add_business
+              </span>
               Create Property
             </button>
             <label className="relative min-w-[260px] flex-1">
@@ -670,7 +706,7 @@ export function PropertiesPage() {
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-800/70">
-            <span className="material-symbols-outlined text-3xl text-slate-400">
+            <span className="material-symbols-outlined text-xl text-slate-400">
               holiday_village
             </span>
             <p className="mt-3 text-base font-semibold text-slate-900 dark:text-slate-100">
@@ -689,7 +725,10 @@ export function PropertiesPage() {
 
       {showCreatePropertyModal ? (
         <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+          <div
+            className="w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            style={{ background: "var(--popup-card-bg)" }}
+          >
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-700">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -786,7 +825,9 @@ export function PropertiesPage() {
                   disabled={submitting}
                   className={outlinedPrimarySubmitButtonClassName}
                 >
-                  <span className="material-symbols-outlined text-base">save</span>
+                  <span className="material-symbols-outlined text-base">
+                    save
+                  </span>
                   {submitting ? "Creating..." : "Save Property"}
                 </button>
               </div>
@@ -797,7 +838,10 @@ export function PropertiesPage() {
 
       {showDetailsModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+          <div
+            className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95"
+            style={{ background: "var(--popup-card-bg)" }}
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -1145,7 +1189,10 @@ export function PropertiesPage() {
 
       {showRoomsSummaryModal ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+          <div
+            className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95"
+            style={{ background: "var(--popup-card-bg)" }}
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -1292,9 +1339,13 @@ export function PropertiesPage() {
                             <div
                               className="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-900 shadow-sm"
                               style={
-                                String(room.room_status || "PROCESSING").toUpperCase() === "LIVE"
+                                String(
+                                  room.room_status || "PROCESSING",
+                                ).toUpperCase() === "LIVE"
                                   ? { backgroundColor: "#3adb12" }
-                                  : String(room.room_status || "PROCESSING").toUpperCase() === "PROCESSING"
+                                  : String(
+                                        room.room_status || "PROCESSING",
+                                      ).toUpperCase() === "PROCESSING"
                                     ? { backgroundColor: "#e8e22a" }
                                     : { backgroundColor: "#e2e8f0" }
                               }
@@ -1355,7 +1406,10 @@ export function PropertiesPage() {
 
       {showRatePlansSummaryModal ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95">
+          <div
+            className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900/95"
+            style={{ background: "var(--popup-card-bg)" }}
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">

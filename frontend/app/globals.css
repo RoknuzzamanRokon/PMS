@@ -14,6 +14,7 @@
   --muted-text: #64748b;
   --soft-surface: #f8fafc;
   --soft-border: #e2e8f0;
+  --popup-card-bg: #ffffff;
   --scroll-track: #f1f5f9;
   --scroll-thumb: #cbd5e1;
 }
@@ -32,6 +33,7 @@
   --muted-text: #8b6f5d;
   --soft-surface: rgba(255, 246, 236, 0.94);
   --soft-border: rgba(232, 212, 190, 0.9);
+  --popup-card-bg: #F4EDF1;
   --scroll-track: #f7ede4;
   --scroll-thumb: #d8c0a7;
 }
@@ -49,6 +51,7 @@
   --muted-text: #94a3b8;
   --soft-surface: rgba(15, 23, 42, 0.7);
   --soft-border: rgba(51, 65, 85, 0.9);
+  --popup-card-bg: #0f172a;
   --scroll-track: #0f172a;
   --scroll-thumb: #334155;
 }
@@ -68,6 +71,7 @@
   --muted-text: #a9b7d0;
   --soft-surface: rgba(14, 20, 43, 0.78);
   --soft-border: rgba(71, 85, 105, 0.95);
+  --popup-card-bg: rgba(8, 12, 30, 0.95);
   --scroll-track: #050816;
   --scroll-thumb: #3b4a6a;
 }

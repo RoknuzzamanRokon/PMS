@@ -48,7 +48,10 @@
       }
       .rates-grid {
         display: grid;
-        grid-template-columns: 180px repeat(var(--rate-days, 7), minmax(120px, 1fr));
+        grid-template-columns: 180px repeat(
+            var(--rate-days, 7),
+            minmax(120px, 1fr)
+          );
       }
       .custom-scrollbar::-webkit-scrollbar {
         height: 8px;
@@ -219,7 +222,7 @@
           <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
             <div class="flex flex-col gap-1">
               <h2
-                class="text-slate-900 dark:text-slate-100 text-3xl font-bold tracking-tight"
+                class="text-slate-900 dark:text-slate-100 text-xl font-bold tracking-tight"
               >
                 Daily Rates &amp; Yield
               </h2>
@@ -291,7 +294,9 @@
               </button>
             </div>
             <div class="ml-auto flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-widest text-slate-400">
+              <span
+                class="text-xs font-bold uppercase tracking-widest text-slate-400"
+              >
                 View
               </span>
               <div
@@ -602,7 +607,8 @@
             row.cells.slice(0, range).forEach((cell, index) => {
               const slot = document.createElement("div");
               const weekend =
-                days[index].shortDay === "Sat" || days[index].shortDay === "Sun";
+                days[index].shortDay === "Sat" ||
+                days[index].shortDay === "Sun";
               const isToday = index === todayIndex;
               slot.className = [
                 "p-2",

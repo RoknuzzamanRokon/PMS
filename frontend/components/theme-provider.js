@@ -17,11 +17,16 @@ function applyTheme(theme) {
     return "light";
   }
 
-  const resolvedTheme = theme === "system" ? "light" : theme;
+  const resolvedTheme = theme === "system" || !theme ? "light" : theme;
   const root = document.documentElement;
   const isDarkFamily = resolvedTheme === "dark" || resolvedTheme === "midnight";
 
-  root.classList.toggle("dark", isDarkFamily);
+  // Explicitly add or remove — never rely on toggle with OS state
+  if (isDarkFamily) {
+    root.classList.add("dark");
+  } else {
+    root.classList.remove("dark");
+  }
   root.dataset.theme = resolvedTheme;
   root.style.colorScheme = isDarkFamily ? "dark" : "light";
 
@@ -34,9 +39,21 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem(storageKey) || "light";
-    const normalizedTheme = savedTheme === "system" ? "light" : savedTheme;
+    const normalizedTheme =
+      savedTheme === "system" || !savedTheme ? "light" : savedTheme;
     setThemeState(normalizedTheme);
     setResolvedTheme(applyTheme(normalizedTheme));
+
+    // Only respond to OS changes if user hasn't explicitly picked a theme
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    function handleOsChange() {
+      const current = window.localStorage.getItem(storageKey);
+      // If user has an explicit saved theme, ignore OS changes
+      if (current && current !== "system") return;
+      applyTheme("light");
+    }
+    mediaQuery.addEventListener("change", handleOsChange);
+    return () => mediaQuery.removeEventListener("change", handleOsChange);
   }, []);
 
   function setTheme(nextTheme) {
@@ -59,7 +76,9 @@ export function ThemeProvider({ children }) {
     [resolvedTheme, theme],
   );
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 export function useTheme() {

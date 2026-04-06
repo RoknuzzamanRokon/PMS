@@ -80,20 +80,11 @@ export function DotGrid({
 
     const getDarkMode = () => {
       if (typeof document === "undefined") return false;
-
-      return (
-        document.documentElement.classList.contains("dark") ||
-        document.body.classList.contains("dark") ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
+      // Only check the site's own dark class — never the OS preference
+      return document.documentElement.classList.contains("dark");
     };
 
     setIsDark(getDarkMode());
-
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => setIsDark(getDarkMode());
-
-    media.addEventListener?.("change", onChange);
 
     const observer = new MutationObserver(() => {
       setIsDark(getDarkMode());
@@ -110,7 +101,6 @@ export function DotGrid({
     });
 
     return () => {
-      media.removeEventListener?.("change", onChange);
       observer.disconnect();
     };
   }, [forceDark]);
@@ -435,7 +425,7 @@ export function DotGrid({
     <section
       className={`relative flex h-full w-full items-center justify-center overflow-hidden p-4 ${className}`}
       style={{
-        background: backgroundStyle,
+        background: "transparent",
         ...style,
       }}
     >

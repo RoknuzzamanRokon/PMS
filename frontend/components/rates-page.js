@@ -670,7 +670,6 @@ export function DailyRatesPage({
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
   const matrixRoomColumnWidth = 200;
-  const matrixDayColumnWidth = 72;
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
   const [rateMatrixSearch, setRateMatrixSearch] = useState("");
@@ -833,6 +832,11 @@ export function DailyRatesPage({
     [calendarStartDate, totalDays],
   );
   const visibleDays = days;
+  const matrixGridTemplate = useMemo(
+    () =>
+      `clamp(168px, 18vw, ${matrixRoomColumnWidth}px) repeat(${visibleDays.length}, minmax(0, 1fr))`,
+    [visibleDays.length],
+  );
 
   useEffect(() => {
     setSummaryPopover(null);
@@ -2672,18 +2676,15 @@ export function DailyRatesPage({
                 onMouseMove={handleMatrixMouseMove}
                 onMouseUp={handleMatrixMouseUp}
                 onMouseLeave={handleMatrixMouseUp}
-                className="custom-scrollbar cursor-grab select-none overflow-x-auto overflow-y-visible active:cursor-grabbing"
+                className="select-none overflow-x-hidden overflow-y-visible"
               >
                 <div
-                  className="min-w-max overflow-visible"
-                  style={{
-                    width: `${matrixRoomColumnWidth + visibleDays.length * matrixDayColumnWidth}px`,
-                  }}
+                  className="w-full overflow-visible"
                 >
                   <div
                     className="sticky top-0 z-30 grid"
                     style={{
-                      gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                      gridTemplateColumns: matrixGridTemplate,
                       background: matrixThemeStyles.headerRow.background,
                       borderBottom: matrixThemeStyles.headerRow.borderBottom,
                       backdropFilter: "blur(14px)",
@@ -2716,7 +2717,7 @@ export function DailyRatesPage({
                           type="button"
                           key={day.isoDate}
                           onClick={() => setSelectedDateIndex(index)}
-                          className="min-w-[48px] p-2 text-center"
+                          className="w-full p-2 text-center"
                           style={{
                             borderRight: "1px solid rgba(148, 163, 184, 0.10)",
                             backgroundColor: isSelected
@@ -2766,7 +2767,7 @@ export function DailyRatesPage({
                   <div
                     className="sticky top-[76px] z-20 grid"
                     style={{
-                      gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                      gridTemplateColumns: matrixGridTemplate,
                       background: matrixThemeStyles.subHeader.background,
                       borderBottom: "1px solid rgba(148, 163, 184, 0.14)",
                       backdropFilter: "blur(12px)",
@@ -3133,7 +3134,7 @@ export function DailyRatesPage({
                       key={row.code}
                       className="grid transition-colors"
                       style={{
-                        gridTemplateColumns: `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+                        gridTemplateColumns: matrixGridTemplate,
                       }}
                     >
                       <div
@@ -3150,35 +3151,44 @@ export function DailyRatesPage({
                           WebkitBackdropFilter: "blur(16px) saturate(140%)",
                         }}
                       >
-                        <span
-                          className={`font-headline text-[15px] font-semibold leading-tight ${matrixThemeStyles.firstColumn.titleClass}`}
-                          title={row.title}
-                        >
-                          {String(row.title).slice(0, 18)}
-                        </span>
+                        <div className="flex items-start justify-between gap-2">
+                          <span
+                            className={`min-w-0 flex-1 font-headline text-[15px] font-semibold leading-tight ${matrixThemeStyles.firstColumn.titleClass}`}
+                            title={row.title}
+                          >
+                            {String(row.title).slice(0, 18)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRatePlan(row)}
+                            disabled={
+                              !apiConnected ||
+                              publishing ||
+                              deletingRateId === row.code
+                            }
+                            title={
+                              deletingRateId === row.code
+                                ? "Removing..."
+                                : "Remove"
+                            }
+                            aria-label={
+                              deletingRateId === row.code
+                                ? "Removing..."
+                                : "Remove"
+                            }
+                            className="inline-flex size-6 shrink-0 items-center justify-center rounded border border-rose-200 bg-rose-50 text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-400"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              delete
+                            </span>
+                          </button>
+                        </div>
                         <span
                           className={`mt-0.5 text-[11px] ${matrixThemeStyles.subHeader.subtextClass}`}
                           title={row.roomLabel}
                         >
                           {String(row.roomLabel || row.code).slice(0, 22)}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRatePlan(row)}
-                          disabled={
-                            !apiConnected ||
-                            publishing ||
-                            deletingRateId === row.code
-                          }
-                          className="mt-2 inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-800/40 dark:bg-rose-950/30 dark:text-rose-400"
-                        >
-                          <span className="material-symbols-outlined text-[12px]">
-                            delete
-                          </span>
-                          {deletingRateId === row.code
-                            ? "Removing..."
-                            : "Remove"}
-                        </button>
                       </div>
 
                       {row.cells

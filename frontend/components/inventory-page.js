@@ -6,9 +6,9 @@ import { PmsShell } from "./pms-shell";
 import { useTheme } from "./theme-provider";
 import { fetchJson } from "../lib/api";
 
-const dayColumnWidth = 72;
+const totalGridWidth = 1608; // fixed width: roomColumnWidth + 30 * 48
 const visibleDayCount = 20;
-const roomColumnWidth = 200;
+const roomColumnWidth = 168;
 const visibleRoomCount = 7;
 
 const bookingToneClasses = {
@@ -246,6 +246,9 @@ export function InventoryPage({ propertyId }) {
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
+  const dayColumnWidth = Math.floor(
+    (totalGridWidth - roomColumnWidth) / (calendar.days || 30),
+  );
   const [apiConnected, setApiConnected] = useState(false);
   const [savingBookingId, setSavingBookingId] = useState("");
   const [calendarError, setCalendarError] = useState("");
@@ -264,9 +267,24 @@ export function InventoryPage({ propertyId }) {
   const [loadingBookingDetails, setLoadingBookingDetails] = useState(false);
   const [availableRateDateKeys, setAvailableRateDateKeys] = useState(new Set());
   const [roomSort, setRoomSort] = useState("updated-desc");
-  const monthStartDate = useMemo(() => getMonthStartIsoDate(), []);
-  const monthDayCount = useMemo(() => getDaysInMonth(), []);
+  const [monthStartDate, setMonthStartDate] = useState(() =>
+    getMonthStartIsoDate(),
+  );
+  const monthDayCount = useMemo(
+    () => getDaysInMonth(monthStartDate),
+    [monthStartDate],
+  );
   const calendarScrollerRef = useRef(null);
+
+  function shiftCalendarMonth(direction) {
+    const currentDate = new Date(`${monthStartDate}T00:00:00`);
+    currentDate.setMonth(currentDate.getMonth() + direction);
+    setMonthStartDate(
+      getMonthStartIsoDate(
+        `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-01`,
+      ),
+    );
+  }
 
   async function loadCalendar() {
     if (!selectedPropertyId) {
@@ -1236,83 +1254,90 @@ export function InventoryPage({ propertyId }) {
           </div>
         </section>
       ) : (
-        <div
-          className="flex min-h-[calc(100vh-108px)] flex-col overflow-hidden"
+        <section
+          className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border"
           style={{
-            background: "transparent",
+            borderColor: "var(--soft-border)",
+            background:
+              "color-mix(in srgb, var(--panel-bg, rgba(255,255,255,0.94)) 92%, transparent)",
+            boxShadow: "0 18px 42px -30px rgba(15,23,42,0.35)",
           }}
         >
-          {/* <div className="flex flex-wrap items-center justify-between gap-4"> */}
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              Inventory Calendar
-            </h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              Real bookings by room from `/api/v1/inventory/calendar` for{" "}
-              {calendar.property.name}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+          <div
+            className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-4"
+            style={{
+              borderColor: "var(--soft-border)",
+              background:
+                "color-mix(in srgb, var(--panel-bg, rgba(255,255,255,0.94)) 82%, transparent)",
+            }}
+          >
+            <div className="flex min-w-0 flex-col">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                Inventory Calendar
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Real bookings by room from `/api/v1/inventory/calendar` for{" "}
+                {calendar.property.name}
+              </p>
+            </div>
+            <div
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 shadow-sm"
+              style={{
+                borderColor: "var(--soft-border)",
+                background:
+                  "color-mix(in srgb, var(--panel-bg) 90%, transparent)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => shiftCalendarMonth(-1)}
+                className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <span className="material-symbols-outlined text-base">
+                  chevron_left
+                </span>
+              </button>
+              <span className="min-w-[120px] text-center text-sm font-bold text-slate-900 dark:text-slate-100">
+                {new Date(`${monthStartDate}T00:00:00`).toLocaleDateString(
+                  "en-US",
+                  { month: "long", year: "numeric" },
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => shiftCalendarMonth(1)}
+                className="rounded-lg px-2 py-1 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <span className="material-symbols-outlined text-base">
+                  chevron_right
+                </span>
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/properties"
                 className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-slate-500 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
+                style={softLightGlassInsetStyle}
               >
                 <span className="material-symbols-outlined text-base">
                   arrow_back
                 </span>
-                Back to Properties
+                Back
               </Link>
-              <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <span className="material-symbols-outlined text-base">
-                  pin_drop
-                </span>
-                Viewing {calendar.property.name}
-              </div>
-            </div>
-          </div>
-          <div
-            className={[
-              "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium",
-              apiConnected
-                ? "border border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                : "border border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900/40 dark:text-stone-200",
-            ].join(" ")}
-          >
-            <span className="material-symbols-outlined text-base">
-              {apiConnected ? "view_timeline" : "cloud_off"}
-            </span>
-            {apiConnected ? "Inventory API Live" : "Using Local Fallback"}
-          </div>
-          {/* </div> */}
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            {[
-              ["filter_alt", "Property:", calendar.property.property_id],
-              ["calendar_month", "Start:", calendar.start_date],
-              ["date_range", "View:", `${calendar.days} days`],
-              ["hotel", "Rows:", `${roomRows.length}`],
-              [
-                "link",
-                "Endpoint:",
-                `/inventory/calendar?property_id=${selectedPropertyId}&start_date=${monthStartDate}&days=${monthDayCount}`,
-              ],
-            ].map(([icon, label, value]) => (
               <div
-                key={label}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900"
+                className={[
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium",
+                  apiConnected
+                    ? "border border-slate-300 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                    : "border border-stone-300 bg-stone-100 text-stone-700 dark:border-stone-700 dark:bg-stone-900/40 dark:text-stone-200",
+                ].join(" ")}
                 style={softLightGlassInsetStyle}
               >
-                <span className="material-symbols-outlined text-lg text-slate-400">
-                  {icon}
+                <span className="material-symbols-outlined text-base">
+                  {apiConnected ? "view_timeline" : "cloud_off"}
                 </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                  {label}
-                </span>
-                <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                  {value}
-                </span>
+                {apiConnected ? "Inventory API Live" : "Using Local Fallback"}
               </div>
-            ))}
-            <div className="ml-auto flex items-center gap-6">
               <label
                 className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white/70 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60"
                 style={softLightGlassInsetStyle}
@@ -1354,19 +1379,13 @@ export function InventoryPage({ propertyId }) {
             </div>
           </div>
 
-          <div
-            className="flex-1 overflow-y-auto py-6"
-            style={{
-              background: "transparent",
-            }}
-          >
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <div
               ref={calendarScrollerRef}
               onWheel={handleCalendarWheel}
-              className="custom-scrollbar relative w-full overflow-x-auto overflow-y-visible pr-0"
+              className="custom-scrollbar relative w-full overflow-x-auto overflow-y-visible"
               style={{
                 maxWidth: "100%",
-                paddingRight: 0,
                 maxHeight: `${visibleRoomWindowHeight}px`,
                 overflowY: "auto",
               }}
@@ -1374,7 +1393,7 @@ export function InventoryPage({ propertyId }) {
               <div
                 className="min-w-max overflow-visible rounded-xl border shadow-2xl"
                 style={{
-                  width: `${roomColumnWidth + calendar.days * dayColumnWidth}px`,
+                  width: `${totalGridWidth}px`,
                   borderColor: "var(--soft-border)",
 
                   background: "rgba(255, 255, 255, 0.01)", // almost invisible
@@ -1396,7 +1415,7 @@ export function InventoryPage({ propertyId }) {
                   }}
                 >
                   <div
-                    className="sticky left-0 z-[60] flex min-h-[72px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.18)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.32)]"
+                    className="sticky left-0 z-[60] flex min-h-[54px] items-center p-4 text-left shadow-[2px_0_10px_rgba(15,23,42,0.18)] dark:shadow-[2px_0_10px_rgba(0,0,0,0.32)]"
                     style={{
                       borderRight: calendarThemeStyles.firstColumn.borderRight,
                       background: calendarThemeStyles.firstColumn.background,
@@ -1418,7 +1437,7 @@ export function InventoryPage({ propertyId }) {
                   {days.map((day) => (
                     <div
                       key={day.isoDate}
-                      className="min-w-[48px] p-3 text-center"
+                      className="min-w-0 p-2 text-center"
                       style={{
                         borderRight: calendarThemeStyles.dayCell.borderRight,
                         backgroundColor: day.weekend
@@ -1503,7 +1522,7 @@ export function InventoryPage({ propertyId }) {
                     : 1;
                   const rowHeight = Math.max(
                     room.rowHeight,
-                    activeLaneCount * 28 + 16,
+                    activeLaneCount * 24 + 12,
                   );
 
                   return (
@@ -1516,7 +1535,7 @@ export function InventoryPage({ propertyId }) {
                       }}
                     >
                       <div
-                        className="sticky left-0 z-30 flex flex-col justify-center px-4 py-4 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
+                        className="sticky left-0 z-30 flex flex-col justify-center px-4 py-3 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
                         style={{
                           minHeight: `${rowHeight}px`,
                           borderRight:
@@ -1534,7 +1553,7 @@ export function InventoryPage({ propertyId }) {
                       >
                         <span
                           className={[
-                            "font-headline text-[18px] font-semibold leading-tight",
+                            "font-headline text-[15px] font-semibold leading-tight",
                             calendarThemeStyles.firstColumn.title,
                           ].join(" ")}
                           title={room.room_name || room.room_id}
@@ -1618,7 +1637,7 @@ export function InventoryPage({ propertyId }) {
                                 <div
                                   className="flex h-full w-full items-center justify-center rounded-sm border transition-all duration-150 hover:scale-[1.01] hover:border-white/60 hover:brightness-105"
                                   style={{
-                                    minHeight: `${rowHeight - 8}px`,
+                                    minHeight: `${rowHeight - 6}px`,
                                     borderColor: cellTone.borderColor,
                                     background: cellTone.background,
                                     boxShadow: cellTone.boxShadow,
@@ -1646,9 +1665,9 @@ export function InventoryPage({ propertyId }) {
                               className="absolute z-10 px-1"
                               style={{
                                 left: `${displayBooking.left_days * dayColumnWidth + 4}px`,
-                                top: `${displayBooking.laneIndex * 28 + 6}px`,
+                                top: `${displayBooking.laneIndex * 24 + 6}px`,
                                 width: `${(displayBooking.duration_days + 1) * dayColumnWidth - 8}px`,
-                                height: "24px",
+                                height: "20px",
                               }}
                             >
                               <div
@@ -1702,14 +1721,14 @@ export function InventoryPage({ propertyId }) {
                               >
                                 <span
                                   className={[
-                                    "truncate text-[9px] font-black uppercase tracking-[0.12em]",
+                                    "truncate text-[8px] font-black uppercase tracking-[0.12em]",
                                     tone.title,
                                   ].join(" ")}
                                 >
                                   {displayBooking.guest_name}
                                 </span>
 
-                                <span className="truncate font-mono text-[8px] text-slate-500 dark:text-slate-400">
+                                <span className="truncate font-mono text-[7px] text-slate-500 dark:text-slate-400">
                                   {displayBooking.rate_title ||
                                     displayBooking.rate_id ||
                                     "Rate"}
@@ -1717,7 +1736,7 @@ export function InventoryPage({ propertyId }) {
 
                                 <span
                                   className={[
-                                    "ml-auto shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider",
+                                    "ml-auto shrink-0 rounded-full px-1 py-0.5 text-[7px] font-black uppercase tracking-wider",
                                     tone.badge,
                                   ].join(" ")}
                                 >
@@ -1726,7 +1745,7 @@ export function InventoryPage({ propertyId }) {
 
                                 <span
                                   className={[
-                                    "shrink-0 text-[8px] font-semibold",
+                                    "shrink-0 text-[7px] font-semibold",
                                     tone.meta,
                                   ].join(" ")}
                                 >
@@ -1753,7 +1772,7 @@ export function InventoryPage({ propertyId }) {
                     <div
                       className="sticky left-0 z-20"
                       style={{
-                        minHeight: "56px",
+                        minHeight: "54px",
                         borderRight:
                           calendarThemeStyles.firstColumn.borderRight,
                         background:
@@ -1770,7 +1789,7 @@ export function InventoryPage({ propertyId }) {
                       className="grid"
                       style={{
                         gridTemplateColumns: `repeat(${calendar.days}, ${dayColumnWidth}px)`,
-                        minHeight: "56px",
+                        minHeight: "54px",
                       }}
                     >
                       {days.map((day) => (
@@ -1809,7 +1828,7 @@ export function InventoryPage({ propertyId }) {
               {calendarSuccess}
             </div>
           ) : null}
-        </div>
+        </section>
       )}
 
       {selectedBooking ? (

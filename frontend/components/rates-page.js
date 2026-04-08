@@ -234,11 +234,7 @@ function parseCalendarDate(value = new Date()) {
   if (typeof value === "string") {
     const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
-      return new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3]),
-      );
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
     }
   }
 
@@ -669,7 +665,8 @@ export function DailyRatesPage({
   const [loadingRoomSummary, setLoadingRoomSummary] = useState(false);
   const [roomListMessage, setRoomListMessage] = useState("");
   const [activeRoomPlansModal, setActiveRoomPlansModal] = useState(null);
-  const matrixRoomColumnWidth = 200;
+  const matrixRoomColumnWidth = 168;
+  const matrixTotalGridWidth = 1608; // 168 + 30 * 48
   const [availableDates, setAvailableDates] = useState([]);
   const [inventoryDates, setInventoryDates] = useState([]);
   const [rateMatrixSearch, setRateMatrixSearch] = useState("");
@@ -742,18 +739,16 @@ export function DailyRatesPage({
           : isMidnightTheme
             ? "rgb(2, 6, 23)"
             : "rgb(248, 250, 252)",
-      textClass:
-        isSoftLightTheme
-          ? "text-[#6f2f62]"
-          : isDarkTheme || isMidnightTheme
-            ? "text-white"
-            : "text-slate-900",
-      subtextClass:
-        isSoftLightTheme
-          ? "text-[#8b5e80]"
-          : isDarkTheme || isMidnightTheme
-            ? "text-white/70"
-            : "text-slate-500",
+      textClass: isSoftLightTheme
+        ? "text-[#6f2f62]"
+        : isDarkTheme || isMidnightTheme
+          ? "text-white"
+          : "text-slate-900",
+      subtextClass: isSoftLightTheme
+        ? "text-[#8b5e80]"
+        : isDarkTheme || isMidnightTheme
+          ? "text-white/70"
+          : "text-slate-500",
     },
     firstColumn: {
       evenBg: isSoftLightTheme
@@ -832,10 +827,13 @@ export function DailyRatesPage({
     [calendarStartDate, totalDays],
   );
   const visibleDays = days;
+  const matrixDayColumnWidth = Math.floor(
+    (matrixTotalGridWidth - matrixRoomColumnWidth) / (visibleDays.length || 30),
+  );
   const matrixGridTemplate = useMemo(
     () =>
-      `clamp(168px, 18vw, ${matrixRoomColumnWidth}px) repeat(${visibleDays.length}, minmax(0, 1fr))`,
-    [visibleDays.length],
+      `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+    [visibleDays.length, matrixDayColumnWidth],
   );
 
   useEffect(() => {
@@ -2570,7 +2568,7 @@ export function DailyRatesPage({
           </section>
 
           <section
-            className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border"
+            className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border -mx-6 lg:-mx-8"
             style={matrixThemeStyles.panel}
           >
             <div
@@ -2680,10 +2678,11 @@ export function DailyRatesPage({
                 onMouseMove={handleMatrixMouseMove}
                 onMouseUp={handleMatrixMouseUp}
                 onMouseLeave={handleMatrixMouseUp}
-                className="select-none overflow-x-hidden overflow-y-visible"
+                className="select-none overflow-x-auto overflow-y-visible"
               >
                 <div
-                  className="w-full overflow-visible"
+                  style={{ width: `${matrixTotalGridWidth}px` }}
+                  className="overflow-visible"
                 >
                   <div
                     className="sticky top-0 z-30 grid"

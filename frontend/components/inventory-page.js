@@ -414,10 +414,9 @@ export function InventoryPage({ propertyId }) {
     }
 
     function clampLeftDays(leftDays, durationDays) {
-      return Math.max(
-        0,
-        Math.min(leftDays, Math.max(calendar.days - durationDays, 0)),
-      );
+      // Allow the start date to be anywhere in the current month view.
+      // This allows moving cross-month bookings without them "snapping" backwards/forwards.
+      return Math.max(-durationDays + 1, Math.min(leftDays, calendar.days - 1));
     }
 
     function handlePointerMove(event) {

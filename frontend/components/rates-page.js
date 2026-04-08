@@ -1444,7 +1444,7 @@ export function DailyRatesPage({
           disabled={isPast}
           className="flex h-full w-full flex-col items-center justify-center rounded-sm border transition-all duration-150 hover:scale-[1.02] hover:brightness-105 disabled:cursor-not-allowed"
           style={{
-            minHeight: "64px",
+            minHeight: "48px",
             borderColor: innerBorderColor,
             background: innerBg,
             boxShadow: isSelected
@@ -2171,7 +2171,7 @@ export function DailyRatesPage({
             ))}
           </section>
 
-          <section className="mb-6 grid gap-4 xl:grid-cols-[1.45fr_0.9fr]">
+          <section className="mb-6 space-y-4">
             {/* <div className="grid gap-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3">
@@ -2298,9 +2298,9 @@ export function DailyRatesPage({
           </div>
         </div> */}
 
-            <div className="grid gap-4 md:grid-cols-2 md:items-start">
+            <div className="grid items-stretch gap-4 xl:grid-cols-[2fr_1fr]">
               <article
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                 style={softLightGlassCardStyle}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -2373,7 +2373,7 @@ export function DailyRatesPage({
                 </div>
               </article>
               <article
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                 style={softLightGlassCardStyle}
               >
                 <h3 className="text-base font-bold text-slate-900">
@@ -2540,29 +2540,33 @@ export function DailyRatesPage({
                   </p>
                 ) : null}
               </article>
-              {insightCards.map((card) => (
-                <article
-                  key={card.title}
-                  className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                  style={softLightGlassCardStyle}
-                >
-                  <h3 className="text-base font-bold text-slate-900">
-                    {card.title}
-                  </h3>
-                  <div className="mt-4 space-y-3">
-                    {card.items.map((item) => (
-                      <div
-                        key={item}
-                        className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
-                        style={softLightGlassInsetStyle}
-                      >
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
             </div>
+            {insightCards.length ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                {insightCards.map((card) => (
+                  <article
+                    key={card.title}
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                    style={softLightGlassCardStyle}
+                  >
+                    <h3 className="text-base font-bold text-slate-900">
+                      {card.title}
+                    </h3>
+                    <div className="mt-4 space-y-3">
+                      {card.items.map((item) => (
+                        <div
+                          key={item}
+                          className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                          style={softLightGlassInsetStyle}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <section
@@ -3140,7 +3144,7 @@ export function DailyRatesPage({
                       <div
                         className="sticky left-0 z-20 flex flex-col justify-center px-4 py-3 shadow-[2px_0_10px_rgba(15,23,42,0.06)] transition-colors dark:shadow-[2px_0_10px_rgba(0,0,0,0.20)]"
                         style={{
-                          minHeight: "72px",
+                          minHeight: "54px",
                           borderRight: "1px solid rgba(148,163,184,0.16)",
                           borderBottom: "1px solid rgba(148, 163, 184, 0.10)",
                           background:
@@ -3183,12 +3187,6 @@ export function DailyRatesPage({
                             </span>
                           </button>
                         </div>
-                        <span
-                          className={`mt-0.5 text-[11px] ${matrixThemeStyles.subHeader.subtextClass}`}
-                          title={row.roomLabel}
-                        >
-                          {String(row.roomLabel || row.code).slice(0, 22)}
-                        </span>
                       </div>
 
                       {row.cells

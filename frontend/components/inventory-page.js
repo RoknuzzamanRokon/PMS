@@ -9,7 +9,7 @@ import { fetchJson } from "../lib/api";
 const totalGridWidth = 1608; // fixed width: roomColumnWidth + 30 * 48
 const visibleDayCount = 20;
 const roomColumnWidth = 168;
-const visibleRoomCount = 7;
+const visibleRoomCount = 10;
 
 const bookingToneClasses = {
   blue: {
@@ -246,9 +246,11 @@ export function InventoryPage({ propertyId }) {
   const selectedPropertyId = propertyId || "";
   const hasSelectedProperty = Boolean(selectedPropertyId);
   const [calendar, setCalendar] = useState(fallbackCalendar);
+  const [gridLayoutWidth, setGridLayoutWidth] = useState(totalGridWidth);
   const dayColumnWidth = Math.floor(
-    (totalGridWidth - roomColumnWidth) / (calendar.days || 30),
+    (gridLayoutWidth - roomColumnWidth) / (calendar.days || 30),
   );
+  const exactGridWidth = roomColumnWidth + (calendar.days || 30) * dayColumnWidth;
   const [apiConnected, setApiConnected] = useState(false);
   const [savingBookingId, setSavingBookingId] = useState("");
   const [calendarError, setCalendarError] = useState("");
@@ -305,6 +307,20 @@ export function InventoryPage({ propertyId }) {
       setApiConnected(false);
     }
   }
+
+  useEffect(() => {
+    const scroller = calendarScrollerRef.current;
+    if (!scroller) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setGridLayoutWidth(Math.max(totalGridWidth, entry.contentRect.width));
+      }
+    });
+
+    observer.observe(scroller);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -549,11 +565,28 @@ export function InventoryPage({ propertyId }) {
 
       if (row.booking?.booking_id) {
         const bookingRateId = row.booking.rate_id || "";
+
+        let computedLeftDays = Number(row.booking.left_days || 0);
+        let computedDurationDays = Number(row.booking.duration_days || 0);
+
+        if (row.booking.check_in_date && row.booking.check_out_date && calendar.start_date) {
+          const calStart = new Date(`${calendar.start_date}T00:00:00`);
+          const checkIn = new Date(`${row.booking.check_in_date}T00:00:00`);
+          const checkOut = new Date(`${row.booking.check_out_date}T00:00:00`);
+
+          const msPerDay = 86400000;
+          // Calculate the actual offset from our view's start date (can be negative)
+          computedLeftDays = Math.round((checkIn - calStart) / msPerDay);
+          computedDurationDays = Math.round((checkOut - checkIn) / msPerDay);
+        }
+
         group.bookings.push({
           ...row.booking,
           room_id: row.room_id,
           room_name: row.room_name,
           rate_id: bookingRateId,
+          left_days: computedLeftDays,
+          duration_days: computedDurationDays,
           rate_title:
             group.rateTitleById.get(bookingRateId) ||
             (row.rates || []).find((rate) => rate.rate_id === bookingRateId)
@@ -589,7 +622,7 @@ export function InventoryPage({ propertyId }) {
             null,
           stackedBookings,
           laneCount,
-          rowHeight: Math.max(56, laneCount * 28 + 16),
+          rowHeight: Math.max(56, laneCount * 24 + 12),
         };
       })
       .sort((left, right) => {
@@ -610,7 +643,7 @@ export function InventoryPage({ propertyId }) {
           new Date(left.lastUpdatedAt || 0).getTime()
         );
       });
-  }, [calendar.rows, roomSort]);
+  }, [calendar.rows, calendar.start_date, calendar.days, roomSort]);
   const visibleRoomWindowHeight = useMemo(() => {
     const visibleRowsHeight = roomRows
       .slice(0, visibleRoomCount)
@@ -1255,7 +1288,7 @@ export function InventoryPage({ propertyId }) {
         </section>
       ) : (
         <section
-          className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border"
+          className="sticky top-[73px] z-20 flex max-h-[calc(100vh-97px)] h-fit flex-col overflow-hidden rounded-2xl border"
           style={{
             borderColor: "var(--soft-border)",
             background:
@@ -1393,7 +1426,7 @@ export function InventoryPage({ propertyId }) {
               <div
                 className="min-w-max overflow-visible rounded-xl border shadow-2xl"
                 style={{
-                  width: `${totalGridWidth}px`,
+                  width: `${exactGridWidth}px`,
                   borderColor: "var(--soft-border)",
 
                   background: "rgba(255, 255, 255, 0.01)", // almost invisible
@@ -1563,7 +1596,7 @@ export function InventoryPage({ propertyId }) {
                       </div>
 
                       <div
-                        className="relative"
+                        className="relative overflow-hidden"
                         data-booking-drop-target="true"
                         data-room-id={room.room_id}
                         data-rate-id={room.defaultRateId || ""}
@@ -1659,6 +1692,11 @@ export function InventoryPage({ propertyId }) {
                             displayBooking.meta || "",
                           ).split(" • ");
 
+                          const clampedDuration = Math.min(
+                            displayBooking.duration_days + 1,
+                            calendar.days - displayBooking.left_days,
+                          );
+
                           return (
                             <div
                               key={displayBooking.booking_id}
@@ -1666,7 +1704,7 @@ export function InventoryPage({ propertyId }) {
                               style={{
                                 left: `${displayBooking.left_days * dayColumnWidth + 4}px`,
                                 top: `${displayBooking.laneIndex * 24 + 6}px`,
-                                width: `${(displayBooking.duration_days + 1) * dayColumnWidth - 8}px`,
+                                width: `${clampedDuration * dayColumnWidth - 8}px`,
                                 height: "20px",
                               }}
                             >

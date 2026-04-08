@@ -798,25 +798,25 @@ export function DailyRatesPage({
   };
   const softLightGlassCardStyle = isSoftLightTheme
     ? {
-        backgroundColor: "rgb(255, 249, 242)",
-        backgroundImage:
-          "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
-        borderColor: "rgb(221 191 161 / 55%)",
-        boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
-        backdropFilter: "blur(18px)",
-        WebkitBackdropFilter: "blur(18px)",
-      }
+      backgroundColor: "rgb(255, 249, 242)",
+      backgroundImage:
+        "linear-gradient(135deg, rgb(255 255 255 / 42%) 0%, rgb(255 249 242 / 72%) 48%, rgb(255 236 217 / 38%) 100%)",
+      borderColor: "rgb(221 191 161 / 55%)",
+      boxShadow: "0 20px 40px -28px rgb(146 104 62 / 22%)",
+      backdropFilter: "blur(18px)",
+      WebkitBackdropFilter: "blur(18px)",
+    }
     : undefined;
   const softLightGlassInsetStyle = isSoftLightTheme
     ? {
-        backgroundColor: "rgb(255, 249, 242)",
-        backgroundImage:
-          "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
-        borderColor: "rgb(221 191 161 / 42%)",
-        boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
-        backdropFilter: "blur(14px)",
-        WebkitBackdropFilter: "blur(14px)",
-      }
+      backgroundColor: "rgb(255, 249, 242)",
+      backgroundImage:
+        "linear-gradient(135deg, rgb(255 255 255 / 36%) 0%, rgb(255 249 242 / 64%) 100%)",
+      borderColor: "rgb(221 191 161 / 42%)",
+      boxShadow: "inset 0 1px 0 rgb(255 255 255 / 60%)",
+      backdropFilter: "blur(14px)",
+      WebkitBackdropFilter: "blur(14px)",
+    }
     : undefined;
   const totalDays = useMemo(
     () => getDaysInMonth(calendarStartDate),
@@ -832,7 +832,7 @@ export function DailyRatesPage({
   );
   const matrixGridTemplate = useMemo(
     () =>
-      `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, ${matrixDayColumnWidth}px)`,
+      `${matrixRoomColumnWidth}px repeat(${visibleDays.length}, minmax(${matrixDayColumnWidth}px, 1fr))`,
     [visibleDays.length, matrixDayColumnWidth],
   );
 
@@ -1044,12 +1044,12 @@ export function DailyRatesPage({
           Array.isArray(inventoryData?.dates) && inventoryData.dates.length
             ? inventoryData.dates
             : buildHotelSummaryFallback(
-                data.rooms || [],
-                data.rate_plans || [],
-                calendarStartDate,
-                totalDays,
-                inventoryBoardData?.rows || [],
-              );
+              data.rooms || [],
+              data.rate_plans || [],
+              calendarStartDate,
+              totalDays,
+              inventoryBoardData?.rows || [],
+            );
         setInventoryDates(nextInventoryDates);
         setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
         setApiConnected(true);
@@ -1303,12 +1303,12 @@ export function DailyRatesPage({
       Array.isArray(inventoryData?.dates) && inventoryData.dates.length
         ? inventoryData.dates
         : buildHotelSummaryFallback(
-            data.rooms || [],
-            data.rate_plans || [],
-            calendarStartDate,
-            totalDays,
-            inventoryBoardData?.rows || [],
-          );
+          data.rooms || [],
+          data.rate_plans || [],
+          calendarStartDate,
+          totalDays,
+          inventoryBoardData?.rows || [],
+        );
     setInventoryDates(nextInventoryDates);
     setAvailableDates(normalizeAvailableDatesResponse(availableDatesData));
     setApiConnected(true);
@@ -1464,19 +1464,19 @@ export function DailyRatesPage({
             setSummaryPopover(null);
             setCellPopover((current) =>
               current?.rateId === row.code &&
-              current?.stayDate === cell.stay_date
+                current?.stayDate === cell.stay_date
                 ? null
                 : {
-                    anchorEl: anchor,
-                    rateId: row.code,
-                    stayDate: cell.stay_date,
-                    left,
-                    top,
-                    rowTitle: row.title,
-                    cellRate,
-                    cellAvailability,
-                    availabilityLabel,
-                  },
+                  anchorEl: anchor,
+                  rateId: row.code,
+                  stayDate: cell.stay_date,
+                  left,
+                  top,
+                  rowTitle: row.title,
+                  cellRate,
+                  cellAvailability,
+                  availabilityLabel,
+                },
             );
           }}
         >
@@ -1673,9 +1673,9 @@ export function DailyRatesPage({
     } catch (error) {
       setRatePlanModalError(
         error.message ||
-          (ratePlanModalMode === "edit"
-            ? "Could not update the rate plan."
-            : "Could not create the rate plan."),
+        (ratePlanModalMode === "edit"
+          ? "Could not update the rate plan."
+          : "Could not create the rate plan."),
       );
     } finally {
       setSavingNewRatePlan(false);
@@ -1985,7 +1985,7 @@ export function DailyRatesPage({
       .filter((value) => !Number.isNaN(value) && value > 0);
     const adr = numericRates.length
       ? numericRates.reduce((sum, value) => sum + value, 0) /
-        numericRates.length
+      numericRates.length
       : 0;
 
     return [
@@ -2568,7 +2568,7 @@ export function DailyRatesPage({
           </section>
 
           <section
-            className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border -mx-6 lg:-mx-8"
+            className="sticky top-[73px] z-20 flex h-[calc(100vh-97px)] flex-col overflow-hidden rounded-2xl border mx-6 lg:mx-1"
             style={matrixThemeStyles.panel}
           >
             <div
@@ -2681,7 +2681,7 @@ export function DailyRatesPage({
                 className="select-none overflow-x-auto overflow-y-visible"
               >
                 <div
-                  style={{ width: `${matrixTotalGridWidth}px` }}
+                  style={{ width: '100%', minWidth: `${matrixTotalGridWidth}px` }}
                   className="overflow-visible"
                 >
                   <div
@@ -2827,12 +2827,12 @@ export function DailyRatesPage({
                               current?.stayDate === summary.stay_date
                                 ? null
                                 : {
-                                    anchorEl: anchor,
-                                    stayDate: summary.stay_date,
-                                    left,
-                                    top,
-                                    summary,
-                                  },
+                                  anchorEl: anchor,
+                                  stayDate: summary.stay_date,
+                                  left,
+                                  top,
+                                  summary,
+                                },
                             );
                           }}
                           style={{
@@ -2987,10 +2987,10 @@ export function DailyRatesPage({
                               new Date(cellPopover.stayDate + "T00:00:00") < t
                             );
                           })() && (
-                            <div className="mt-1 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                              Past — read only
-                            </div>
-                          )}
+                              <div className="mt-1 rounded px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                Past — read only
+                              </div>
+                            )}
                         </div>
                         <button
                           type="button"
@@ -3036,13 +3036,13 @@ export function DailyRatesPage({
                               setCellPopover((current) =>
                                 current
                                   ? {
-                                      ...current,
-                                      cellAvailability: event.target.value,
-                                      availabilityLabel:
-                                        getAvailabilityDisplayLabel(
-                                          event.target.value,
-                                        ),
-                                    }
+                                    ...current,
+                                    cellAvailability: event.target.value,
+                                    availabilityLabel:
+                                      getAvailabilityDisplayLabel(
+                                        event.target.value,
+                                      ),
+                                  }
                                   : current,
                               );
                               setPublishError("");
@@ -3570,7 +3570,7 @@ export function DailyRatesPage({
                         <p className="mt-1 text-sm text-slate-500">
                           {[
                             newRatePlanForm.room_id ||
-                              selectedRoomForRatePlan?.room_id,
+                            selectedRoomForRatePlan?.room_id,
                             newRatePlanForm.meal_plan || "Meal plan pending",
                             newRatePlanForm.bed_type || "Bed type pending",
                           ]
